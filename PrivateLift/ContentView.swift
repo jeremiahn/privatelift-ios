@@ -1,24 +1,17 @@
-//
-//  ContentView.swift
-//  PrivateLift
-//
-//  Created by Jeremiah Nelson on 5/31/26.
-//
-
 import SwiftUI
-
-struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+                                                                                                                                                      
+    // This wraps your custom ViewController so SwiftUI can display it
+    struct ViewControllerRepresentable: UIViewControllerRepresentable {
+        func makeUIViewController(context: Context) -> ViewController {
+            return ViewController()
         }
-        .padding()
+                                                                                                                                                      
+        func updateUIViewController(_ uiViewController: ViewController, context: Context) {}
     }
-}
-
-#Preview {
-    ContentView()
-}
+                                                                                                                                                      
+    struct ContentView: View {
+        var body: some View {
+            ViewControllerRepresentable()
+                .edgesIgnoringSafeArea(.all) // Bleed fullscreen, bypassing navigation bars
+        }
+    }                                                          

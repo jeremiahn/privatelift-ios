@@ -1,0 +1,1646 @@
+// private_lift_offline_engine.js
+
+// 1. DATABASE MANAGEMENT (IndexedDB)
+let db;
+const DB_NAME = "PrivateLiftLocalDB";
+const DB_VERSION = 1;
+
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        
+        request.onupgradeneeded = function(event) {
+            const database = event.target.result;
+            
+            // Store for Workout Sessions (Key: date string 'YYYY-MM-DD')
+            if (!database.objectStoreNames.contains("sessions")) {
+                database.createObjectStore("sessions", { keyPath: "date" });
+            }
+            
+            // Store for Workout Sets (Key: auto-incrementing id)
+            if (!database.objectStoreNames.contains("sets")) {
+                const setStore = database.createObjectStore("sets", { keyPath: "id", autoIncrement: true });
+                setStore.createIndex("sessionDate", "sessionDate", { unique: false });
+            }
+            
+            // Store for Custom Routine Templates (Key: auto-incrementing id)
+            if (!database.objectStoreNames.contains("templates")) {
+                database.createObjectStore("templates", { keyPath: "id", autoIncrement: true });
+            }
+        };
+        
+        request.onsuccess = function(event) {
+            db = event.target.result;
+            console.log("IndexedDB Local database initialized successfully!");
+            resolve();
+        };
+        
+        request.onerror = function(event) {
+            console.error("Database failed to open:", event.target.error);
+            reject(event.target.error);
+        };
+    });
+}
+
+// 2. DEFAULT USER SETTINGS & LOCAL STORAGE
+const DEFAULT_SETTINGS = {
+    squatMax: 315,
+    benchMax: 225,
+    deadliftMax: 405,
+    bodyWeight: 180,
+    gender: "male",
+    formula: "epley",
+    weightUnit: "lbs",
+    showRestTimer: true,
+    theme: "system"
+};
+
+let userSettings = { ...DEFAULT_SETTINGS };
+
+function loadLocalSettings() {
+    const saved = localStorage.getItem("privatelift_settings");
+    if (saved) {
+        try {
+            userSettings = { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+        } catch(e) {
+            userSettings = { ...DEFAULT_SETTINGS };
+        }
+    } else {
+        userSettings = { ...DEFAULT_SETTINGS };
+        saveLocalSettings();
+    }
+    
+    // Seed default template routines if empty
+    seedDefaultTemplates();
+}
+
+function saveLocalSettings() {
+    localStorage.setItem("privatelift_settings", JSON.stringify(userSettings));
+}
+
+// 3. SEED STANDARD TRAINING ROUTINE TEMPLATES
+function seedDefaultTemplates() {
+    const seeded = localStorage.getItem("privatelift_templates_seeded");
+    if (seeded) return;
+    
+    // Open templates database store
+    const tx = db.transaction("templates", "readwrite");
+    const store = tx.objectStore("templates");
+    
+    const defaults = [
+        {
+            name: "Powerlifting Big Three",
+            description: "Squat, Bench, and Deadlift target weights.",
+            exercises: [
+                { exercise: "SQUAT", reps: 5, set_type: "working", pct: 0.85 },
+                { exercise: "BENCH", reps: 5, set_type: "working", pct: 0.85 },
+                { exercise: "DEADLIFT", reps: 5, set_type: "working", pct: 0.85 }
+            ]
+        },
+        {
+            name: "Squat Focus (3x5)",
+            description: "Triple working sets for leg development.",
+            exercises: [
+                { exercise: "SQUAT", reps: 5, set_type: "working", pct: 0.85 },
+                { exercise: "SQUAT", reps: 5, set_type: "working", pct: 0.85 },
+                { exercise: "SQUAT", reps: 5, set_type: "working", pct: 0.85 }
+            ]
+        },
+        {
+            name: "Bench Press Volume (3x5)",
+            description: "Triple working sets for upper body pushing power.",
+            exercises: [
+                { exercise: "BENCH", reps: 5, set_type: "working", pct: 0.85 },
+                { exercise: "BENCH", reps: 5, set_type: "working", pct: 0.85 },
+                { exercise: "BENCH", reps: 5, set_type: "working", pct: 0.85 }
+            ]
+        }
+    ];
+    
+    defaults.forEach(t => store.add(t));
+    tx.oncomplete = () => {
+        localStorage.setItem("privatelift_templates_seeded", "true");
+        console.log("Default routine templates seeded locally!");
+    };
+}
+
+// 4. TAB STATE ROUTER (SPA Navigation)
+let activeTab = "dashboard";
+
+function switchTab(tabId) {
+    activeTab = tabId;
+    
+    // Toggle screens
+    const screens = ["dashboard", "stats", "history", "settings"];
+    screens.forEach(s => {
+        const el = document.getElementById(`screen-${s}`);
+        if (s === tabId) {
+            el.classList.remove("hidden");
+        } else {
+            el.classList.add("hidden");
+        }
+    });
+    
+    // Toggle navigation button styles (Desktop & Mobile)
+    screens.forEach(s => {
+        const desktopBtn = document.getElementById(`nav-btn-${s}`);
+        const mobileBtn = document.getElementById(`mobile-btn-${s}`);
+        
+        const activeNavClasses = ["bg-blue-600", "text-white", "shadow-md", "border-blue-500"];
+        const inactiveNavClasses = ["bg-gray-100", "dark:bg-gray-700", "text-gray-700", "dark:text-white", "border-gray-200", "dark:border-gray-600/50"];
+        
+        if (s === tabId) {
+            desktopBtn.className = `px-4 py-2.5 rounded-lg text-xs font-black transition border shadow-md uppercase tracking-wider ${activeNavClasses.join(' ')}`;
+            mobileBtn.className = "flex flex-col items-center justify-center w-full text-blue-500 transition-colors";
+        } else {
+            desktopBtn.className = `px-4 py-2.5 rounded-lg text-xs font-bold transition border uppercase tracking-wider ${inactiveNavClasses.join(' ')}`;
+            mobileBtn.className = "flex flex-col items-center justify-center w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors";
+        }
+    });
+
+    // Load tab-specific components
+    if (tabId === "dashboard") {
+        renderDashboard();
+    } else if (tabId === "stats") {
+        renderStats();
+    } else if (tabId === "history") {
+        renderHistory();
+    } else if (tabId === "settings") {
+        renderSettings();
+    }
+    
+    // Smooth scroll top on switch
+    window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+// 5. STRENGTH INTENSITY CALCULATIONS (Epley, Brzycki, Lander formulas)
+function getE1RM(weight, reps, formula = "epley") {
+    if (!weight || !reps) return 0;
+    if (reps === 1) return weight;
+    
+    if (formula === "brzycki") {
+        return Math.round(weight / (1.0278 - (0.0278 * reps)));
+    } else if (formula === "lander") {
+        return Math.round((100 * weight) / (101.3 - (2.6712 * reps)));
+    } else { // default: epley
+        return Math.round(weight * (1 + reps / 30));
+    }
+}
+
+function getWeeklyProgram(percentage) {
+    return {
+        squat: Math.round((userSettings.squatMax * percentage) / 5) * 5,
+        bench: Math.round((userSettings.benchMax * percentage) / 5) * 5,
+        deadlift: Math.round((userSettings.deadliftMax * percentage) / 5) * 5
+    };
+}
+
+// 6. DASHBOARD TAB
+let currentIntensity = 85;
+let logSetType = "working";
+
+function renderDashboard() {
+    const percentage = currentIntensity / 100.0;
+    const program = getWeeklyProgram(percentage);
+    
+    // Render Weight Cards
+    const weightGrid = document.getElementById("weight-cards-container");
+    weightGrid.innerHTML = `
+        <!-- SQUAT CARD -->
+        <div class="flex flex-col items-start w-full">
+            <span class="text-[9px] md:text-[11px] font-black uppercase tracking-widest mb-1.5 ml-1 text-red-500">SQUAT</span>
+            <div class="w-full bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border-2 border-red-500 dark:border-red-500 flex flex-col items-start justify-center cursor-pointer hover:bg-gray-850 transition" onclick="fillCalc(${program.squat})">
+                <div class="flex items-baseline gap-0.5 sm:gap-1">
+                    <span class="text-base sm:text-2xl md:text-3xl font-black text-white leading-none">${program.squat}</span>
+                    <span class="text-[8px] sm:text-xs text-gray-500 font-bold uppercase ml-0.5 sm:ml-1">${userSettings.weightUnit.toUpperCase()}</span>
+                </div>
+            </div>
+        </div>
+        <!-- BENCH CARD -->
+        <div class="flex flex-col items-start w-full">
+            <span class="text-[9px] md:text-[11px] font-black uppercase tracking-widest mb-1.5 ml-1 text-blue-500">BENCH</span>
+            <div class="w-full bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border-2 border-blue-500 dark:border-blue-500 flex flex-col items-start justify-center cursor-pointer hover:bg-gray-850 transition" onclick="fillCalc(${program.bench})">
+                <div class="flex items-baseline gap-0.5 sm:gap-1">
+                    <span class="text-base sm:text-2xl md:text-3xl font-black text-white leading-none">${program.bench}</span>
+                    <span class="text-[8px] sm:text-xs text-gray-500 font-bold uppercase ml-0.5 sm:ml-1">${userSettings.weightUnit.toUpperCase()}</span>
+                </div>
+            </div>
+        </div>
+        <!-- DEADLIFT CARD -->
+        <div class="flex flex-col items-start w-full">
+            <span class="text-[9px] md:text-[11px] font-black uppercase tracking-widest mb-1.5 ml-1 text-green-500">DEADLIFT</span>
+            <div class="w-full bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border-2 border-green-500 dark:border-green-500 flex flex-col items-start justify-center cursor-pointer hover:bg-gray-850 transition" onclick="fillCalc(${program.deadlift})">
+                <div class="flex items-baseline gap-0.5 sm:gap-1">
+                    <span class="text-base sm:text-2xl md:text-3xl font-black text-white leading-none">${program.deadlift}</span>
+                    <span class="text-[8px] sm:text-xs text-gray-500 font-bold uppercase ml-0.5 sm:ml-1">${userSettings.weightUnit.toUpperCase()}</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Sync all unit labels
+    document.querySelectorAll(".calc-unit-label").forEach(el => {
+        el.innerText = userSettings.weightUnit.toUpperCase();
+    });
+    
+    // Render Today's Sets list
+    renderTodaySets();
+    
+    // Calculate plates initially
+    calculatePlates();
+}
+
+function updateIntensity(val) {
+    currentIntensity = val;
+    
+    const disp = document.getElementById("intensity-display");
+    if (disp) disp.innerText = `${val}%`;
+    
+    const largeDisp = document.getElementById("intensity-large-display");
+    if (largeDisp) largeDisp.innerText = `${val}%`;
+    
+    const percentage = val / 100.0;
+    const program = getWeeklyProgram(percentage);
+    
+    // Quick-update weights on grid
+    renderDashboard();
+}
+
+// Set type toggle inside logging box
+function setLogType(type) {
+    logSetType = type;
+    const types = ["warmup", "working", "failure"];
+    types.forEach(t => {
+        const btn = document.getElementById(`log-type-${t}`);
+        if (t === type) {
+            btn.className = "text-[9px] font-black rounded-md transition uppercase bg-blue-600 text-white shadow-sm";
+        } else {
+            btn.className = "text-[9px] font-black rounded-md transition uppercase text-gray-500 hover:text-gray-800 dark:text-gray-400";
+        }
+    });
+}
+
+function getTodayString() {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+// Log new set submit handler
+function handleLogSubmit(event) {
+    event.preventDefault();
+    
+    const exercise = document.getElementById("log-exercise").value;
+    const weight = parseInt(document.getElementById("log-weight").value);
+    const reps = parseInt(document.getElementById("log-reps").value);
+    const rpeVal = document.getElementById("log-rpe").value;
+    const rpe = rpeVal ? parseFloat(rpeVal) : null;
+    
+    if (isNaN(weight) || isNaN(reps) || weight < 0 || reps <= 0) {
+        alert("Please enter valid weight and rep figures.");
+        return;
+    }
+    
+    const todayStr = getTodayString();
+    const calculatedE1RM = getE1RM(weight, reps, userSettings.formula);
+    
+    // Open transaction to write session & set
+    const tx = db.transaction(["sessions", "sets"], "readwrite");
+    const sessionStore = tx.objectStore("sessions");
+    const setStore = tx.objectStore("sets");
+    
+    // Ensure session exists
+    sessionStore.put({ date: todayStr, notes: "" });
+    
+    // Create new set
+    const newSet = {
+        sessionDate: todayStr,
+        exercise: exercise,
+        weight: weight,
+        reps: reps,
+        set_type: logSetType,
+        rpe: rpe,
+        e1rm: calculatedE1RM
+    };
+    
+    setStore.add(newSet);
+    
+    tx.oncomplete = function() {
+        console.log("Set successfully logged locally!");
+        document.getElementById("log-set-form").reset();
+        setLogType("working"); // reset to default
+        
+        // Re-render
+        renderTodaySets();
+        
+        // Native Haptic feedback trigger (short pulse)
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.haptic) {
+            window.webkit.messageHandlers.haptic.postMessage("success");
+        } else if (navigator.vibrate) {
+            navigator.vibrate(25);
+        }
+        
+        // Rest timer trigger
+        if (userSettings.showRestTimer && logSetType !== "warmup") {
+            triggerRestTimer(90); // standard 90 seconds
+        }
+    };
+}
+
+// Today's Sets partial renderer
+function renderTodaySets() {
+    const todayStr = getTodayString();
+    const container = document.getElementById("todays-sets-container");
+    container.innerHTML = "";
+    
+    const tx = db.transaction("sets", "readonly");
+    const store = tx.objectStore("sets");
+    const index = store.index("sessionDate");
+    const request = index.getAll(todayStr);
+    
+    request.onsuccess = function(event) {
+        const sets = event.target.result;
+        if (!sets || sets.length === 0) {
+            container.innerHTML = `<p class="text-gray-400 dark:text-gray-500 text-xs italic py-4 text-center">No sets recorded yet today. Hit the platform!</p>`;
+            return;
+        }
+        
+        // Sort sets by ID descending (newest first)
+        sets.sort((a,b) => b.id - a.id);
+        
+        sets.forEach(set => {
+            const badgeClasses = {
+                warmup: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+                working: "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
+                failure: "bg-red-50 text-red-700 border-red-100 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800"
+            }[set.set_type];
+            
+            const rpeBadge = set.rpe ? `<span class="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 px-2 py-0.5 rounded text-[9px] font-black leading-none ml-1 uppercase">@${set.rpe}</span>` : "";
+            
+            const row = document.createElement("div");
+            row.id = `today-set-${set.id}`;
+            row.className = "bg-gray-50 dark:bg-gray-900/50 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 flex justify-between items-center transition-all duration-300";
+            row.innerHTML = `
+                <div>
+                    <div class="flex items-center gap-1">
+                        <span class="text-xs font-black ${set.exercise === 'SQUAT' ? 'text-red-500' : set.exercise === 'BENCH' ? 'text-blue-500' : 'text-green-500'} uppercase">${set.exercise}</span>
+                        <span class="text-[9px] uppercase font-black px-1.5 py-0.5 rounded ${badgeClasses}">${set.set_type}</span>
+                        ${rpeBadge}
+                    </div>
+                    <p class="text-sm font-black text-gray-800 dark:text-gray-100 mt-1">
+                        ${set.weight} ${userSettings.weightUnit.toUpperCase()} <span class="text-xs text-gray-400 font-bold">x</span> ${set.reps} reps
+                    </p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-[9px] font-bold text-gray-400 uppercase">e1RM: ${set.e1rm}</span>
+                    <button onclick="deleteTodaySet(${set.id})" class="text-gray-400 hover:text-red-500 transition-colors p-1" title="Delete Set">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+    };
+}
+
+function deleteTodaySet(setId) {
+    if (!confirm("Are you sure you want to delete this logged set?")) return;
+    
+    const tx = db.transaction("sets", "readwrite");
+    const store = tx.objectStore("sets");
+    store.delete(setId);
+    
+    tx.oncomplete = function() {
+        const el = document.getElementById(`today-set-${setId}`);
+        if (el) {
+            el.classList.add("scale-95", "opacity-0");
+            setTimeout(() => {
+                renderTodaySets();
+            }, 300);
+        }
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.haptic) {
+            window.webkit.messageHandlers.haptic.postMessage("medium");
+        } else if (navigator.vibrate) {
+            navigator.vibrate(15);
+        }
+    };
+}
+
+// 7. INTERACTIVE PLATE CALCULATOR
+function fillCalc(weight) {
+    document.getElementById("calc-weight-input").value = weight;
+    calculatePlates();
+}
+
+function autofillCalc(exercise) {
+    const program = getWeeklyProgram(currentIntensity / 100.0);
+    const weight = program[exercise];
+    fillCalc(weight);
+}
+
+function calculatePlates() {
+    const totalWeight = parseInt(document.getElementById("calc-weight-input").value);
+    const graphicContainer = document.getElementById("barbell-graphic");
+    const textBreakdown = document.getElementById("plates-breakdown-text");
+    
+    graphicContainer.innerHTML = "";
+    textBreakdown.innerText = "";
+    
+    if (isNaN(totalWeight) || totalWeight <= 0) {
+        textBreakdown.innerText = "Enter weight above 0 to calculate.";
+        return;
+    }
+    
+    const isLbs = userSettings.weightUnit === "lbs";
+    const barWeight = isLbs ? 45 : 20;
+    
+    if (totalWeight < barWeight) {
+        textBreakdown.innerText = `Weight is less than the barbell weight (${barWeight} ${userSettings.weightUnit.toUpperCase()}).`;
+        return;
+    }
+    
+    const sideWeight = (totalWeight - barWeight) / 2;
+    
+    // Plate definitions (Weight, height class, Tailwind color class)
+    const lbsPlatesConfig = [
+        { wt: 45, h: "h-16", color: "bg-red-500 border border-red-600 text-white" },
+        { wt: 35, h: "h-14", color: "bg-blue-500 border border-blue-600 text-white" },
+        { wt: 25, h: "h-12", color: "bg-yellow-500 border border-yellow-600 text-black" },
+        { wt: 10, h: "h-10", color: "bg-green-500 border border-green-600 text-white" },
+        { wt: 5, h: "h-8", color: "bg-gray-200 border border-gray-300 text-gray-800" },
+        { wt: 2.5, h: "h-6", color: "bg-black border border-gray-800 text-white" }
+    ];
+    
+    const kgPlatesConfig = [
+        { wt: 25, h: "h-16", color: "bg-red-500 border border-red-600 text-white" },
+        { wt: 20, h: "h-14", color: "bg-blue-500 border border-blue-600 text-white" },
+        { wt: 15, h: "h-12", color: "bg-yellow-500 border border-yellow-600 text-black" },
+        { wt: 10, h: "h-10", color: "bg-green-500 border border-green-600 text-white" },
+        { wt: 5, h: "h-8", color: "bg-gray-200 border border-gray-300 text-gray-800" },
+        { wt: 2.5, h: "h-6", color: "bg-black border border-gray-800 text-white" },
+        { wt: 1.25, h: "h-5", color: "bg-gray-400 border border-gray-500 text-white" }
+    ];
+    
+    const config = isLbs ? lbsPlatesConfig : kgPlatesConfig;
+    let remaining = sideWeight;
+    const platesUsed = [];
+    
+    config.forEach(plate => {
+        const count = Math.floor(remaining / plate.wt);
+        if (count > 0) {
+            for (let i = 0; i < count; i++) {
+                platesUsed.push(plate);
+            }
+            remaining = remaining % plate.wt;
+        }
+    });
+    
+    // Draw barbell graphic
+    // 1. Draw sleeve/bar base
+    const sleeve = document.createElement("div");
+    sleeve.className = "w-6 h-3 bg-gray-400 dark:bg-gray-600 rounded-l shrink-0";
+    graphicContainer.appendChild(sleeve);
+    
+    // 2. Draw plates on bar
+    if (platesUsed.length === 0) {
+        textBreakdown.innerText = "No plates needed (Empty Barbell).";
+    } else {
+        const counts = {};
+        platesUsed.forEach(p => {
+            counts[p.wt] = (counts[p.wt] || 0) + 1;
+            
+            const visualPlate = document.createElement("div");
+            visualPlate.className = `w-4 ${p.h} ${p.color} rounded flex items-center justify-center font-black text-[7px] select-none shrink-0 shadow-md`;
+            visualPlate.innerText = p.wt;
+            graphicContainer.appendChild(visualPlate);
+        });
+        
+        // Write text list
+        const textParts = Object.entries(counts).map(([wt, qty]) => `${qty}x ${wt} ${userSettings.weightUnit.toUpperCase()}`);
+        textBreakdown.innerText = `Plates per side: ${textParts.join(', ')}`;
+    }
+    
+    // 3. Draw remaining bar tip
+    const barTip = document.createElement("div");
+    barTip.className = "w-10 h-2 bg-gray-300 dark:bg-gray-700 rounded-r shrink-0";
+    graphicContainer.appendChild(barTip);
+}
+
+// 8. BACKGROUND-SAFE AUTOMATED REST TIMER
+let timerInterval;
+let timerTargetEndTime = null;
+
+function triggerRestTimer(seconds) {
+    if (timerInterval) clearInterval(timerInterval);
+    
+    timerTargetEndTime = Date.now() + seconds * 1000;
+    
+    const banner = document.getElementById("floating-rest-timer");
+    banner.classList.remove("hidden");
+    
+    // Trigger tick immediately
+    tickRestTimer();
+    
+    timerInterval = setInterval(tickRestTimer, 100);
+}
+
+function tickRestTimer() {
+    if (!timerTargetEndTime) return;
+    
+    const now = Date.now();
+    const remainingMs = timerTargetEndTime - now;
+    
+    if (remainingMs <= 0) {
+        skipRestTimer();
+        // Play gentle audio sound or long haptic vibration
+        if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+        }
+        return;
+    }
+    
+    const totalSeconds = Math.ceil(remainingMs / 1000);
+    const m = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+    const s = String(totalSeconds % 60).padStart(2, '0');
+    
+    document.getElementById("timer-countdown").innerText = `${m}:${s}`;
+}
+
+function adjustRestTimer(seconds) {
+    if (!timerTargetEndTime) return;
+    timerTargetEndTime += seconds * 1000;
+    tickRestTimer();
+}
+
+function skipRestTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerTargetEndTime = null;
+    document.getElementById("floating-rest-timer").classList.add("hidden");
+}
+
+// Check timer resume on tab wake or app return
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && timerTargetEndTime) {
+        tickRestTimer(); // refresh immediately
+    }
+});
+
+// 9. STATS & ANALYTICS TAB
+let e1rmChartInstance = null;
+
+function renderStats() {
+    const tx = db.transaction(["sessions", "sets"], "readonly");
+    const sessionStore = tx.objectStore("sessions");
+    const setStore = tx.objectStore("sets");
+    
+    // 1. Fetch total sessions count
+    const sessionRequest = sessionStore.count();
+    sessionRequest.onsuccess = function(e) {
+        const total = e.target.result;
+        document.getElementById("stats-total-sessions").innerText = total;
+        
+        // Compute and sync DOTS / Wilks score
+        calculateStrengthScores(total);
+    };
+    
+    // 2. Fetch all sets for detailed metrics
+    const setsRequest = setStore.getAll();
+    setsRequest.onsuccess = function(e) {
+        const sets = e.target.result || [];
+        computeBigLiftsStats(sets);
+        computeWeeklyVolumeStats(sets);
+        renderE1RMChart(sets);
+    };
+}
+
+// DOTS & Wilks formulas calculations client-side in JS
+function calculateStrengthScores(totalSessions) {
+    const bw = userSettings.bodyWeight;
+    const gender = userSettings.gender;
+    const formula = userSettings.formula;
+    
+    const dotsEl = document.getElementById("stats-dots-score");
+    const wilksEl = document.getElementById("stats-dots-score"); // mapping dots/wilks cleanly
+    
+    // We need to fetch the current peak working 1RMs to get total lifted
+    const squat = userSettings.squatMax;
+    const bench = userSettings.benchMax;
+    const deadlift = userSettings.deadliftMax;
+    const totalPl = squat + bench + deadlift;
+    
+    if (totalPl === 0 || !bw) {
+        document.getElementById("stats-dots-score").innerText = "0.00";
+        document.getElementById("stats-wilks-score").innerText = "0.00";
+        return;
+    }
+    
+    // Convert to kg for official coefficients
+    const bwKg = userSettings.weightUnit === "lbs" ? bw * 0.45359237 : bw;
+    const totalKg = userSettings.weightUnit === "lbs" ? totalPl * 0.45359237 : totalPl;
+    
+    // 1. DOTS Formula Coefficients
+    const dotsCoeffs = {
+        male: [-0.000001093, 0.0007391293, -0.1918759221, 24.9653958277, -1620.5735043681, 31070.4002081498],
+        female: [-0.0000010706, 0.0005158298, -0.0989773103, 8.9626224396, -380.1972120619, 10758.3715933611]
+    }[gender === "female" ? "female" : "male"];
+    
+    let dotsDenom = 0;
+    for (let i = 0; i < 6; i++) {
+        dotsDenom += dotsCoeffs[i] * Math.pow(bwKg, 5 - i);
+    }
+    const dotsScore = dotsDenom > 0 ? (totalKg * 500) / dotsDenom : 0;
+    document.getElementById("stats-dots-score").innerText = dotsScore.toFixed(2);
+    
+    // 2. Wilks Formula Coefficients
+    const wilksCoeffs = {
+        male: [-0.00000001093, 0.000007391293, -0.001918759221, 0.249653958277, -16.205735043681, 310.704002081498],
+        female: [-0.000000010706, 0.000005158298, -0.000989773103, 0.089626224396, -3.801972120619, 107.583715933611]
+    }[gender === "female" ? "female" : "male"];
+    
+    let wilksCoeff = 0;
+    for (let i = 0; i < 6; i++) {
+        wilksCoeff += wilksCoeffs[i] * Math.pow(bwKg, 5 - i);
+    }
+    const wilksScore = wilksCoeff > 0 ? totalKg * wilksCoeff : 0;
+    document.getElementById("stats-wilks-score").innerText = wilksScore.toFixed(2);
+}
+
+// Compute stats card values
+function computeBigLiftsStats(sets) {
+    const cardsContainer = document.getElementById("stats-exercise-cards");
+    cardsContainer.innerHTML = "";
+    
+    const exercises = ["SQUAT", "BENCH", "DEADLIFT"];
+    const metrics = {
+        SQUAT: { tonnage: 0, reps: 0, peak: 0 },
+        BENCH: { tonnage: 0, reps: 0, peak: 0 },
+        DEADLIFT: { tonnage: 0, reps: 0, peak: 0 }
+    };
+    
+    sets.forEach(s => {
+        const ex = s.exercise.toUpperCase();
+        if (metrics[ex]) {
+            if (s.set_type !== "warmup") {
+                metrics[ex].tonnage += (s.weight * s.reps);
+                metrics[ex].reps += s.reps;
+                if (s.e1rm > metrics[ex].peak) {
+                    metrics[ex].peak = s.e1rm;
+                }
+            }
+        }
+    });
+    
+    exercises.forEach(ex => {
+        const labelColor = ex === "SQUAT" ? "text-red-500" : ex === "BENCH" ? "text-blue-500" : "text-green-500";
+        const borderClasses = ex === "SQUAT" ? "border border-red-500 dark:border-red-500 border-l-4" : ex === "BENCH" ? "border border-blue-500 dark:border-blue-500 border-l-4" : "border border-green-500 dark:border-green-500 border-l-4";
+        const volColor = ex === "SQUAT" ? "text-red-400" : ex === "BENCH" ? "text-blue-400" : "text-green-400";
+        
+        const card = document.createElement("div");
+        card.className = `bg-gray-50 dark:bg-gray-900/50 p-4 md:p-6 rounded-xl flex justify-between items-center ${borderClasses}`;
+        card.innerHTML = `
+            <div class="w-1/4 text-left">
+                <h3 class="text-xs md:text-sm font-black ${labelColor} uppercase tracking-wider">${ex}</h3>
+            </div>
+            <div class="w-1/4 text-center">
+                <p class="text-[8px] md:text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider leading-none mb-1">Volume</p>
+                <p class="${volColor} font-black text-xs md:text-lg leading-none whitespace-nowrap">${metrics[ex].tonnage} <span class="text-[8px] md:text-xs text-gray-500 font-bold">${userSettings.weightUnit.toUpperCase()}</span></p>
+            </div>
+            <div class="w-1/4 text-center">
+                <p class="text-[8px] md:text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider leading-none mb-1">Reps</p>
+                <p class="text-green-400 font-black text-xs md:text-lg leading-none whitespace-nowrap">${metrics[ex].reps}</p>
+            </div>
+            <div class="w-1/4 text-right">
+                <p class="text-[8px] md:text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider leading-none mb-1">Peak e1RM</p>
+                <p class="text-amber-500 font-black text-xs md:text-lg leading-none whitespace-nowrap">${metrics[ex].peak} <span class="text-[8px] md:text-xs text-gray-500 font-bold">${userSettings.weightUnit.toUpperCase()}</span></p>
+            </div>
+        `;
+        cardsContainer.appendChild(card);
+    });
+}
+
+// Compute Weekly breakdown calendar lists client-side!
+function getMonday(d) {
+    d = new Date(d);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+    return new Date(d.setDate(diff));
+}
+
+function computeWeeklyVolumeStats(sets) {
+    const container = document.getElementById("stats-weekly-breakdown-container");
+    container.innerHTML = "";
+    
+    // Group sets by ISO calendar week Monday
+    const weeklyData = {};
+    
+    sets.forEach(s => {
+        if (s.set_type === "warmup") return;
+        
+        const dateObj = new Date(s.sessionDate);
+        const monday = getMonday(dateObj);
+        const yyyy = monday.getFullYear();
+        const mm = String(monday.getMonth() + 1).padStart(2, '0');
+        const dd = String(monday.getDate()).padStart(2, '0');
+        const mondayStr = `${yyyy}-${mm}-${dd}`;
+        
+        if (!weeklyData[mondayStr]) {
+            weeklyData[mondayStr] = {
+                SQUAT: { tonnage: 0, reps: 0 },
+                BENCH: { tonnage: 0, reps: 0 },
+                DEADLIFT: { tonnage: 0, reps: 0 }
+            };
+        }
+        
+        const ex = s.exercise.toUpperCase();
+        if (weeklyData[mondayStr][ex]) {
+            weeklyData[mondayStr][ex].tonnage += (s.weight * s.reps);
+            weeklyData[mondayStr][ex].reps += s.reps;
+        }
+    });
+    
+    const weeksSorted = Object.keys(weeklyData).sort().reverse();
+    
+    if (weeksSorted.length === 0) {
+        container.innerHTML = `<p class="text-gray-400 dark:text-gray-500 text-xs italic text-center py-4">No logged sets to compute weekly statistics yet.</p>`;
+        return;
+    }
+    
+    weeksSorted.forEach((weekStr, index) => {
+        const weekDate = new Date(weekStr);
+        const fDate = weekDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const data = weeklyData[weekStr];
+        
+        const card = document.createElement("details");
+        card.className = "group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-lg transition-all duration-300";
+        if (index === 0) card.setAttribute("open", "");
+        
+        card.innerHTML = `
+            <summary class="list-none [&::-webkit-details-marker]:hidden flex items-center justify-between p-4 md:p-6 cursor-pointer select-none focus:outline-none">
+                <span class="text-gray-700 dark:text-gray-200 text-xs md:text-sm font-black uppercase tracking-wider">
+                    Week of ${fDate}
+                </span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 dark:text-gray-400 transform group-open:rotate-180 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
+            
+            <div class="p-4 md:p-6 pt-0 border-t border-gray-200 dark:border-gray-700/50">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <!-- SQUAT -->
+                    <div class="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-red-500 dark:border-red-500 border-l-4 flex justify-between items-center">
+                        <div>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider block">Squat Volume</span>
+                            <span class="text-red-400 font-black text-base md:text-lg mt-0.5 block leading-none">${data.SQUAT.tonnage} ${userSettings.weightUnit.toUpperCase()}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] text-gray-400 dark:text-gray-500 font-bold block uppercase tracking-wider leading-none mb-0.5">Reps</span>
+                            <span class="text-green-400 font-black text-base md:text-lg block">${data.SQUAT.reps}</span>
+                        </div>
+                    </div>
+                    <!-- BENCH -->
+                    <div class="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-blue-500 dark:border-blue-500 border-l-4 flex justify-between items-center">
+                        <div>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider block">Bench Volume</span>
+                            <span class="text-blue-400 font-black text-base md:text-lg mt-0.5 block leading-none">${data.BENCH.tonnage} ${userSettings.weightUnit.toUpperCase()}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] text-gray-400 dark:text-gray-500 font-bold block uppercase tracking-wider leading-none mb-0.5">Reps</span>
+                            <span class="text-green-400 font-black text-base md:text-lg block">${data.BENCH.reps}</span>
+                        </div>
+                    </div>
+                    <!-- DEADLIFT -->
+                    <div class="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-green-500 dark:border-green-500 border-l-4 flex justify-between items-center">
+                        <div>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider block">Deadlift Volume</span>
+                            <span class="text-green-400 font-black text-base md:text-lg mt-0.5 block leading-none">${data.DEADLIFT.tonnage} ${userSettings.weightUnit.toUpperCase()}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] text-gray-400 dark:text-gray-500 font-bold block uppercase tracking-wider leading-none mb-0.5">Reps</span>
+                            <span class="text-green-400 font-black text-base md:text-lg block">${data.DEADLIFT.reps}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+// Render dynamic interactive Chart.js line graph offline
+function renderE1RMChart(sets) {
+    if (e1rmChartInstance) {
+        e1rmChartInstance.destroy();
+    }
+    
+    // Group peak e1RMs by date & exercise
+    const e1rmData = {};
+    sets.forEach(s => {
+        if (s.set_type === "warmup" || !s.e1rm) return;
+        const d = s.sessionDate;
+        const ex = s.exercise.toUpperCase();
+        
+        if (!e1rmData[d]) {
+            e1rmData[d] = { SQUAT: null, BENCH: null, DEADLIFT: null };
+        }
+        
+        if (!e1rmData[d][ex] || s.e1rm > e1rmData[d][ex]) {
+            e1rmData[d][ex] = s.e1rm;
+        }
+    });
+    
+    const datesSorted = Object.keys(e1rmData).sort();
+    if (datesSorted.length === 0) {
+        document.getElementById("stats-chart-card").classList.add("hidden");
+        return;
+    }
+    document.getElementById("stats-chart-card").classList.remove("hidden");
+    
+    const squatPoints = [];
+    const benchPoints = [];
+    const deadliftPoints = [];
+    
+    datesSorted.forEach(d => {
+        squatPoints.push(e1rmData[d].SQUAT);
+        benchPoints.push(e1rmData[d].BENCH);
+        deadliftPoints.push(e1rmData[d].DEADLIFT);
+    });
+    
+    const ctx = document.getElementById("e1rmChart").getContext("2d");
+    const isDark = document.documentElement.classList.contains("dark");
+    const gridColor = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)";
+    const textColor = isDark ? "#9ca3af" : "#4b5563";
+    
+    e1rmChartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: datesSorted,
+            datasets: [
+                {
+                    label: "Squat",
+                    data: squatPoints,
+                    borderColor: "#ef4444",
+                    backgroundColor: "rgba(239, 68, 68, 0.05)",
+                    borderWidth: 3,
+                    tension: 0.25,
+                    spanGaps: true
+                },
+                {
+                    label: "Bench Press",
+                    data: benchPoints,
+                    borderColor: "#3b82f6",
+                    backgroundColor: "rgba(59, 130, 246, 0.05)",
+                    borderWidth: 3,
+                    tension: 0.25,
+                    spanGaps: true
+                },
+                {
+                    label: "Deadlift",
+                    data: deadliftPoints,
+                    borderColor: "#10b981",
+                    backgroundColor: "rgba(16, 185, 129, 0.05)",
+                    borderWidth: 3,
+                    tension: 0.25,
+                    spanGaps: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: textColor,
+                        font: { family: "Inter, system-ui, sans-serif", weight: "800", size: 10 }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: gridColor },
+                    ticks: { color: textColor, font: { size: 9, weight: "bold" } }
+                },
+                y: {
+                    grid: { color: gridColor },
+                    ticks: { color: textColor, font: { size: 9, weight: "bold" } }
+                }
+            }
+        }
+    });
+}
+
+// 10. HISTORY TAB
+function renderHistory() {
+    const container = document.getElementById("history-sessions-container");
+    container.innerHTML = "";
+    
+    const tx = db.transaction(["sessions", "sets"], "readonly");
+    const sessionStore = tx.objectStore("sessions");
+    const setStore = tx.objectStore("sets");
+    
+    sessionStore.getAll().onsuccess = function(e) {
+        const sessions = e.target.result || [];
+        if (sessions.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <p class="text-gray-500 dark:text-gray-400 mb-1 text-sm font-semibold">No training history found.</p>
+                    <p class="text-xs text-gray-400">Go hit the platform and log some sets on the Dashboard!</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Sort sessions descending (newest first)
+        sessions.sort((a,b) => b.date.localeCompare(a.date));
+        
+        setStore.getAll().onsuccess = function(e2) {
+            const sets = e2.target.result || [];
+            
+            // Map sets to their sessionDate
+            const setsMap = {};
+            sets.forEach(s => {
+                if (!setsMap[s.sessionDate]) {
+                    setsMap[s.sessionDate] = [];
+                }
+                setsMap[s.sessionDate].push(s);
+            });
+            
+            sessions.forEach((session, idx) => {
+                const dateObj = new Date(session.date + "T00:00:00");
+                const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                const sessionSets = setsMap[session.date] || [];
+                
+                const card = document.createElement("details");
+                card.id = `history-card-${session.date}`;
+                card.className = "group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-lg mb-4 md:mb-6 transition-all duration-300";
+                if (idx === 0) card.setAttribute("open", "");
+                
+                // Date sets lists layout
+                let setsHtml = "";
+                if (sessionSets.length === 0) {
+                    setsHtml = `<p class="text-gray-500 text-xs italic py-2">No sets recorded for this session.</p>`;
+                } else {
+                    // Sort inside card ascending by ID
+                    sessionSets.sort((a,b) => a.id - b.id);
+                    sessionSets.forEach(s => {
+                        const badgeClasses = {
+                            warmup: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+                            working: "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
+                            failure: "bg-red-50 text-red-700 border-red-100 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800"
+                        }[s.set_type];
+                        const rpeBadge = s.rpe ? `<span class="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 px-2 py-0.5 rounded text-[9px] font-black leading-none ml-1 uppercase">@${s.rpe}</span>` : "";
+                        
+                        setsHtml += `
+                            <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-750/30 last:border-0">
+                                <div>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-xs font-black ${s.exercise === 'SQUAT' ? 'text-red-500' : s.exercise === 'BENCH' ? 'text-blue-500' : 'text-green-500'} uppercase">${s.exercise}</span>
+                                        <span class="text-[9px] uppercase font-black px-1.5 py-0.5 rounded ${badgeClasses}">${s.set_type}</span>
+                                        ${rpeBadge}
+                                    </div>
+                                    <p class="text-xs font-black text-gray-800 dark:text-gray-100 mt-1">
+                                        ${s.weight} ${userSettings.weightUnit.toUpperCase()} <span class="text-gray-400">x</span> ${s.reps} reps
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-[9px] font-bold text-gray-400">e1RM: ${s.e1rm}</span>
+                                    <button onclick="deleteHistorySet('${session.date}', ${s.id})" class="text-gray-400 hover:text-red-500 transition-colors p-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                card.innerHTML = `
+                    <summary class="list-none [&::-webkit-details-marker]:hidden flex items-center justify-between p-4 md:p-6 cursor-pointer select-none focus:outline-none">
+                        <div class="flex items-center gap-3">
+                            <h2 class="text-lg md:text-xl font-bold text-blue-600 dark:text-blue-400">
+                                ${formattedDate}
+                            </h2>
+                            <!-- Cascade Delete entire date card button -->
+                            <button type="button" onclick="deleteHistorySession(event, '${session.date}')" class="text-gray-400 hover:text-red-500 p-1.5 transition-colors focus:outline-none" title="Delete entire Session date">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 dark:text-gray-400 transform group-open:rotate-180 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </summary>
+                    
+                    <div class="p-4 md:p-6 pt-0 border-t border-gray-200 dark:border-gray-700/50">
+                        <div class="space-y-2 mt-4">
+                            ${setsHtml}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        };
+    };
+}
+
+// Delete single set inside History
+function deleteHistorySet(dateStr, setId) {
+    if (!confirm("Are you sure you want to delete this logged set from your history?")) return;
+    
+    const tx = db.transaction("sets", "readwrite");
+    const store = tx.objectStore("sets");
+    store.delete(setId);
+    
+    tx.oncomplete = function() {
+        renderHistory();
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.haptic) {
+            window.webkit.messageHandlers.haptic.postMessage("medium");
+        } else if (navigator.vibrate) {
+            navigator.vibrate(15);
+        }
+    };
+}
+
+// Cascade Delete entire Workout Session date card
+function deleteHistorySession(event, dateStr) {
+    event.stopPropagation(); // prevent collapsing/toggling details accordion container!
+    
+    if (!confirm(`Are you sure you want to delete the entire session from ${dateStr}? All logged sets for this date will be permanently deleted.`)) return;
+    
+    // Open transaction to delete session and all corresponding sets cascade style
+    const tx = db.transaction(["sessions", "sets"], "readwrite");
+    const sessionStore = tx.objectStore("sessions");
+    const setStore = tx.objectStore("sets");
+    
+    sessionStore.delete(dateStr);
+    
+    // Fetch and delete sets matching this sessionDate
+    const index = setStore.index("sessionDate");
+    index.openCursor(dateStr).onsuccess = function(e) {
+        const cursor = e.target.result;
+        if (cursor) {
+            cursor.delete();
+            cursor.continue();
+        }
+    };
+    
+    tx.oncomplete = function() {
+        console.log(`Workout Session date ${dateStr} successfully cleared!`);
+        const card = document.getElementById(`history-card-${dateStr}`);
+        if (card) {
+            card.classList.add("scale-95", "opacity-0");
+            setTimeout(() => {
+                renderHistory();
+            }, 300);
+        }
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.haptic) {
+            window.webkit.messageHandlers.haptic.postMessage("warning");
+        } else if (navigator.vibrate) {
+            navigator.vibrate(25);
+        }
+    };
+}
+
+// 11. SETTINGS TAB & UNIT CONVERSIONS (LBS / KG DETAILED MATRIX)
+function renderSettings() {
+    document.getElementById("set-squat").value = userSettings.squatMax;
+    document.getElementById("set-bench").value = userSettings.benchMax;
+    document.getElementById("set-deadlift").value = userSettings.deadliftMax;
+    document.getElementById("set-bodyweight").value = userSettings.bodyWeight;
+    document.getElementById("set-gender").value = userSettings.gender;
+    document.getElementById("set-formula").value = userSettings.formula;
+    
+    // Sync checkboxes
+    document.getElementById("pref-show-timer").checked = userSettings.showRestTimer;
+    
+    // Sync selectors
+    syncThemeSettingsUI();
+    syncUnitSettingsUI();
+}
+
+function syncThemeSettingsUI() {
+    const t = userSettings.theme;
+    const lightBtn = document.getElementById("pref-theme-light");
+    const darkBtn = document.getElementById("pref-theme-dark");
+    const systemBtn = document.getElementById("pref-theme-system");
+    
+    const active = ["bg-blue-600", "text-white", "shadow-sm"];
+    const inactive = ["text-gray-500", "dark:text-gray-400", "hover:text-gray-900", "dark:hover:text-white"];
+    
+    [lightBtn, darkBtn, systemBtn].forEach(b => {
+        b.classList.remove(...active);
+        b.classList.add(...inactive);
+    });
+    
+    if (t === "light") lightBtn.classList.add(...active);
+    else if (t === "dark") darkBtn.classList.add(...active);
+    else systemBtn.classList.add(...active);
+}
+
+function syncUnitSettingsUI() {
+    const unit = userSettings.weightUnit;
+    const lbsBtn = document.getElementById("pref-lbs-btn");
+    const kgBtn = document.getElementById("pref-kg-btn");
+    
+    const active = ["bg-blue-600", "text-white", "shadow-sm"];
+    const inactive = ["text-gray-500", "dark:text-gray-400", "hover:text-gray-900", "dark:hover:text-white"];
+    
+    [lbsBtn, kgBtn].forEach(b => {
+        b.classList.remove(...active);
+        b.classList.add(...inactive);
+    });
+    
+    if (unit === "lbs") lbsBtn.classList.add(...active);
+    else kgBtn.classList.add(...active);
+    
+    // Update local label suffixes
+    document.querySelectorAll(".calc-unit-label").forEach(el => {
+        el.innerText = unit.toUpperCase();
+    });
+}
+
+// Toggle Rest Timer preference
+function toggleRestTimerPref(checked) {
+    userSettings.showRestTimer = checked;
+    saveLocalSettings();
+}
+
+// Switch app theme
+function setAppTheme(theme) {
+    userSettings.theme = theme;
+    saveLocalSettings();
+    syncThemeSettingsUI();
+    
+    const html = document.documentElement;
+    let isDark = false;
+    if (theme === "system") {
+        if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+            html.classList.add("dark");
+            isDark = true;
+        } else {
+            html.classList.remove("dark");
+        }
+    } else if (theme === "dark") {
+        html.classList.add("dark");
+        isDark = true;
+    } else {
+        html.classList.remove("dark");
+    }
+    
+    // Native iOS Status Bar Theme Bridge
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.theme) {
+        window.webkit.messageHandlers.theme.postMessage(isDark ? "dark" : "light");
+    }
+}
+
+// CRITICAL USER REQUEST: Convert ALL past logs + benchmarks on unit switch!
+async function toggleWeightUnitPref(targetUnit) {
+    if (userSettings.weightUnit === targetUnit) return;
+    
+    const oldUnit = userSettings.weightUnit;
+    const multiplier = targetUnit === "kg" ? 0.45359237 : (1 / 0.45359237);
+    
+    if (!confirm(`You are changing your primary weight unit from ${oldUnit.toUpperCase()} to ${targetUnit.toUpperCase()}.\n\nThis will physically convert and round all past logged set weights, calculated estimated 1RMs, body weight, and profile maximums to keep your training history perfectly aligned! Proceed?`)) {
+        syncUnitSettingsUI();
+        return;
+    }
+    
+    // 1. Convert settings benchmarks locally
+    userSettings.squatMax = Math.round(userSettings.squatMax * multiplier);
+    userSettings.benchMax = Math.round(userSettings.benchMax * multiplier);
+    userSettings.deadliftMax = Math.round(userSettings.deadliftMax * multiplier);
+    userSettings.bodyWeight = Math.round(userSettings.bodyWeight * multiplier);
+    userSettings.weightUnit = targetUnit;
+    
+    saveLocalSettings();
+    
+    // 2. Open transaction to convert database weights
+    const tx = db.transaction("sets", "readwrite");
+    const store = tx.objectStore("sets");
+    
+    store.openCursor().onsuccess = function(event) {
+        const cursor = event.target.result;
+        if (cursor) {
+            const set = cursor.value;
+            // Convert weight & e1rm
+            set.weight = Math.round(set.weight * multiplier);
+            set.e1rm = Math.round(set.e1rm * multiplier);
+            
+            cursor.update(set);
+            cursor.continue();
+        }
+    };
+    
+    tx.oncomplete = function() {
+        console.log("Database weight values successfully converted and rounded!");
+        alert(`Successfully converted all past workout logs and lift benchmarks to ${targetUnit.toUpperCase()}!`);
+        
+        syncUnitSettingsUI();
+        renderSettings();
+        if (navigator.vibrate) navigator.vibrate(50);
+    };
+}
+
+function saveSettings(event) {
+    event.preventDefault();
+    
+    userSettings.squatMax = parseInt(document.getElementById("set-squat").value);
+    userSettings.benchMax = parseInt(document.getElementById("set-bench").value);
+    userSettings.deadliftMax = parseInt(document.getElementById("set-deadlift").value);
+    userSettings.bodyWeight = parseFloat(document.getElementById("set-bodyweight").value);
+    userSettings.gender = document.getElementById("set-gender").value;
+    userSettings.formula = document.getElementById("set-formula").value;
+    
+    saveLocalSettings();
+    alert("Profile settings successfully saved locally!");
+}
+
+// Clear all Local App data (Reset App)
+function clearAllAppStoreData() {
+    if (!confirm("⚠️ DANGER ZONE! This will permanently delete all sets, custom templates, and settings. This cannot be undone. Are you absolutely sure?")) return;
+    
+    const dbreq = indexedDB.deleteDatabase(DB_NAME);
+    dbreq.onsuccess = function() {
+        localStorage.clear();
+        alert("All local data wiped successfully. The app will reload to default.");
+        window.location.reload();
+    };
+}
+
+// 12. FILE BACKUP & RESTORE SYSTEMS (JSON Backup for phone transfers)
+function exportBackupData() {
+    const tx = db.transaction(["sessions", "sets", "templates"], "readonly");
+    
+    const backup = {
+        settings: userSettings,
+        sessions: [],
+        sets: [],
+        templates: []
+    };
+    
+    tx.objectStore("sessions").getAll().onsuccess = function(e) {
+        backup.sessions = e.target.result || [];
+    };
+    
+    tx.objectStore("sets").getAll().onsuccess = function(e) {
+        backup.sets = e.target.result || [];
+    };
+    
+    tx.objectStore("templates").getAll().onsuccess = function(e) {
+        backup.templates = e.target.result || [];
+    };
+    
+    tx.oncomplete = function() {
+        const jsonStr = JSON.stringify(backup, null, 2);
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement("a");
+        const dateStr = getTodayString();
+        a.href = url;
+        a.download = `PrivateLift_Backup_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        alert("Backup file successfully compiled and downloaded!");
+    };
+}
+
+function importBackupData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const backup = JSON.parse(e.target.result);
+            if (!backup.settings || !backup.sets) {
+                alert("Invalid backup file format. Missing core datasets.");
+                return;
+            }
+            
+            if (!confirm("This will overwrite your current settings and merge all workout logs. Do you want to proceed with the restore?")) return;
+            
+            // Save Settings
+            userSettings = { ...DEFAULT_SETTINGS, ...backup.settings };
+            saveLocalSettings();
+            
+            // Save database items
+            const tx = db.transaction(["sessions", "sets", "templates"], "readwrite");
+            
+            // 1. Restore sessions
+            const sessionStore = tx.objectStore("sessions");
+            if (backup.sessions) {
+                backup.sessions.forEach(s => sessionStore.put(s));
+            }
+            
+            // 2. Restore sets
+            const setStore = tx.objectStore("sets");
+            if (backup.sets) {
+                backup.sets.forEach(s => setStore.put(s));
+            }
+            
+            // 3. Restore templates
+            const templateStore = tx.objectStore("templates");
+            if (backup.templates) {
+                backup.templates.forEach(t => templateStore.put(t));
+            }
+            
+            tx.oncomplete = function() {
+                alert("Application databases successfully restored! The app will now refresh.");
+                window.location.reload();
+            };
+            
+        } catch(err) {
+            alert("Error parsing backup JSON file. Ensure it is a valid backup.");
+            console.error(err);
+        }
+    };
+    reader.readAsText(file);
+}
+
+// 13. TEMPLATE SYSTEM IMPLEMENTATIONS
+let currentTemplatesList = [];
+
+function openTemplateLoader() {
+    const modal = document.getElementById("modal-template-loader");
+    const container = document.getElementById("template-loader-list");
+    container.innerHTML = "";
+    
+    const tx = db.transaction("templates", "readonly");
+    const store = tx.objectStore("templates");
+    
+    store.getAll().onsuccess = function(e) {
+        const templates = e.target.result || [];
+        currentTemplatesList = templates;
+        
+        if (templates.length === 0) {
+            container.innerHTML = `<p class="text-gray-500 text-xs italic text-center py-4">No custom routines saved yet.</p>`;
+            modal.classList.remove("hidden");
+            return;
+        }
+        
+        templates.forEach(t => {
+            const card = document.createElement("div");
+            card.className = "bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center";
+            card.innerHTML = `
+                <div class="text-left w-3/4">
+                    <h4 class="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider">${t.name}</h4>
+                    <p class="text-[10px] text-gray-500 mt-1 leading-relaxed">${t.description || 'No description.'}</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="loadTemplateIntoToday(${t.id})" class="bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-black px-2.5 py-1.5 rounded-lg transition uppercase">Load</button>
+                    <button onclick="deleteRoutineTemplate(${t.id})" class="text-gray-400 hover:text-red-500 transition-colors p-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+        
+        modal.classList.remove("hidden");
+    };
+}
+
+function closeTemplateLoader() {
+    document.getElementById("modal-template-loader").classList.add("hidden");
+}
+
+function loadTemplateIntoToday(templateId) {
+    const template = currentTemplatesList.find(t => t.id === templateId);
+    if (!template) return;
+    
+    if (!confirm(`Are you sure you want to load "${template.name}" into today's log? This will auto-create these lifts.`)) return;
+    
+    const todayStr = getTodayString();
+    
+    const tx = db.transaction(["sessions", "sets"], "readwrite");
+    const sessionStore = tx.objectStore("sessions");
+    const setStore = tx.objectStore("sets");
+    
+    sessionStore.put({ date: todayStr, notes: "" });
+    
+    template.exercises.forEach(te => {
+        let weight = te.weight;
+        // If template only has percentage, compute actual working weight
+        if (!weight && te.pct) {
+            const program = getWeeklyProgram(te.pct);
+            weight = program[te.exercise.toLowerCase()];
+        }
+        
+        const calculatedE1RM = getE1RM(weight, te.reps, userSettings.formula);
+        
+        setStore.add({
+            sessionDate: todayStr,
+            exercise: te.exercise.toUpperCase(),
+            weight: weight || 135,
+            reps: te.reps,
+            set_type: te.set_type || "working",
+            rpe: null,
+            e1rm: calculatedE1RM
+        });
+    });
+    
+    tx.oncomplete = function() {
+        closeTemplateLoader();
+        renderDashboard();
+        if (navigator.vibrate) navigator.vibrate(40);
+    };
+}
+
+function deleteRoutineTemplate(id) {
+    if (!confirm("Are you sure you want to permanently delete this routine template?")) return;
+    
+    const tx = db.transaction("templates", "readwrite");
+    tx.objectStore("templates").delete(id);
+    tx.oncomplete = () => {
+        openTemplateLoader(); // reload
+    };
+}
+
+function openTemplateSaver() {
+    document.getElementById("modal-template-saver").classList.remove("hidden");
+}
+
+function closeTemplateSaver() {
+    document.getElementById("modal-template-saver").classList.add("hidden");
+}
+
+function saveTemplateFromToday() {
+    const templateName = document.getElementById("save-template-name").value.trim();
+    if (!templateName) {
+        alert("Please enter a name for your custom routine template.");
+        return;
+    }
+    
+    const todayStr = getTodayString();
+    
+    // Fetch today's sets
+    const tx = db.transaction(["sets", "templates"], "readwrite");
+    const setIndex = tx.objectStore("sets").index("sessionDate");
+    const templateStore = tx.objectStore("templates");
+    
+    setIndex.getAll(todayStr).onsuccess = function(event) {
+        const sets = event.target.result || [];
+        if (sets.length === 0) {
+            alert("No sets logged today to save into a template routine!");
+            return;
+        }
+        
+        // Sort sets by ID ascending
+        sets.sort((a,b) => a.id - b.id);
+        
+        const exercises = sets.map(s => ({
+            exercise: s.exercise,
+            weight: s.weight,
+            reps: s.reps,
+            set_type: s.set_type
+        }));
+        
+        const newTemplate = {
+            name: templateName,
+            description: `Saved from workout logged on ${todayStr}`,
+            exercises: exercises
+        };
+        
+        templateStore.add(newTemplate);
+    };
+    
+    tx.oncomplete = function() {
+        closeTemplateSaver();
+        document.getElementById("save-template-name").value = "";
+        alert(`Successfully saved routine template "${templateName}"!`);
+        if (navigator.vibrate) navigator.vibrate(30);
+    };
+}
+
+// 14. CSV IMPORT & EXPORT HANDLERS (Client-Side HTML5 APIs)
+function exportCSV() {
+    const tx = db.transaction("sets", "readonly");
+    tx.objectStore("sets").getAll().onsuccess = function(event) {
+        const sets = event.target.result || [];
+        if (sets.length === 0) {
+            alert("No logged workout history available to export.");
+            return;
+        }
+        
+        // Sort sets by date descending
+        sets.sort((a,b) => b.sessionDate.localeCompare(a.sessionDate));
+        
+        // Build CSV columns
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Date,Exercise,Weight,Reps,Set Type,RPE,Estimated 1RM\n";
+        
+        sets.forEach(s => {
+            const rpeStr = s.rpe || "";
+            csvContent += `${s.sessionDate},${s.exercise},${s.weight},${s.reps},${s.set_type},${rpeStr},${s.e1rm}\n`;
+        });
+        
+        const encodedUri = encodeURI(csvContent);
+        const a = document.createElement("a");
+        const dateStr = getTodayString();
+        a.href = encodedUri;
+        a.download = `PrivateLift_History_${dateStr}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        alert("Lifting history exported successfully as CSV!");
+    };
+}
+
+function importCSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const lines = text.split("\n");
+        if (lines.length <= 1) {
+            alert("CSV file appears to be empty.");
+            return;
+        }
+        
+        if (!confirm("This will merge CSV entries into your local device database. Proceed?")) return;
+        
+        const tx = db.transaction(["sessions", "sets"], "readwrite");
+        const sessionStore = tx.objectStore("sessions");
+        const setStore = tx.objectStore("sets");
+        
+        // Simple CSV parser
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            const cols = line.split(",");
+            if (cols.length < 4) continue;
+            
+            const dateStr = cols[0].trim();
+            const exercise = cols[1].trim().toUpperCase();
+            const weight = parseInt(cols[2].trim());
+            const reps = parseInt(cols[3].trim());
+            const setType = cols[4] ? cols[4].trim().toLowerCase() : "working";
+            const rpeVal = cols[5] ? cols[5].trim() : "";
+            const rpe = rpeVal ? parseFloat(rpeVal) : null;
+            
+            if (!dateStr || !exercise || isNaN(weight) || isNaN(reps)) continue;
+            
+            // Ensure session exists
+            sessionStore.put({ date: dateStr, notes: "" });
+            
+            const calculatedE1RM = getE1RM(weight, reps, userSettings.formula);
+            
+            setStore.add({
+                sessionDate: dateStr,
+                exercise: exercise,
+                weight: weight,
+                reps: reps,
+                set_type: setType,
+                rpe: rpe,
+                e1rm: calculatedE1RM
+            });
+        }
+        
+        tx.oncomplete = function() {
+            alert("Successfully imported CSV history data! The screen will now reload.");
+            switchTab("history");
+        };
+    };
+    reader.readAsText(file);
+}
+
+// 15. INITIALIZATION WAKE HOOKS
+document.addEventListener("DOMContentLoaded", async () => {
+    // 1. Initialize offline database
+    await initDB();
+    
+    // 2. Load preferences
+    loadLocalSettings();
+    
+    // 3. Set standard color themes based on preferences
+    setAppTheme(userSettings.theme);
+    
+    // 4. Load initial tab screen
+    switchTab("dashboard");
+    
+    // Request durable storage to prevent OS eviction
+    if (navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().then(persisted => {
+            if (persisted) {
+                console.log(" DURATION STORAGE OPTION: Active. Apple storage persistence fully secured.");
+            }
+        });
+    }
+});

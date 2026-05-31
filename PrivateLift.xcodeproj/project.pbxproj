@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		277DFE132FCCA24300D40D44 /* web in Resources */ = {isa = PBXBuildFile; fileRef = 277DFE122FCCA24300D40D44 /* web */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		277DFDEF2FCC95C900D40D44 /* PrivateLift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PrivateLift.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		277DFE122FCCA24300D40D44 /* web */ = {isa = PBXFileReference; lastKnownFileType = folder; path = web; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -32,6 +37,7 @@
 		277DFDE62FCC95C900D40D44 = {
 			isa = PBXGroup;
 			children = (
+				277DFE122FCCA24300D40D44 /* web */,
 				277DFDF12FCC95C900D40D44 /* PrivateLift */,
 				277DFDF02FCC95C900D40D44 /* Products */,
 			);
@@ -109,6 +115,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				277DFE132FCCA24300D40D44 /* web in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
