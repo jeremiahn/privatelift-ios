@@ -1273,19 +1273,23 @@ function syncThemeSettingsUI() {
     const t = userSettings.theme;
     const lightBtn = document.getElementById("pref-theme-light");
     const darkBtn = document.getElementById("pref-theme-dark");
+    const nightBtn = document.getElementById("pref-theme-night");
     const systemBtn = document.getElementById("pref-theme-system");
     
     const active = ["bg-blue-600", "text-white", "shadow-sm"];
     const inactive = ["text-gray-500", "dark:text-gray-400", "hover:text-gray-900", "dark:hover:text-white"];
     
-    [lightBtn, darkBtn, systemBtn].forEach(b => {
-        b.classList.remove(...active);
-        b.classList.add(...inactive);
+    [lightBtn, darkBtn, nightBtn, systemBtn].forEach(b => {
+        if (b) {
+            b.classList.remove(...active);
+            b.classList.add(...inactive);
+        }
     });
     
-    if (t === "light") lightBtn.classList.add(...active);
-    else if (t === "dark") darkBtn.classList.add(...active);
-    else systemBtn.classList.add(...active);
+    if (t === "light" && lightBtn) lightBtn.classList.add(...active);
+    else if (t === "dark" && darkBtn) darkBtn.classList.add(...active);
+    else if (t === "night" && nightBtn) nightBtn.classList.add(...active);
+    else if (systemBtn) systemBtn.classList.add(...active);
 }
 
 function syncUnitSettingsUI() {
@@ -1324,18 +1328,21 @@ function setAppTheme(theme) {
     
     const html = document.documentElement;
     let isDark = false;
+    
+    html.classList.remove("dark", "night");
+    
     if (theme === "system") {
         if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
             html.classList.add("dark");
             isDark = true;
-        } else {
-            html.classList.remove("dark");
         }
     } else if (theme === "dark") {
         html.classList.add("dark");
         isDark = true;
-    } else {
-        html.classList.remove("dark");
+    } else if (theme === "night") {
+        html.classList.add("dark"); // keeps dark mode Tailwind classes active
+        html.classList.add("night"); // activates specific blackout styles
+        isDark = true;
     }
     
     // Native iOS Status Bar Theme Bridge
@@ -1757,43 +1764,77 @@ function saveTemplateFromToday() {
 }
 
 // 14. CSV IMPORT & EXPORT HANDLERS (Client-Side HTML5 APIs)
+function escapeCSV(val) {
+    if (val === undefined || val === null) return "";
+    let str = String(val);
+    if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
+        return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+}
+
 function exportCSV() {
-    const tx = db.transaction("sets", "readonly");
-    tx.objectStore("sets").getAll().onsuccess = function(event) {
-        const sets = event.target.result || [];
-        if (sets.length === 0) {
-            alert("No logged workout history available to export.");
-            return;
-        }
-        
-        // Sort sets by date descending
-        sets.sort((a,b) => b.sessionDate.localeCompare(a.sessionDate));
-        
-        // Build CSV columns
-        let csvContent = "Date,Exercise,Weight,Reps,Set Type,RPE,Estimated 1RM\n";
-        
-        sets.forEach(s => {
-            const rpeStr = s.rpe || "";
-            csvContent += `${s.sessionDate},${s.exercise},${s.weight},${s.reps},${s.set_type},${rpeStr},${s.e1rm}\n`;
+    const tx = db.transaction(["sets", "sessions"], "readonly");
+    const setsStore = tx.objectStore("sets");
+    const sessionsStore = tx.objectStore("sessions");
+    
+    sessionsStore.getAll().onsuccess = function(e) {
+        const sessions = e.target.result || [];
+        const sessionsMap = {};
+        sessions.forEach(s => {
+            sessionsMap[s.date] = s.notes || "";
         });
         
-        const filename = `PrivateLift_History_${getTodayString()}.csv`;
-        
-        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.download) {
-            window.webkit.messageHandlers.download.postMessage({
-                filename: filename,
-                content: csvContent
+        setsStore.getAll().onsuccess = function(event) {
+            const sets = event.target.result || [];
+            if (sets.length === 0) {
+                alert("No logged workout history available to export.");
+                return;
+            }
+            
+            // Sort sets by date descending
+            sets.sort((a,b) => b.sessionDate.localeCompare(a.sessionDate));
+            
+            // Build CSV columns with all possible data to match JSON backup
+            let csvContent = "Date,Exercise,Weight,Reps,Set Type,RPE,Estimated 1RM,Session Notes,Squat Max,Bench Max,Deadlift Max,Body Weight,Gender,Formula,Weight Unit,Show Rest Timer,Theme\n";
+            
+            sets.forEach(s => {
+                const rpeStr = s.rpe !== null && s.rpe !== undefined ? s.rpe : "";
+                const notesVal = sessionsMap[s.sessionDate] || "";
+                
+                const squatMax = userSettings.squatMax || "";
+                const benchMax = userSettings.benchMax || "";
+                const deadliftMax = userSettings.deadliftMax || "";
+                const bodyWeight = userSettings.bodyWeight || "";
+                const gender = userSettings.gender || "";
+                const formula = userSettings.formula || "";
+                const weightUnit = userSettings.weightUnit || "";
+                const showRestTimer = userSettings.showRestTimer !== undefined ? userSettings.showRestTimer : "";
+                const theme = userSettings.theme || "";
+                
+                csvContent += `${s.sessionDate},${escapeCSV(s.exercise)},${s.weight},${s.reps},${escapeCSV(s.set_type)},${rpeStr},${s.e1rm},${escapeCSV(notesVal)},${squatMax},${benchMax},${deadliftMax},${bodyWeight},${escapeCSV(gender)},${escapeCSV(formula)},${escapeCSV(weightUnit)},${showRestTimer},${escapeCSV(theme)}\n`;
             });
-        } else {
-            const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
-            const a = document.createElement("a");
-            a.href = encodedUri;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            alert("Lifting history exported successfully as CSV!");
-        }
+            
+            const filename = `PrivateLift_History_${getTodayString()}.csv`;
+            
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.download) {
+                window.webkit.messageHandlers.download.postMessage({
+                    filename: filename,
+                    content: csvContent
+                });
+            } else {
+                const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                alert("Lifting history exported successfully as CSV!");
+            }
+        };
     };
 }
 
@@ -1840,14 +1881,27 @@ function importCSV(event) {
                 }
             }
             
-            // Split fields and strip any wrapping single or double quotes
-            const cols = line.split(delimiter).map(col => {
-                let val = col.trim();
-                if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-                    val = val.substring(1, val.length - 1).trim();
+            // Robust CSV parser line splitter that handles double quotes with embedded commas/newlines
+            const cols = [];
+            let inQuotes = false;
+            let currentField = "";
+            for (let charIndex = 0; charIndex < line.length; charIndex++) {
+                const char = line[charIndex];
+                if (char === '"') {
+                    if (inQuotes && line[charIndex + 1] === '"') {
+                        currentField += '"';
+                        charIndex++; // skip next quote
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === delimiter && !inQuotes) {
+                    cols.push(currentField.trim());
+                    currentField = "";
+                } else {
+                    currentField += char;
                 }
-                return val;
-            });
+            }
+            cols.push(currentField.trim());
             
             if (cols.length < 4) continue;
             
@@ -1887,8 +1941,11 @@ function importCSV(event) {
                 continue;
             }
             
-            // Ensure session exists in IndexedDB
-            sessionStore.put({ date: dateStr, notes: "" });
+            // Session notes parsing
+            const sessionNotes = cols[7] || "";
+            
+            // Ensure session exists in IndexedDB and restore notes if present
+            sessionStore.put({ date: dateStr, notes: sessionNotes });
             
             const calculatedE1RM = getE1RM(weight, reps, userSettings.formula);
             
@@ -1903,10 +1960,27 @@ function importCSV(event) {
                 e1rm: calculatedE1RM
             });
             
+            // If settings columns exist, restore them from the first record
+            if (i === 1) {
+                if (cols[8]) userSettings.squatMax = parseInt(cols[8]) || userSettings.squatMax;
+                if (cols[9]) userSettings.benchMax = parseInt(cols[9]) || userSettings.benchMax;
+                if (cols[10]) userSettings.deadliftMax = parseInt(cols[10]) || userSettings.deadliftMax;
+                if (cols[11]) userSettings.bodyWeight = parseInt(cols[11]) || userSettings.bodyWeight;
+                if (cols[12]) userSettings.gender = cols[12] || userSettings.gender;
+                if (cols[13]) userSettings.formula = cols[13] || userSettings.formula;
+                if (cols[14]) userSettings.weightUnit = cols[14] || userSettings.weightUnit;
+                if (cols[15]) userSettings.showRestTimer = cols[15] === "true" ? true : (cols[15] === "false" ? false : userSettings.showRestTimer);
+                if (cols[16]) userSettings.theme = cols[16] || userSettings.theme;
+                saveLocalSettings();
+            }
+            
             importCount++;
         }
         
         tx.oncomplete = function() {
+            syncThemeSettingsUI();
+            syncUnitSettingsUI();
+            
             alert(`Successfully imported ${importCount} sets of CSV history data!`);
             event.target.value = ""; // Reset input file element
             
