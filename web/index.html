@@ -566,9 +566,10 @@
 
                         <div class="group">
                             <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Gender Preference</label>
-                            <div class="grid grid-cols-3 gap-2">
+                            <div class="grid grid-cols-2 gap-2">
                                 <button type="button" id="gender-male-btn" onclick="window.setOnboardingGender('male')" class="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer">Male</button>
                                 <button type="button" id="gender-female-btn" onclick="window.setOnboardingGender('female')" class="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer">Female</button>
+                                <button type="button" id="gender-nb-btn" onclick="window.setOnboardingGender('non_binary')" class="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer">Non-Binary</button>
                                 <button type="button" id="gender-other-btn" onclick="window.setOnboardingGender('other')" class="bg-white/10 border border-purple-500/60 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer">Other</button>
                             </div>
                             <input type="hidden" id="onboard-gender" value="other">

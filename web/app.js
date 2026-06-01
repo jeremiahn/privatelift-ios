@@ -1936,10 +1936,12 @@ function setOnboardingGender(gender) {
     // Reset genders styling
     const maleBtn = document.getElementById("gender-male-btn");
     const femaleBtn = document.getElementById("gender-female-btn");
+    const nbBtn = document.getElementById("gender-nb-btn");
     const otherBtn = document.getElementById("gender-other-btn");
     
     maleBtn.className = "bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer";
     femaleBtn.className = "bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer";
+    nbBtn.className = "bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer";
     otherBtn.className = "bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer";
     
     // Highlight active one
@@ -1947,6 +1949,8 @@ function setOnboardingGender(gender) {
         maleBtn.className = "bg-white/15 border-2 border-purple-500/60 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer shadow-sm";
     } else if (gender === "female") {
         femaleBtn.className = "bg-white/15 border-2 border-purple-500/60 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer shadow-sm";
+    } else if (gender === "non_binary") {
+        nbBtn.className = "bg-white/15 border-2 border-purple-500/60 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer shadow-sm";
     } else {
         otherBtn.className = "bg-white/15 border-2 border-purple-500/60 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer shadow-sm";
     }
