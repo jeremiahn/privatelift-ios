@@ -196,7 +196,7 @@ function getWeeklyProgram(percentage) {
 }
 
 // 6. DASHBOARD TAB
-let currentIntensity = 85;
+let currentIntensity = parseInt(localStorage.getItem("lastIntensity")) || 85;
 let logSetType = "working";
 
 function renderDashboard() {
@@ -251,7 +251,8 @@ function renderDashboard() {
 }
 
 function updateIntensity(val) {
-    currentIntensity = val;
+    currentIntensity = parseInt(val);
+    localStorage.setItem("lastIntensity", currentIntensity);
     
     const disp = document.getElementById("intensity-display");
     if (disp) disp.innerText = `${val}%`;
@@ -339,7 +340,7 @@ function handleLogSubmit(event) {
         
         // Rest timer trigger
         if (userSettings.showRestTimer && logSetType !== "warmup") {
-            triggerRestTimer(90); // standard 90 seconds
+            triggerRestTimer(180); // standard 180 seconds (3 minutes)
         }
     };
 }
@@ -391,7 +392,7 @@ function renderTodaySets() {
                 <div class="flex items-center gap-3">
                     <span class="text-[9px] font-bold text-gray-400 uppercase">e1RM: ${set.e1rm}</span>
                     <button onclick="deleteTodaySet(${set.id})" class="text-gray-400 hover:text-red-500 transition-colors p-1" title="Delete Set">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
@@ -1401,20 +1402,25 @@ function exportBackupData() {
     
     tx.oncomplete = function() {
         const jsonStr = JSON.stringify(backup, null, 2);
-        const blob = new Blob([jsonStr], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
+        const filename = `PrivateLift_Backup_${getTodayString()}.json`;
         
-        const a = document.createElement("a");
-        const dateStr = getTodayString();
-        a.href = url;
-        a.download = `PrivateLift_Backup_${dateStr}.json`;
-        document.body.appendChild(a);
-        a.click();
-        
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        alert("Backup file successfully compiled and downloaded!");
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.download) {
+            window.webkit.messageHandlers.download.postMessage({
+                filename: filename,
+                content: jsonStr
+            });
+        } else {
+            const blob = new Blob([jsonStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            alert("Backup file successfully compiled and downloaded!");
+        }
     };
 }
 
@@ -1503,7 +1509,7 @@ function openTemplateLoader() {
                 <div class="flex gap-2">
                     <button onclick="loadTemplateIntoToday(${t.id})" class="bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-black px-2.5 py-1.5 rounded-lg transition uppercase">Load</button>
                     <button onclick="deleteRoutineTemplate(${t.id})" class="text-gray-400 hover:text-red-500 transition-colors p-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                     </button>
@@ -1642,24 +1648,30 @@ function exportCSV() {
         sets.sort((a,b) => b.sessionDate.localeCompare(a.sessionDate));
         
         // Build CSV columns
-        let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Date,Exercise,Weight,Reps,Set Type,RPE,Estimated 1RM\n";
+        let csvContent = "Date,Exercise,Weight,Reps,Set Type,RPE,Estimated 1RM\n";
         
         sets.forEach(s => {
             const rpeStr = s.rpe || "";
             csvContent += `${s.sessionDate},${s.exercise},${s.weight},${s.reps},${s.set_type},${rpeStr},${s.e1rm}\n`;
         });
         
-        const encodedUri = encodeURI(csvContent);
-        const a = document.createElement("a");
-        const dateStr = getTodayString();
-        a.href = encodedUri;
-        a.download = `PrivateLift_History_${dateStr}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        const filename = `PrivateLift_History_${getTodayString()}.csv`;
         
-        alert("Lifting history exported successfully as CSV!");
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.download) {
+            window.webkit.messageHandlers.download.postMessage({
+                filename: filename,
+                content: csvContent
+            });
+        } else {
+            const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
+            const a = document.createElement("a");
+            a.href = encodedUri;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            alert("Lifting history exported successfully as CSV!");
+        }
     };
 }
 
@@ -1734,6 +1746,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     // 3. Set standard color themes based on preferences
     setAppTheme(userSettings.theme);
+    
+    // Initialize intensity slider to last persisted value
+    const intensitySlider = document.getElementById("intensity-slider");
+    if (intensitySlider) {
+        intensitySlider.value = currentIntensity;
+    }
+    updateIntensity(currentIntensity);
     
     // 4. Load initial tab screen
     switchTab("dashboard");

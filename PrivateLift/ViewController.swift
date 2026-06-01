@@ -24,6 +24,7 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
         let contentController = WKUserContentController()
         contentController.add(self, name: "haptic")
         contentController.add(self, name: "theme")
+        contentController.add(self, name: "download")
         
         let config = WKWebViewConfiguration()
         config.userContentController = contentController
@@ -96,6 +97,33 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
                 self.setNeedsStatusBarAppearanceUpdate()
             }
         }
+        
+        // Handle file downloads from WebView by presenting an iOS Share Sheet (UIActivityViewController)
+        if message.name == "download", let body = message.body as? [String: Any],
+           let filename = body["filename"] as? String,
+           let content = body["content"] as? String {
+            
+            let tempDir = FileManager.default.temporaryDirectory
+            let fileURL = tempDir.appendingPathComponent(filename)
+            
+            do {
+                try content.write(to: fileURL, atomically: true, encoding: .utf8)
+                
+                DispatchQueue.main.async {
+                    let activityVC = UIActivityViewController(activityItems: [fileURL], applicationActivities: nil)
+                    
+                    if let popoverController = activityVC.popoverPresentationController {
+                        popoverController.sourceView = self.webView
+                        popoverController.sourceRect = CGRect(x: self.webView.bounds.midX, y: self.webView.bounds.midY, width: 0, height: 0)
+                        popoverController.permittedArrowDirections = []
+                    }
+                    
+                    self.present(activityVC, animated: true, completion: nil)
+                }
+            } catch {
+                print("Failed to save or share backup file: \(error)")
+            }
+        }
     }
     
     // 5. Handle JavaScript alert() and confirm() natively in iOS
@@ -108,7 +136,17 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
     }
     
     func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
-        let alertController = UIAlertController(title: "Change Primary Unit", message: message, preferredStyle: .alert)
+        let title: String
+        let lower = message.lowercased()
+        if lower.contains("delete") || lower.contains("remove") || lower.contains("danger") {
+            title = "Confirm Deletion"
+        } else if lower.contains("unit") {
+            title = "Change Primary Unit"
+        } else {
+            title = "Confirm"
+        }
+        
+        let alertController = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in
             completionHandler(false)
         }))
