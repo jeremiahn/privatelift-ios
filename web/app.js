@@ -48,7 +48,7 @@ const DEFAULT_SETTINGS = {
     benchMax: 225,
     deadliftMax: 405,
     bodyWeight: 180,
-    gender: "male",
+    gender: "other",
     formula: "epley",
     weightUnit: "lbs",
     showRestTimer: true,
@@ -209,9 +209,9 @@ function renderDashboard() {
         <!-- SQUAT CARD -->
         <div class="flex flex-col items-start w-full">
             <span class="text-[9px] md:text-[11px] font-black uppercase tracking-widest mb-1.5 ml-1 text-red-500">SQUAT</span>
-            <div class="w-full bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border-2 border-red-500 dark:border-red-500 flex flex-col items-start justify-center cursor-pointer hover:bg-gray-850 transition" onclick="fillCalc(${program.squat})">
+            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border-2 border-red-500 dark:border-red-500 flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition" onclick="fillCalc(${program.squat})">
                 <div class="flex items-baseline gap-0.5 sm:gap-1">
-                    <span class="text-base sm:text-2xl md:text-3xl font-black text-white leading-none">${program.squat}</span>
+                    <span class="text-base sm:text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">${program.squat}</span>
                     <span class="text-[8px] sm:text-xs text-gray-500 font-bold uppercase ml-0.5 sm:ml-1">${userSettings.weightUnit.toUpperCase()}</span>
                 </div>
             </div>
@@ -219,9 +219,9 @@ function renderDashboard() {
         <!-- BENCH CARD -->
         <div class="flex flex-col items-start w-full">
             <span class="text-[9px] md:text-[11px] font-black uppercase tracking-widest mb-1.5 ml-1 text-blue-500">BENCH</span>
-            <div class="w-full bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border-2 border-blue-500 dark:border-blue-500 flex flex-col items-start justify-center cursor-pointer hover:bg-gray-850 transition" onclick="fillCalc(${program.bench})">
+            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border-2 border-blue-500 dark:border-blue-500 flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition" onclick="fillCalc(${program.bench})">
                 <div class="flex items-baseline gap-0.5 sm:gap-1">
-                    <span class="text-base sm:text-2xl md:text-3xl font-black text-white leading-none">${program.bench}</span>
+                    <span class="text-base sm:text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">${program.bench}</span>
                     <span class="text-[8px] sm:text-xs text-gray-500 font-bold uppercase ml-0.5 sm:ml-1">${userSettings.weightUnit.toUpperCase()}</span>
                 </div>
             </div>
@@ -229,9 +229,9 @@ function renderDashboard() {
         <!-- DEADLIFT CARD -->
         <div class="flex flex-col items-start w-full">
             <span class="text-[9px] md:text-[11px] font-black uppercase tracking-widest mb-1.5 ml-1 text-green-500">DEADLIFT</span>
-            <div class="w-full bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border-2 border-green-500 dark:border-green-500 flex flex-col items-start justify-center cursor-pointer hover:bg-gray-850 transition" onclick="fillCalc(${program.deadlift})">
+            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border-2 border-green-500 dark:border-green-500 flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition" onclick="fillCalc(${program.deadlift})">
                 <div class="flex items-baseline gap-0.5 sm:gap-1">
-                    <span class="text-base sm:text-2xl md:text-3xl font-black text-white leading-none">${program.deadlift}</span>
+                    <span class="text-base sm:text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">${program.deadlift}</span>
                     <span class="text-[8px] sm:text-xs text-gray-500 font-bold uppercase ml-0.5 sm:ml-1">${userSettings.weightUnit.toUpperCase()}</span>
                 </div>
             </div>
@@ -266,18 +266,13 @@ function updateIntensity(val) {
     renderDashboard();
 }
 
-// Set type toggle inside logging box
+// Set type dropdown change handler inside logging box
 function setLogType(type) {
     logSetType = type;
-    const types = ["warmup", "working", "failure"];
-    types.forEach(t => {
-        const btn = document.getElementById(`log-type-${t}`);
-        if (t === type) {
-            btn.className = "text-[9px] font-black rounded-md transition uppercase bg-blue-600 text-white shadow-sm";
-        } else {
-            btn.className = "text-[9px] font-black rounded-md transition uppercase text-gray-500 hover:text-gray-800 dark:text-gray-400";
-        }
-    });
+    const selectEl = document.getElementById("log-type");
+    if (selectEl && selectEl.value !== type) {
+        selectEl.value = type;
+    }
 }
 
 function getTodayString() {
@@ -602,9 +597,6 @@ function renderStats() {
     sessionRequest.onsuccess = function(e) {
         const total = e.target.result;
         document.getElementById("stats-total-sessions").innerText = total;
-        
-        // Compute and sync DOTS / Wilks score
-        calculateStrengthScores(total);
     };
     
     // 2. Fetch all sets for detailed metrics
@@ -613,23 +605,25 @@ function renderStats() {
         const sets = e.target.result || [];
         computeBigLiftsStats(sets);
         computeWeeklyVolumeStats(sets);
-        renderE1RMChart(sets);
     };
 }
 
 // DOTS & Wilks formulas calculations client-side in JS
-function calculateStrengthScores(totalSessions) {
+function calculateStrengthScores(peakSquat, peakBench, peakDeadlift) {
     const bw = userSettings.bodyWeight;
     const gender = userSettings.gender;
-    const formula = userSettings.formula;
     
-    const dotsEl = document.getElementById("stats-dots-score");
-    const wilksEl = document.getElementById("stats-dots-score"); // mapping dots/wilks cleanly
+    // Opt-out check for 'other' / Prefer Not to Say
+    if (gender !== "male" && gender !== "female" && gender !== "non_binary") {
+        document.getElementById("stats-dots-score").innerText = "N/A";
+        document.getElementById("stats-wilks-score").innerText = "N/A";
+        return;
+    }
     
-    // We need to fetch the current peak working 1RMs to get total lifted
-    const squat = userSettings.squatMax;
-    const bench = userSettings.benchMax;
-    const deadlift = userSettings.deadliftMax;
+    // We use the maximum of the manual settings benchmark or the actual logged peak
+    const squat = Math.max(userSettings.squatMax || 0, peakSquat || 0);
+    const bench = Math.max(userSettings.benchMax || 0, peakBench || 0);
+    const deadlift = Math.max(userSettings.deadliftMax || 0, peakDeadlift || 0);
     const totalPl = squat + bench + deadlift;
     
     if (totalPl === 0 || !bw) {
@@ -642,30 +636,68 @@ function calculateStrengthScores(totalSessions) {
     const bwKg = userSettings.weightUnit === "lbs" ? bw * 0.45359237 : bw;
     const totalKg = userSettings.weightUnit === "lbs" ? totalPl * 0.45359237 : totalPl;
     
-    // 1. DOTS Formula Coefficients
-    const dotsCoeffs = {
-        male: [-0.000001093, 0.0007391293, -0.1918759221, 24.9653958277, -1620.5735043681, 31070.4002081498],
-        female: [-0.0000010706, 0.0005158298, -0.0989773103, 8.9626224396, -380.1972120619, 10758.3715933611]
-    }[gender === "female" ? "female" : "male"];
+    // 1. DOTS Formula (4th-degree polynomial in denominator)
+    // Denominator = A*bw^4 + B*bw^3 + C*bw^2 + D*bw + E
+    // Male DOTS Coefficients:
+    // A = -0.0000010930, B = 0.0007391293, C = -0.1918759221, D = 24.0900756, E = -307.75076
+    // Female DOTS Coefficients:
+    // A = -0.0000010706, B = 0.0005158568, C = -0.1126655495, D = 13.6175032, E = -57.96288
+    const dotsDenomFemale = (-0.0000010706 * Math.pow(bwKg, 4)) + 
+                            (0.0005158568 * Math.pow(bwKg, 3)) + 
+                            (-0.1126655495 * Math.pow(bwKg, 2)) + 
+                            (13.6175032 * bwKg) - 57.96288;
+                            
+    const dotsDenomMale = (-0.0000010930 * Math.pow(bwKg, 4)) + 
+                          (0.0007391293 * Math.pow(bwKg, 3)) + 
+                          (-0.1918759221 * Math.pow(bwKg, 2)) + 
+                          (24.0900756 * bwKg) - 307.75076;
     
-    let dotsDenom = 0;
-    for (let i = 0; i < 6; i++) {
-        dotsDenom += dotsCoeffs[i] * Math.pow(bwKg, 5 - i);
+    const dotsFemale = dotsDenomFemale > 0 ? (totalKg * 500) / dotsDenomFemale : 0;
+    const dotsMale = dotsDenomMale > 0 ? (totalKg * 500) / dotsDenomMale : 0;
+    
+    let dotsScore = 0;
+    if (gender === "female") {
+        dotsScore = dotsFemale;
+    } else if (gender === "male") {
+        dotsScore = dotsMale;
+    } else {
+        // Highly inclusive approach for Non-Binary / Other: use the exact midpoint average of male and female curves!
+        dotsScore = (dotsFemale + dotsMale) / 2;
     }
-    const dotsScore = dotsDenom > 0 ? (totalKg * 500) / dotsDenom : 0;
     document.getElementById("stats-dots-score").innerText = dotsScore.toFixed(2);
     
-    // 2. Wilks Formula Coefficients
-    const wilksCoeffs = {
-        male: [-0.00000001093, 0.000007391293, -0.001918759221, 0.249653958277, -16.205735043681, 310.704002081498],
-        female: [-0.000000010706, 0.000005158298, -0.000989773103, 0.089626224396, -3.801972120619, 107.583715933611]
-    }[gender === "female" ? "female" : "male"];
+    // 2. Classic Wilks Formula (5th-degree polynomial in denominator)
+    // Coeff = 500 / (a + b*x + c*x^2 + d*x^3 + e*x^4 + f*x^5)
+    // Male Wilks Coefficients:
+    // a = -216.0475144, b = 16.2606339, c = -0.002388645, d = -0.00113732, e = 7.01863e-6, f = -1.291e-8
+    // Female Wilks Coefficients:
+    // a = 594.31747775582, b = -27.23842536447, c = 0.82112226871, d = -0.00930733913, e = 4.731582e-5, f = -9.054e-8
+    const wilksDenomFemale = 594.31747775582 + 
+                             (-27.23842536447 * bwKg) + 
+                             (0.82112226871 * Math.pow(bwKg, 2)) + 
+                             (-0.00930733913 * Math.pow(bwKg, 3)) + 
+                             (4.731582e-5 * Math.pow(bwKg, 4)) + 
+                             (-9.054e-8 * Math.pow(bwKg, 5));
+                             
+    const wilksDenomMale = -216.0475144 + 
+                           (16.2606339 * bwKg) + 
+                           (-0.002388645 * Math.pow(bwKg, 2)) + 
+                           (-0.00113732 * Math.pow(bwKg, 3)) + 
+                           (7.01863e-6 * Math.pow(bwKg, 4)) + 
+                           (-1.291e-8 * Math.pow(bwKg, 5));
+                           
+    const wilksFemale = wilksDenomFemale > 0 ? totalKg * (500 / wilksDenomFemale) : 0;
+    const wilksMale = wilksDenomMale > 0 ? totalKg * (500 / wilksDenomMale) : 0;
     
-    let wilksCoeff = 0;
-    for (let i = 0; i < 6; i++) {
-        wilksCoeff += wilksCoeffs[i] * Math.pow(bwKg, 5 - i);
+    let wilksScore = 0;
+    if (gender === "female") {
+        wilksScore = wilksFemale;
+    } else if (gender === "male") {
+        wilksScore = wilksMale;
+    } else {
+        // Highly inclusive approach for Non-Binary / Other: use the exact midpoint average of male and female curves!
+        wilksScore = (wilksFemale + wilksMale) / 2;
     }
-    const wilksScore = wilksCoeff > 0 ? totalKg * wilksCoeff : 0;
     document.getElementById("stats-wilks-score").innerText = wilksScore.toFixed(2);
 }
 
@@ -720,6 +752,9 @@ function computeBigLiftsStats(sets) {
         `;
         cardsContainer.appendChild(card);
     });
+    
+    // Call calculateStrengthScores with the peak lifter metrics calculated from history
+    calculateStrengthScores(metrics.SQUAT.peak, metrics.BENCH.peak, metrics.DEADLIFT.peak);
 }
 
 // Compute Weekly breakdown calendar lists client-side!
@@ -951,6 +986,7 @@ function renderHistory() {
                     <p class="text-xs text-gray-400">Go hit the platform and log some sets on the Dashboard!</p>
                 </div>
             `;
+            renderE1RMChart([]);
             return;
         }
         
@@ -959,6 +995,7 @@ function renderHistory() {
         
         setStore.getAll().onsuccess = function(e2) {
             const sets = e2.target.result || [];
+            renderE1RMChart(sets);
             
             // Map sets to their sessionDate
             const setsMap = {};
@@ -1122,6 +1159,7 @@ function renderSettings() {
     // Sync selectors
     syncThemeSettingsUI();
     syncUnitSettingsUI();
+    setBackupFormat(currentBackupFormat);
 }
 
 function syncThemeSettingsUI() {
@@ -1247,6 +1285,44 @@ async function toggleWeightUnitPref(targetUnit) {
     };
 }
 
+// Live-save individual profile setting changes instantly
+function updateProfileSetting(field, value) {
+    if (field === "squatMax" || field === "benchMax" || field === "deadliftMax") {
+        userSettings[field] = parseInt(value) || 0;
+        renderDashboard();
+    } else if (field === "bodyWeight") {
+        userSettings[field] = parseFloat(value) || 0;
+    } else if (field === "formula") {
+        userSettings[field] = value;
+        recalculateAllDatabaseE1RMs(value);
+    } else {
+        userSettings[field] = value;
+    }
+    saveLocalSettings();
+}
+
+// Recalculates all e1RM values in the database when the formula is changed
+function recalculateAllDatabaseE1RMs(formula) {
+    const tx = db.transaction("sets", "readwrite");
+    const store = tx.objectStore("sets");
+    
+    store.openCursor().onsuccess = function(event) {
+        const cursor = event.target.result;
+        if (cursor) {
+            const set = cursor.value;
+            set.e1rm = getE1RM(set.weight, set.reps, formula);
+            cursor.update(set);
+            cursor.continue();
+        }
+    };
+    
+    tx.oncomplete = function() {
+        console.log("All database estimated 1RM values successfully updated to the new formula!");
+        renderStats();
+        renderHistory();
+    };
+}
+
 function saveSettings(event) {
     event.preventDefault();
     
@@ -1271,6 +1347,33 @@ function clearAllAppStoreData() {
         alert("All local data wiped successfully. The app will reload to default.");
         window.location.reload();
     };
+}
+
+let currentBackupFormat = "json";
+
+function setBackupFormat(format) {
+    currentBackupFormat = format;
+    
+    const jsonBtn = document.getElementById("backup-format-json");
+    const csvBtn = document.getElementById("backup-format-csv");
+    
+    const jsonPanel = document.getElementById("backup-panel-json");
+    const csvPanel = document.getElementById("backup-panel-csv");
+    
+    const active = ["bg-blue-600", "text-white", "shadow-sm"];
+    const inactive = ["text-gray-500", "dark:text-gray-400", "hover:text-gray-900", "dark:hover:text-white"];
+    
+    if (format === "json") {
+        jsonBtn.className = `px-3 py-1.5 rounded-md text-[10px] font-black transition uppercase ${active.join(" ")}`;
+        csvBtn.className = `px-3 py-1.5 rounded-md text-[10px] font-black transition uppercase ${inactive.join(" ")}`;
+        jsonPanel.classList.remove("hidden");
+        csvPanel.classList.add("hidden");
+    } else {
+        jsonBtn.className = `px-3 py-1.5 rounded-md text-[10px] font-black transition uppercase ${inactive.join(" ")}`;
+        csvBtn.className = `px-3 py-1.5 rounded-md text-[10px] font-black transition uppercase ${active.join(" ")}`;
+        jsonPanel.classList.add("hidden");
+        csvPanel.classList.remove("hidden");
+    }
 }
 
 // 12. FILE BACKUP & RESTORE SYSTEMS (JSON Backup for phone transfers)

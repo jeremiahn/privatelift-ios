@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>PrivateLift | Performance Tracking</title>
     <!-- Offline CSS & Script hooks -->
     <script src="tailwind.js"></script>
@@ -95,14 +95,23 @@
         #intensity-slider::-moz-range-thumb:hover {
             transform: scale(1.1);
         }
+
+        /* Add top safe area padding to the main content container to prevent overlapping iOS status bar */
+        main {
+            padding-top: calc(env(safe-area-inset-top) + 16px) !important;
+        }
+        @media (min-width: 640px) {
+            main {
+                padding-top: calc(env(safe-area-inset-top) + 24px) !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-200 relative pb-24 md:pb-6">
 
-    <!-- Top Accent Bar -->
-    <div class="h-1.5 bg-gradient-to-r from-red-500 via-blue-500 to-green-500 w-full"></div>
-
-    <main class="max-w-6xl mx-auto px-2 py-4 sm:px-4 sm:py-6">
+    <main class="max-w-6xl mx-auto px-2 pb-4 sm:px-4 sm:pb-6">
+        <!-- Top Accent Bar -->
+        <div class="h-1.5 bg-gradient-to-r from-red-500 via-blue-500 to-green-500 w-full rounded-full mb-3 shadow-[0_2px_10px_rgba(59,130,246,0.15)]"></div>
         <!-- Top App Header -->
         <header class="flex flex-row justify-between items-center bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-lg mb-4 md:mb-8 transition-colors">
             <!-- Left Side Navigation (Desktop Header Mode) -->
@@ -165,118 +174,116 @@
                 </div>
             </div>
 
-            <!-- Plate Calculator Card -->
+            <!-- Log New Set Card (Full Width) -->
             <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition-colors">
-                <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">Plate Calculator</h3>
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                    
-                    <!-- Left Inputs (4 cols) -->
-                    <div class="md:col-span-4 space-y-4">
+                <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">Log New Set</h3>
+                
+                <form id="log-set-form" onsubmit="handleLogSubmit(event)" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Exercise Type -->
                         <div class="group">
-                            <label class="block text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Target Weight</label>
-                            <div class="relative">
-                                <input type="number" id="calc-weight-input" value="135" min="45"
-                                       class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-3 px-3 text-gray-900 dark:text-white font-black text-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent transition outline-none"
-                                       oninput="calculatePlates()">
-                                <span class="absolute right-4 top-3.5 text-gray-400 dark:text-gray-600 font-bold text-xs uppercase calc-unit-label">LBS</span>
-                            </div>
+                            <label for="log-exercise" class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Exercise</label>
+                            <select id="log-exercise" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-bold text-xs md:text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11 appearance-none">
+                                <option value="SQUAT">Squat</option>
+                                <option value="BENCH">Bench Press</option>
+                                <option value="DEADLIFT">Deadlift</option>
+                            </select>
                         </div>
                         
-                        <!-- Auto-Fill Buttons -->
-                        <div class="grid grid-cols-3 gap-2">
-                            <button onclick="autofillCalc('squat')" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black py-2 rounded-lg transition uppercase tracking-wider">Squat</button>
-                            <button onclick="autofillCalc('bench')" class="bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 text-[10px] font-black py-2 rounded-lg transition uppercase tracking-wider">Bench</button>
-                            <button onclick="autofillCalc('deadlift')" class="bg-green-500/10 hover:bg-green-500/20 text-green-500 text-[10px] font-black py-2 rounded-lg transition uppercase tracking-wider">Deadlift</button>
+                        <!-- Set Type -->
+                        <div class="group">
+                            <label for="log-type" class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Set Type</label>
+                            <select id="log-type" onchange="setLogType(this.value)" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-bold text-xs md:text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11 appearance-none">
+                                <option value="warmup">Warm-up Set</option>
+                                <option value="working" selected>Working Set</option>
+                                <option value="failure">To Failure (AMRAP)</option>
+                            </select>
                         </div>
                     </div>
 
-                    <!-- Right Barbell Display (8 cols) -->
-                    <div class="md:col-span-8 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-150 dark:border-gray-800 min-h-[160px] relative overflow-hidden">
-                        <!-- Barbell Bar Visual representation -->
-                        <div class="flex items-center gap-1.5 w-full justify-center max-w-md" id="barbell-graphic">
-                            <!-- Rendered dynamically by app.js -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <!-- Weight -->
+                        <div class="group">
+                            <label for="log-weight" class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Weight</label>
+                            <div class="relative">
+                                <input type="number" id="log-weight" required min="0" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11">
+                                <span class="absolute right-2.5 top-3 text-[9px] font-bold text-gray-400 uppercase calc-unit-label">LBS</span>
+                            </div>
                         </div>
-                        <div id="plates-breakdown-text" class="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-wider mt-4 text-center">
-                            <!-- Plate text math list -->
+
+                        <!-- Reps -->
+                        <div class="group">
+                            <label for="log-reps" class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Reps</label>
+                            <input type="number" id="log-reps" required min="1" max="100" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11">
+                        </div>
+
+                        <!-- RPE -->
+                        <div class="group">
+                            <label for="log-rpe" class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">RPE (1-10)</label>
+                            <select id="log-rpe" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-bold text-xs md:text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11 appearance-none">
+                                <option value="">None</option>
+                                <option value="10">@10.0</option>
+                                <option value="9.5">@9.5</option>
+                                <option value="9">@9.0</option>
+                                <option value="8.5">@8.5</option>
+                                <option value="8">@8.0</option>
+                                <option value="7.5">@7.5</option>
+                                <option value="7">@7.0</option>
+                                <option value="6.5">@6.5</option>
+                                <option value="6">@6.0</option>
+                            </select>
                         </div>
                     </div>
 
-                </div>
+                    <!-- Action buttons -->
+                    <div class="pt-2">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-3 rounded-xl transition shadow-md shadow-blue-500/10 uppercase tracking-widest text-[10px]">
+                            Log Set
+                        </button>
+                    </div>
+                </form>
             </div>
 
-            <!-- Log Set & Today's History split -->
+            <!-- Plate Calculator & Today's History split -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <!-- Log Set form -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition-colors">
-                    <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">Log New Set</h3>
-                    
-                    <form id="log-set-form" onsubmit="handleLogSubmit(event)" class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <!-- Exercise Type -->
-                            <div class="group">
-                                <label for="log-exercise" class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Exercise</label>
-                                <select id="log-exercise" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-bold text-xs md:text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11 appearance-none">
-                                    <option value="SQUAT">Squat</option>
-                                    <option value="BENCH">Bench Press</option>
-                                    <option value="DEADLIFT">Deadlift</option>
-                                </select>
-                            </div>
-                            
-                            <!-- Set Type -->
-                            <div class="group">
-                                <label class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Set Type</label>
-                                <div class="grid grid-cols-3 gap-1 h-11 p-1 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 select-none">
-                                    <button type="button" onclick="setLogType('warmup')" id="log-type-warmup" class="text-[9px] font-black rounded-md transition uppercase">Warm</button>
-                                    <button type="button" onclick="setLogType('working')" id="log-type-working" class="text-[9px] font-black rounded-md transition uppercase bg-blue-600 text-white shadow-sm">Work</button>
-                                    <button type="button" onclick="setLogType('failure')" id="log-type-failure" class="text-[9px] font-black rounded-md transition uppercase">Fail</button>
+                <!-- Plate Calculator Card -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition-colors flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">Plate Calculator</h3>
+                        
+                        <div class="flex flex-col gap-6">
+                            <!-- Left Inputs -->
+                            <div class="space-y-4">
+                                <div class="group">
+                                    <label class="block text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Target Weight</label>
+                                    <div class="relative">
+                                        <input type="number" id="calc-weight-input" value="135" min="45"
+                                               class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-3 px-3 text-gray-900 dark:text-white font-black text-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent transition outline-none"
+                                               oninput="calculatePlates()">
+                                        <span class="absolute right-4 top-3.5 text-gray-400 dark:text-gray-600 font-bold text-xs uppercase calc-unit-label">LBS</span>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4">
-                            <!-- Weight -->
-                            <div class="group">
-                                <label for="log-weight" class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Weight</label>
-                                <div class="relative">
-                                    <input type="number" id="log-weight" required min="0" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11">
-                                    <span class="absolute right-2.5 top-3 text-[9px] font-bold text-gray-400 uppercase calc-unit-label">LBS</span>
+                                
+                                <!-- Auto-Fill Buttons -->
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button onclick="autofillCalc('squat')" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black py-2 rounded-lg transition uppercase tracking-wider">Squat</button>
+                                    <button onclick="autofillCalc('bench')" class="bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 text-[10px] font-black py-2 rounded-lg transition uppercase tracking-wider">Bench</button>
+                                    <button onclick="autofillCalc('deadlift')" class="bg-green-500/10 hover:bg-green-500/20 text-green-500 text-[10px] font-black py-2 rounded-lg transition uppercase tracking-wider">Deadlift</button>
                                 </div>
                             </div>
 
-                            <!-- Reps -->
-                            <div class="group">
-                                <label for="log-reps" class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Reps</label>
-                                <input type="number" id="log-reps" required min="1" max="100" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11">
-                            </div>
-
-                            <!-- RPE -->
-                            <div class="group">
-                                <label for="log-rpe" class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">RPE (1-10)</label>
-                                <select id="log-rpe" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-bold text-xs md:text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11 appearance-none">
-                                    <option value="">None</option>
-                                    <option value="10">@10.0</option>
-                                    <option value="9.5">@9.5</option>
-                                    <option value="9">@9.0</option>
-                                    <option value="8.5">@8.5</option>
-                                    <option value="8">@8.0</option>
-                                    <option value="7.5">@7.5</option>
-                                    <option value="7">@7.0</option>
-                                    <option value="6.5">@6.5</option>
-                                    <option value="6">@6.0</option>
-                                </select>
+                            <!-- Right Barbell Display -->
+                            <div class="flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-150 dark:border-gray-800 min-h-[160px] relative overflow-hidden">
+                                <!-- Barbell Bar Visual representation -->
+                                <div class="flex items-center gap-1.5 w-full justify-center max-w-md" id="barbell-graphic">
+                                    <!-- Rendered dynamically by app.js -->
+                                </div>
+                                <div id="plates-breakdown-text" class="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-wider mt-4 text-center">
+                                    <!-- Plate text math list -->
+                                </div>
                             </div>
                         </div>
-
-                        <!-- Action buttons -->
-                        <div class="grid grid-cols-2 gap-3 pt-2">
-                            <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-black py-3 rounded-xl transition shadow-md shadow-blue-500/10 uppercase tracking-widest text-[10px]">
-                                Log Set
-                            </button>
-                            <button type="button" onclick="openTemplateLoader()" class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-white font-bold py-3 rounded-xl transition border border-gray-200 dark:border-gray-600/50 uppercase tracking-widest text-[10px]">
-                                Load template
-                            </button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
 
                 <!-- Today's logged list -->
@@ -326,14 +333,6 @@
                 </div>
             </div>
 
-            <!-- Line chart progress -->
-            <div id="stats-chart-card" class="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-lg transition-colors">
-                <h2 class="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-tight">e1RM Progression</h2>
-                <div class="relative h-64 md:h-[350px] w-full">
-                    <canvas id="e1rmChart"></canvas>
-                </div>
-            </div>
-
             <!-- Weekly breakdown collapsible cards -->
             <div class="space-y-4 md:space-y-6">
                 <h2 class="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Weekly Volume Breakdown</h2>
@@ -347,14 +346,13 @@
         <section id="screen-history" class="hidden space-y-4 md:space-y-6">
             <div class="flex justify-between items-center mb-4 md:mb-6">
                 <h2 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white tracking-tight uppercase">Logged Sessions</h2>
-                <div class="flex items-center space-x-2">
-                    <label class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-[10px] md:text-xs font-bold py-2 px-3 md:px-4 rounded-lg transition shadow-md cursor-pointer border border-gray-200 dark:border-gray-600/50">
-                        Import CSV
-                        <input type="file" id="csv-import-file" accept=".csv" class="hidden" onchange="importCSV(event)">
-                    </label>
-                    <button onclick="exportCSV()" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] md:text-xs font-bold py-2 px-3 md:px-4 rounded-lg transition shadow-md">
-                        Export CSV
-                    </button>
+            </div>
+
+            <!-- Line chart progress -->
+            <div id="stats-chart-card" class="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-lg transition-colors">
+                <h2 class="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-tight">e1RM Progression</h2>
+                <div class="relative h-64 md:h-[350px] w-full">
+                    <canvas id="e1rmChart"></canvas>
                 </div>
             </div>
 
@@ -378,28 +376,28 @@
                     <div class="space-y-4 md:space-y-6">
                         <!-- Squat Max -->
                         <div class="group">
-                            <label for="set-squat" class="block text-[10px] md:text-xs font-bold text-red-500 uppercase tracking-widest mb-1.5 md:mb-2 group-focus-within:text-red-400">Squat 1RM (Max)</label>
+                            <label for="set-squat" class="block text-[10px] md:text-xs font-bold text-red-500 uppercase tracking-widest mb-1.5 group-focus-within:text-red-400">Squat 1RM (Max)</label>
                             <div class="relative">
-                                <input type="number" id="set-squat" value="315" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-3 px-4 text-gray-900 dark:text-white font-black text-lg focus:ring-2 focus:ring-red-600 outline-none">
-                                <span class="absolute right-4 top-3.5 text-gray-400 dark:text-gray-600 font-bold text-sm uppercase calc-unit-label">LBS</span>
+                                <input type="number" id="set-squat" value="315" oninput="updateProfileSetting('squatMax', this.value)" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-red-600 outline-none">
+                                <span class="absolute right-3.5 top-2.5 text-gray-400 dark:text-gray-600 font-bold text-xs uppercase calc-unit-label">LBS</span>
                             </div>
                         </div>
 
                         <!-- Bench Max -->
                         <div class="group">
-                            <label for="set-bench" class="block text-[10px] md:text-xs font-bold text-blue-500 uppercase tracking-widest mb-1.5 md:mb-2 group-focus-within:text-blue-400">Bench 1RM (Max)</label>
+                            <label for="set-bench" class="block text-[10px] md:text-xs font-bold text-blue-500 uppercase tracking-widest mb-1.5 group-focus-within:text-blue-400">Bench 1RM (Max)</label>
                             <div class="relative">
-                                <input type="number" id="set-bench" value="225" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-3 px-4 text-gray-900 dark:text-white font-black text-lg focus:ring-2 focus:ring-blue-600 outline-none">
-                                <span class="absolute right-4 top-3.5 text-gray-400 dark:text-gray-600 font-bold text-sm uppercase calc-unit-label">LBS</span>
+                                <input type="number" id="set-bench" value="225" oninput="updateProfileSetting('benchMax', this.value)" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-blue-600 outline-none">
+                                <span class="absolute right-3.5 top-2.5 text-gray-400 dark:text-gray-600 font-bold text-xs uppercase calc-unit-label">LBS</span>
                             </div>
                         </div>
 
                         <!-- Deadlift Max -->
                         <div class="group">
-                            <label for="set-deadlift" class="block text-[10px] md:text-xs font-bold text-green-500 uppercase tracking-widest mb-1.5 md:mb-2 group-focus-within:text-green-400">Deadlift 1RM (Max)</label>
+                            <label for="set-deadlift" class="block text-[10px] md:text-xs font-bold text-green-500 uppercase tracking-widest mb-1.5 group-focus-within:text-green-400">Deadlift 1RM (Max)</label>
                             <div class="relative">
-                                <input type="number" id="set-deadlift" value="405" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-3 px-4 text-gray-900 dark:text-white font-black text-lg focus:ring-2 focus:ring-green-600 outline-none">
-                                <span class="absolute right-4 top-3.5 text-gray-400 dark:text-gray-600 font-bold text-sm uppercase calc-unit-label">LBS</span>
+                                <input type="number" id="set-deadlift" value="405" oninput="updateProfileSetting('deadliftMax', this.value)" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-green-600 outline-none">
+                                <span class="absolute right-3.5 top-2.5 text-gray-400 dark:text-gray-600 font-bold text-xs uppercase calc-unit-label">LBS</span>
                             </div>
                         </div>
 
@@ -407,32 +405,22 @@
 
                         <!-- Body Weight -->
                         <div class="group">
-                            <label for="set-bodyweight" class="block text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-widest mb-1.5 md:mb-2 group-focus-within:text-indigo-400">Body Weight</label>
+                            <label for="set-bodyweight" class="block text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-widest mb-1.5 group-focus-within:text-indigo-400">Body Weight</label>
                             <div class="relative">
-                                <input type="number" id="set-bodyweight" step="0.1" value="180" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-3 px-4 text-gray-900 dark:text-white font-black text-lg focus:ring-2 focus:ring-indigo-600 outline-none">
-                                <span class="absolute right-4 top-3.5 text-gray-400 dark:text-gray-600 font-bold text-sm uppercase calc-unit-label">LBS</span>
+                                <input type="number" id="set-bodyweight" step="0.1" value="180" oninput="updateProfileSetting('bodyWeight', this.value)" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-indigo-600 outline-none">
+                                <span class="absolute right-3.5 top-2.5 text-gray-400 dark:text-gray-600 font-bold text-xs uppercase calc-unit-label">LBS</span>
                             </div>
                         </div>
 
-                        <!-- Gender & Formula choice -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="group">
-                                <label for="set-gender" class="block text-[10px] md:text-xs font-bold text-purple-500 uppercase tracking-widest mb-1.5 md:mb-2">Gender</label>
-                                <select id="set-gender" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-3 px-3 text-gray-900 dark:text-white font-bold text-xs md:text-sm focus:ring-2 focus:ring-purple-600 outline-none h-11 md:h-13 appearance-none">
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
-                                    <option value="non_binary">Non-Binary</option>
-                                    <option value="other">Other / Prefer Not to Say</option>
-                                </select>
-                            </div>
-                            <div class="group">
-                                <label for="set-formula" class="block text-[10px] md:text-xs font-bold text-amber-500 uppercase tracking-widest mb-1.5 md:mb-2">1RM Formula Preference</label>
-                                <select id="set-formula" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-3 px-3 text-gray-900 dark:text-white font-bold text-xs md:text-sm focus:ring-2 focus:ring-amber-600 outline-none h-11 md:h-13 appearance-none">
-                                    <option value="epley">Epley (Standard)</option>
-                                    <option value="brzycki">Brzycki (Low Rep)</option>
-                                    <option value="lander">Lander</option>
-                                </select>
-                            </div>
+                        <!-- Gender Choice -->
+                        <div class="group">
+                            <label for="set-gender" class="block text-[10px] md:text-xs font-bold text-purple-500 uppercase tracking-widest mb-1.5">Gender</label>
+                            <select id="set-gender" onchange="updateProfileSetting('gender', this.value)" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2 px-3 text-gray-900 dark:text-white font-bold text-xs md:text-sm focus:ring-2 focus:ring-purple-600 outline-none h-10 appearance-none">
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="non_binary">Non-Binary</option>
+                                <option value="other" selected>Other / Prefer Not to Say</option>
+                            </select>
                         </div>
 
                         <!-- Action save -->
@@ -484,6 +472,24 @@
                         </label>
                     </div>
 
+                    <!-- 1RM Formula Preference Switcher -->
+                    <div class="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-150 dark:border-gray-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-0.5">1RM Formula Preference</label>
+                            <span class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">Choose the standard formula for estimating your 1-Rep Maximums.</span>
+                        </div>
+                        <div class="relative shrink-0 w-full sm:w-56">
+                            <select id="set-formula" onchange="updateProfileSetting('formula', this.value)" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-bold text-xs md:text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11 appearance-none">
+                                <option value="epley">Epley (Standard)</option>
+                                <option value="brzycki">Brzycki (Low Rep)</option>
+                                <option value="lander">Lander</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">
+                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Theme Switcher -->
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-150 dark:border-gray-800/80 gap-3">
                         <div>
@@ -501,16 +507,46 @@
 
             <!-- Backup & Recovery Card -->
             <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 lg:p-8 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 space-y-6">
-                <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 pb-2 mb-4">Backup & Restore Center</h3>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-700 pb-4">
+                    <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest">Backup & Restore Center</h3>
+                    
+                    <!-- Format Switcher -->
+                    <div class="flex bg-gray-50 dark:bg-gray-900 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shrink-0">
+                        <button type="button" id="backup-format-json" onclick="setBackupFormat('json')" class="px-3 py-1.5 rounded-md text-[10px] font-black transition uppercase bg-blue-600 text-white shadow-sm">JSON</button>
+                        <button type="button" id="backup-format-csv" onclick="setBackupFormat('csv')" class="px-3 py-1.5 rounded-md text-[10px] font-black transition uppercase text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">CSV</button>
+                    </div>
+                </div>
                 
-                <div class="grid grid-cols-2 gap-4">
-                    <button onclick="exportBackupData()" class="bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 text-xs font-black py-3 rounded-xl transition border border-blue-500/20 uppercase tracking-wider">
-                        Export Backup (.JSON)
-                    </button>
-                    <label class="bg-green-600/10 hover:bg-green-600/20 text-green-600 text-xs font-black py-3 rounded-xl transition border border-green-500/20 uppercase tracking-wider text-center cursor-pointer flex items-center justify-center">
-                        Import Backup (.JSON)
-                        <input type="file" id="backup-import-file" accept=".json" class="hidden" onchange="importBackupData(event)">
-                    </label>
+                <!-- JSON Panel -->
+                <div id="backup-panel-json" class="space-y-4">
+                    <p class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-semibold">
+                        <strong>Full Application Backup</strong>: Export or import your entire PrivateLift profile including strength benchmarks, training history, and custom routines into a single <code>.json</code> file.
+                    </p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="exportBackupData()" class="bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 text-xs font-black py-3 rounded-xl transition border border-blue-500/20 uppercase tracking-wider">
+                            Export JSON
+                        </button>
+                        <label class="bg-green-600/10 hover:bg-green-600/20 text-green-600 text-xs font-black py-3 rounded-xl transition border border-green-500/20 uppercase tracking-wider text-center cursor-pointer flex items-center justify-center">
+                            Import JSON
+                            <input type="file" id="backup-import-file" accept=".json" class="hidden" onchange="importBackupData(event)">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- CSV Panel -->
+                <div id="backup-panel-csv" class="hidden space-y-4">
+                    <p class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-semibold">
+                        <strong>Spreadsheet Workout Logs</strong>: Export your logged exercise sets as a standard <code>.csv</code> file for use in Excel, Google Sheets, or general training spreadsheets.
+                    </p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="exportCSV()" class="bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 text-xs font-black py-3 rounded-xl transition border border-blue-500/20 uppercase tracking-wider">
+                            Export CSV
+                        </button>
+                        <label class="bg-green-600/10 hover:bg-green-600/20 text-green-600 text-xs font-black py-3 rounded-xl transition border border-green-500/20 uppercase tracking-wider text-center cursor-pointer flex items-center justify-center">
+                            Import CSV
+                            <input type="file" id="csv-import-file" accept=".csv" class="hidden" onchange="importCSV(event)">
+                        </label>
+                    </div>
                 </div>
             </div>
 

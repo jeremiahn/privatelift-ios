@@ -8,7 +8,7 @@
 import UIKit
 import WebKit
 
-class ViewController: UIViewController, WKScriptMessageHandler {
+class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
     
     var webView: WKWebView!
     var statusBarStyle: UIStatusBarStyle = .default
@@ -34,6 +34,7 @@ class ViewController: UIViewController, WKScriptMessageHandler {
         
         // 2. Initialize WebView with fullscreen safe-area layout
         webView = WKWebView(frame: self.view.bounds, configuration: config)
+        webView.uiDelegate = self
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         webView.backgroundColor = UIColor.systemBackground
         webView.scrollView.contentInsetAdjustmentBehavior = .never // Full screen bleed
@@ -95,5 +96,25 @@ class ViewController: UIViewController, WKScriptMessageHandler {
                 self.setNeedsStatusBarAppearanceUpdate()
             }
         }
+    }
+    
+    // 5. Handle JavaScript alert() and confirm() natively in iOS
+    func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+        let alertController = UIAlertController(title: "PrivateLift", message: message, preferredStyle: .alert)
+        alertController.addAction(UIAlertAction(title: "OK", style: .default, handler: { _ in
+            completionHandler()
+        }))
+        self.present(alertController, animated: true, completion: nil)
+    }
+    
+    func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+        let alertController = UIAlertController(title: "Change Primary Unit", message: message, preferredStyle: .alert)
+        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in
+            completionHandler(false)
+        }))
+        alertController.addAction(UIAlertAction(title: "Proceed", style: .default, handler: { _ in
+            completionHandler(true)
+        }))
+        self.present(alertController, animated: true, completion: nil)
     }
 }
