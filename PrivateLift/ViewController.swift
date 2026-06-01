@@ -31,7 +31,9 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
         
         // Allow local file loading and inline media playback
         config.allowsInlineMediaPlayback = true
+        #if DEBUG
         config.preferences.setValue(true, forKey: "developerExtrasEnabled") // enables Safari dev inspect
+        #endif
         
         // 2. Initialize WebView with fullscreen safe-area layout
         webView = WKWebView(frame: self.view.bounds, configuration: config)
