@@ -7,11 +7,13 @@
 
 import UIKit
 import WebKit
+import HealthKit
 
 class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
     
     var webView: WKWebView!
     var statusBarStyle: UIStatusBarStyle = .default
+    let healthStore = HKHealthStore()
     
     override var preferredStatusBarStyle: UIStatusBarStyle {
         return statusBarStyle
@@ -25,6 +27,7 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
         contentController.add(self, name: "haptic")
         contentController.add(self, name: "theme")
         contentController.add(self, name: "download")
+        contentController.add(self, name: "applehealth")
         
         let config = WKWebViewConfiguration()
         config.userContentController = contentController
@@ -100,6 +103,11 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
             }
         }
         
+        // Handle Apple Health (HealthKit) sync bridges
+        if message.name == "applehealth" {
+            handleAppleHealthMessage(message)
+        }
+        
         // Handle file downloads from WebView by presenting an iOS Share Sheet (UIActivityViewController)
         if message.name == "download", let body = message.body as? [String: Any],
            let filename = body["filename"] as? String,
@@ -124,6 +132,112 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
                 }
             } catch {
                 print("Failed to save or share backup file: \(error)")
+            }
+        }
+    }
+    
+    // Apple Health Integration Bridges
+    private func handleAppleHealthMessage(_ message: WKScriptMessage) {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            sendHealthStatusToWebView("unavailable")
+            return
+        }
+        
+        // A. Request Authorization
+        if let bodyString = message.body as? String, bodyString == "requestAuthorization" {
+            let writeTypes: Set<HKSampleType> = [
+                HKObjectType.workoutType(),
+                HKQuantityType.quantityType(forIdentifier: .bodyMass)!,
+                HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
+            ]
+            let readTypes: Set<HKObjectType> = [
+                HKQuantityType.quantityType(forIdentifier: .bodyMass)!
+            ]
+            
+            healthStore.requestAuthorization(toShare: writeTypes, read: readTypes) { (success, error) in
+                DispatchQueue.main.async {
+                    self.sendHealthStatusToWebView(success && error == nil ? "authorized" : "failed")
+                }
+            }
+        }
+        
+        // B. Save set as a strength workout session
+        if let bodyDict = message.body as? [String: Any],
+           let action = bodyDict["action"] as? String, action == "saveWorkout",
+           let dateStr = bodyDict["date"] as? String,
+           let exercise = bodyDict["exercise"] as? String,
+           let weight = bodyDict["weight"] as? Double,
+           let reps = bodyDict["reps"] as? Int,
+           let setType = bodyDict["set_type"] as? String {
+            
+            let rpe = bodyDict["rpe"] as? Double
+            saveWorkoutToAppleHealth(dateStr: dateStr, exercise: exercise, weight: weight, reps: reps, setType: setType, rpe: rpe)
+        }
+        
+        // C. Save Body Weight entry
+        if let bodyDict = message.body as? [String: Any],
+           let action = bodyDict["action"] as? String, action == "saveWeight",
+           let weightVal = bodyDict["weight"] as? Double,
+           let unit = bodyDict["unit"] as? String {
+            
+            saveWeightToAppleHealth(weightVal: weightVal, unit: unit)
+        }
+    }
+    
+    private func sendHealthStatusToWebView(_ status: String) {
+        let script = "onAppleHealthStatusChanged('\(status)')"
+        webView.evaluateJavaScript(script, completionHandler: nil)
+    }
+    
+    private func saveWorkoutToAppleHealth(dateStr: String, exercise: String, weight: Double, reps: Int, setType: String, rpe: Double?) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        guard let workoutDate = dateFormatter.date(from: dateStr) else { return }
+        
+        // Calories estimation: Warmups burn ~3 kcal, working sets ~8 kcal
+        let calories = setType == "warmup" ? 3.0 : 8.0
+        let activeEnergy = HKQuantity(unit: .kilocalorie(), doubleValue: calories)
+        
+        let workout = HKWorkout(
+            activityType: .functionalStrengthTraining,
+            start: workoutDate,
+            end: workoutDate.addingTimeInterval(3 * 60), // standard 3-minute block per set
+            duration: 3 * 60,
+            totalEnergyBurned: activeEnergy,
+            totalDistance: nil,
+            metadata: [
+                HKMetadataKeyWorkoutBrandName: "PrivateLift",
+                HKMetadataKeyIndoorWorkout: true,
+                "Exercise": exercise,
+                "Weight": "\(weight)",
+                "Reps": "\(reps)",
+                "SetType": setType,
+                "RPE": rpe != nil ? "\(rpe!)" : "N/A"
+            ]
+        )
+        
+        healthStore.save(workout) { (success, error) in
+            if success {
+                print("Workout successfully saved to Apple Health!")
+            } else {
+                print("Error saving workout to Apple Health: \(String(describing: error))")
+            }
+        }
+    }
+    
+    private func saveWeightToAppleHealth(weightVal: Double, unit: String) {
+        guard let weightType = HKQuantityType.quantityType(forIdentifier: .bodyMass) else { return }
+        
+        // Convert unit
+        let hkUnit = unit == "lbs" ? HKUnit.pound() : HKUnit.gramUnit(with: .kilo)
+        let quantity = HKQuantity(unit: hkUnit, doubleValue: weightVal)
+        let weightSample = HKQuantitySample(type: weightType, quantity: quantity, start: Date(), end: Date())
+        
+        healthStore.save(weightSample) { (success, error) in
+            if success {
+                print("Body Weight successfully updated in Apple Health!")
+            } else {
+                print("Error saving weight to Apple Health: \(String(describing: error))")
             }
         }
     }

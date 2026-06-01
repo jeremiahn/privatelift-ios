@@ -1036,6 +1036,19 @@
                         </label>
                     </div>
 
+                    <!-- Apple Health Sync Toggle -->
+                    <div class="glass-input p-4 rounded-xl border flex items-center justify-between gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-0.5">Apple Health Integration</label>
+                            <span class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">Sync logged training sessions and body weight directly to the Apple Health app</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer select-none shrink-0">
+                            <input type="checkbox" id="pref-apple-health" class="sr-only peer" onchange="toggleAppleHealthPref(this.checked)">
+                            <div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+
+
                     <!-- 1RM Formula Preference Switcher -->
                     <div class="glass-input p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>

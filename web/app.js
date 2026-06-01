@@ -52,7 +52,8 @@ const DEFAULT_SETTINGS = {
     formula: "epley",
     weightUnit: "lbs",
     showRestTimer: true,
-    theme: "system"
+    theme: "system",
+    appleHealthEnabled: false
 };
 
 let userSettings = { ...DEFAULT_SETTINGS };
@@ -341,6 +342,19 @@ function handleLogSubmit(event) {
         // Rest timer trigger
         if (userSettings.showRestTimer && logSetType !== "warmup") {
             triggerRestTimer(180); // standard 180 seconds (3 minutes)
+        }
+        
+        // Apple Health (HealthKit) sync trigger
+        if (userSettings.appleHealthEnabled && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.applehealth) {
+            window.webkit.messageHandlers.applehealth.postMessage({
+                action: "saveWorkout",
+                date: todayStr,
+                exercise: exercise,
+                weight: weight,
+                reps: reps,
+                set_type: logSetType,
+                rpe: rpe
+            });
         }
     };
 }
@@ -1262,6 +1276,7 @@ function renderSettings() {
     
     // Sync checkboxes
     document.getElementById("pref-show-timer").checked = userSettings.showRestTimer;
+    document.getElementById("pref-apple-health").checked = userSettings.appleHealthEnabled || false;
     
     // Sync selectors
     syncThemeSettingsUI();
@@ -1318,6 +1333,37 @@ function syncUnitSettingsUI() {
 function toggleRestTimerPref(checked) {
     userSettings.showRestTimer = checked;
     saveLocalSettings();
+}
+
+// Toggle Apple Health Settings
+function toggleAppleHealthPref(enabled) {
+    userSettings.appleHealthEnabled = enabled;
+    saveLocalSettings();
+    
+    if (enabled) {
+        // Trigger native iOS authorization
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.applehealth) {
+            window.webkit.messageHandlers.applehealth.postMessage("requestAuthorization");
+        } else {
+            // Fallback if accessed via desktop browser
+            alert("Apple Health integration is only available when running inside the iOS App.");
+            document.getElementById("pref-apple-health").checked = false;
+            userSettings.appleHealthEnabled = false;
+            saveLocalSettings();
+        }
+    }
+}
+
+// Swift Callback Handler for Apple Health authorization success/failure
+function onAppleHealthStatusChanged(status) {
+    if (status === "authorized") {
+        alert("Successfully connected to Apple Health!");
+    } else {
+        alert("Apple Health permission not granted. You can enable it anytime in iOS Settings -> Health.");
+        document.getElementById("pref-apple-health").checked = false;
+        userSettings.appleHealthEnabled = false;
+        saveLocalSettings();
+    }
 }
 
 // Switch app theme
@@ -1448,6 +1494,16 @@ function saveSettings(event) {
     userSettings.formula = document.getElementById("set-formula").value;
     
     saveLocalSettings();
+    
+    // Apple Health body weight sync trigger
+    if (userSettings.appleHealthEnabled && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.applehealth) {
+        window.webkit.messageHandlers.applehealth.postMessage({
+            action: "saveWeight",
+            weight: userSettings.bodyWeight,
+            unit: userSettings.weightUnit
+        });
+    }
+    
     alert("Profile settings successfully saved locally!");
 }
 
