@@ -20,6 +20,10 @@
             user-select: none;
             -webkit-user-select: none;
         }
+        input, textarea, [contenteditable="true"] {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+        }
         @media (max-width: 640px) {
             html {
                 font-size: 114% !important;
