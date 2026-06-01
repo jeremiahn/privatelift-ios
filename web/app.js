@@ -1927,6 +1927,182 @@ function importCSV(event) {
     reader.readAsText(file);
 }
 
+// 16. INTERACTIVE WIZARD ONBOARDING
+let currentOnboardSlide = 0;
+
+function setOnboardingGender(gender) {
+    document.getElementById("onboard-gender").value = gender;
+    
+    // Reset genders styling
+    const maleBtn = document.getElementById("gender-male-btn");
+    const femaleBtn = document.getElementById("gender-female-btn");
+    const otherBtn = document.getElementById("gender-other-btn");
+    
+    maleBtn.className = "bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer";
+    femaleBtn.className = "bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer";
+    otherBtn.className = "bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer";
+    
+    // Highlight active one
+    if (gender === "male") {
+        maleBtn.className = "bg-white/15 border-2 border-purple-500/60 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer shadow-sm";
+    } else if (gender === "female") {
+        femaleBtn.className = "bg-white/15 border-2 border-purple-500/60 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer shadow-sm";
+    } else {
+        otherBtn.className = "bg-white/15 border-2 border-purple-500/60 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer shadow-sm";
+    }
+}
+window.setOnboardingGender = setOnboardingGender;
+
+function updateOnboardingDots() {
+    const dotsContainer = document.getElementById("onboarding-progress-dots");
+    if (!dotsContainer) return;
+    
+    // 5 dots (Slides 1 to 5)
+    dotsContainer.innerHTML = "";
+    for (let i = 1; i <= 5; i++) {
+        const dot = document.createElement("div");
+        if (i <= currentOnboardSlide) {
+            // Completed or active steps
+            dot.className = "w-2.5 h-1.5 rounded-full bg-blue-600 transition-all duration-300";
+        } else {
+            // Unvisited steps
+            dot.className = "w-1.5 h-1.5 rounded-full bg-gray-800 transition-all duration-300";
+        }
+        dotsContainer.appendChild(dot);
+    }
+}
+
+function nextOnboardingSlide() {
+    if (currentOnboardSlide < 5) {
+        // Hide current
+        const curSlideEl = document.getElementById(`onboard-slide-${currentOnboardSlide}`);
+        if (curSlideEl) curSlideEl.classList.add("hidden");
+        
+        currentOnboardSlide++;
+        
+        // Show next
+        const nextSlideEl = document.getElementById(`onboard-slide-${currentOnboardSlide}`);
+        if (nextSlideEl) nextSlideEl.classList.remove("hidden");
+        
+        // Update back button visibility
+        const backBtn = document.getElementById("onboard-back-btn");
+        if (currentOnboardSlide > 0 && currentOnboardSlide < 5) {
+            backBtn.classList.remove("hidden");
+        } else {
+            backBtn.classList.add("hidden");
+        }
+        
+        // Update next button text
+        const nextBtn = document.getElementById("onboard-next-btn");
+        if (currentOnboardSlide === 0) {
+            nextBtn.innerText = "Get Started";
+        } else if (currentOnboardSlide < 5) {
+            nextBtn.innerText = "Next Step";
+        } else {
+            nextBtn.innerText = "Enter App";
+        }
+        
+        updateOnboardingDots();
+    } else {
+        // Complete Onboarding!
+        const squatVal = parseInt(document.getElementById("onboard-squat").value) || 315;
+        const benchVal = parseInt(document.getElementById("onboard-bench").value) || 225;
+        const deadliftVal = parseInt(document.getElementById("onboard-deadlift").value) || 405;
+        const weightVal = parseFloat(document.getElementById("onboard-bodyweight").value) || 180;
+        const genderVal = document.getElementById("onboard-gender").value || "other";
+        
+        // Apply to settings
+        userSettings.squatMax = squatVal;
+        userSettings.benchMax = benchVal;
+        userSettings.deadliftMax = deadliftVal;
+        userSettings.bodyWeight = weightVal;
+        userSettings.gender = genderVal;
+        saveLocalSettings();
+        
+        // Save onboarded flag
+        localStorage.setItem("privatelift_onboarded", "true");
+        
+        // Populate inputs in settings page
+        document.getElementById("set-squat").value = squatVal;
+        document.getElementById("set-bench").value = benchVal;
+        document.getElementById("set-deadlift").value = deadliftVal;
+        document.getElementById("set-bodyweight").value = weightVal;
+        document.getElementById("set-gender").value = genderVal;
+        
+        // Re-render dashboard intensities & stats
+        updateIntensity(currentIntensity);
+        renderStats();
+        
+        // Close overlay with a sleek fade-out scale transition
+        const overlay = document.getElementById("onboarding-overlay");
+        if (overlay) {
+            overlay.classList.remove("opacity-100");
+            overlay.classList.add("opacity-0");
+            const container = overlay.querySelector("div");
+            if (container) {
+                container.classList.remove("scale-100");
+                container.classList.add("scale-95");
+            }
+            setTimeout(() => {
+                overlay.classList.add("hidden");
+            }, 500);
+        }
+    }
+}
+window.nextOnboardingSlide = nextOnboardingSlide;
+
+function prevOnboardingSlide() {
+    if (currentOnboardSlide > 0) {
+        // Hide current
+        const curSlideEl = document.getElementById(`onboard-slide-${currentOnboardSlide}`);
+        if (curSlideEl) curSlideEl.classList.add("hidden");
+        
+        currentOnboardSlide--;
+        
+        // Show previous
+        const prevSlideEl = document.getElementById(`onboard-slide-${currentOnboardSlide}`);
+        if (prevSlideEl) prevSlideEl.classList.remove("hidden");
+        
+        // Update buttons
+        const backBtn = document.getElementById("onboard-back-btn");
+        if (currentOnboardSlide > 0 && currentOnboardSlide < 5) {
+            backBtn.classList.remove("hidden");
+        } else {
+            backBtn.classList.add("hidden");
+        }
+        
+        const nextBtn = document.getElementById("onboard-next-btn");
+        if (currentOnboardSlide === 0) {
+            nextBtn.innerText = "Get Started";
+        } else {
+            nextBtn.innerText = "Next Step";
+        }
+        
+        updateOnboardingDots();
+    }
+}
+window.prevOnboardingSlide = prevOnboardingSlide;
+
+function checkOnboardingCheck() {
+    const onboarded = localStorage.getItem("privatelift_onboarded");
+    if (!onboarded) {
+        const overlay = document.getElementById("onboarding-overlay");
+        if (overlay) {
+            overlay.classList.remove("hidden");
+            // Force a reflow
+            void overlay.offsetWidth;
+            overlay.classList.remove("opacity-0");
+            overlay.classList.add("opacity-100");
+            const container = overlay.querySelector("div");
+            if (container) {
+                container.classList.remove("scale-95");
+                container.classList.add("scale-100");
+            }
+        }
+    }
+}
+window.checkOnboardingCheck = checkOnboardingCheck;
+
 // 15. INITIALIZATION WAKE HOOKS
 function initWakeHooks() {
     initDB().then(() => {
@@ -1948,6 +2124,9 @@ function initWakeHooks() {
         
         // 4. Load initial tab screen
         switchTab("dashboard");
+        
+        // Calibrate onboarding check for first-time use
+        checkOnboardingCheck();
         
         // Request durable storage to prevent OS eviction
         if (navigator.storage && navigator.storage.persist) {

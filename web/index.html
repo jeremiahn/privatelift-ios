@@ -407,6 +407,18 @@
             -webkit-tap-highlight-color: rgba(255, 255, 255, 0.3) !important;
         }
 
+        /* Onboarding Slide Animation Styles */
+        .onboard-slide {
+            transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            transform: scale(1);
+            opacity: 1;
+        }
+        .onboard-slide.hidden {
+            display: none !important;
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
         /* Glass Input Styles */
         .glass-input {
             background: rgba(255, 255, 255, 0.4) !important;
@@ -447,6 +459,146 @@
                     class="bg-white/15 hover:bg-white/25 active:bg-white/35 dark:bg-blue-600/20 dark:hover:bg-blue-600/30 dark:active:bg-blue-600/40 text-white font-black text-[11px] uppercase px-4 py-2.5 rounded-xl border border-white/20 dark:border-blue-500/30 transition shadow-sm select-none cursor-pointer">
                 Skip
             </button>
+        </div>
+    </div>
+
+    <!-- Beautiful Full-Screen Onboarding Wizard Overlay -->
+    <div id="onboarding-overlay" class="hidden fixed inset-0 z-[10000] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4 transition-all duration-500 opacity-0 pointer-events-auto">
+        <div class="w-full max-w-md bg-gray-950/40 rounded-3xl border border-white/10 p-6 md:p-8 shadow-2xl relative transition-all duration-500 transform scale-95 flex flex-col min-h-[460px] justify-between overflow-hidden font-sans">
+            
+            <!-- Progress indicator dot bar -->
+            <div class="flex items-center justify-between mb-8">
+                <span class="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none">Onboarding</span>
+                <div class="flex items-center gap-1.5" id="onboarding-progress-dots">
+                    <div class="w-1.5 h-1.5 rounded-full bg-blue-600 transition-all duration-300"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-gray-800 transition-all duration-300"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-gray-800 transition-all duration-300"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-gray-800 transition-all duration-300"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-gray-800 transition-all duration-300"></div>
+                </div>
+            </div>
+
+            <!-- Slide containers -->
+            <div class="flex-grow flex flex-col justify-center relative">
+                
+                <!-- Slide 0: Welcome -->
+                <div id="onboard-slide-0" class="onboard-slide space-y-4 text-center">
+                    <div class="mx-auto w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 mb-4 animate-pulse">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
+                        PRIVATE<span class="text-blue-500">LIFT</span>
+                    </h3>
+                    <p class="text-gray-400 text-xs md:text-sm leading-relaxed max-w-sm mx-auto font-medium">
+                        Your private, offline-first strength companion. Let's calibrate your starting profile to customize your target weight intensities.
+                    </p>
+                </div>
+
+                <!-- Slide 1: Squat Max -->
+                <div id="onboard-slide-1" class="onboard-slide space-y-6 text-center hidden">
+                    <div class="text-left space-y-1">
+                        <span class="text-[9px] font-black text-red-500 uppercase tracking-widest leading-none">Step 1 of 4</span>
+                        <h4 class="text-xl font-black text-white uppercase tracking-tight">Squat 1RM Max</h4>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Your estimated single rep maximum for Squats.</p>
+                    </div>
+                    
+                    <div class="space-y-4 py-2">
+                        <div class="relative inline-block w-full">
+                            <input type="number" id="onboard-squat" value="315" min="45" max="1000" class="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-center text-4xl font-black text-white focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all font-mono">
+                            <span class="absolute right-6 top-6 text-gray-500 font-black text-sm uppercase">LBS</span>
+                        </div>
+                        <input type="range" min="45" max="600" step="5" value="315" oninput="document.getElementById('onboard-squat').value = this.value" class="w-full accent-red-500 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Slide 2: Bench Max -->
+                <div id="onboard-slide-2" class="onboard-slide space-y-6 text-center hidden">
+                    <div class="text-left space-y-1">
+                        <span class="text-[9px] font-black text-blue-500 uppercase tracking-widest leading-none">Step 2 of 4</span>
+                        <h4 class="text-xl font-black text-white uppercase tracking-tight">Bench 1RM Max</h4>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Your estimated single rep maximum for Bench Press.</p>
+                    </div>
+                    
+                    <div class="space-y-4 py-2">
+                        <div class="relative inline-block w-full">
+                            <input type="number" id="onboard-bench" value="225" min="45" max="1000" class="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-center text-4xl font-black text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-mono">
+                            <span class="absolute right-6 top-6 text-gray-500 font-black text-sm uppercase">LBS</span>
+                        </div>
+                        <input type="range" min="45" max="500" step="5" value="225" oninput="document.getElementById('onboard-bench').value = this.value" class="w-full accent-blue-500 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Slide 3: Deadlift Max -->
+                <div id="onboard-slide-3" class="onboard-slide space-y-6 text-center hidden">
+                    <div class="text-left space-y-1">
+                        <span class="text-[9px] font-black text-green-500 uppercase tracking-widest leading-none">Step 3 of 4</span>
+                        <h4 class="text-xl font-black text-white uppercase tracking-tight">Deadlift 1RM Max</h4>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Your estimated single rep maximum for Deadlifts.</p>
+                    </div>
+                    
+                    <div class="space-y-4 py-2">
+                        <div class="relative inline-block w-full">
+                            <input type="number" id="onboard-deadlift" value="405" min="45" max="1000" class="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-center text-4xl font-black text-white focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all font-mono">
+                            <span class="absolute right-6 top-6 text-gray-500 font-black text-sm uppercase">LBS</span>
+                        </div>
+                        <input type="range" min="45" max="700" step="5" value="405" oninput="document.getElementById('onboard-deadlift').value = this.value" class="w-full accent-green-500 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Slide 4: Body Weight & Gender -->
+                <div id="onboard-slide-4" class="onboard-slide space-y-6 text-center hidden">
+                    <div class="text-left space-y-1">
+                        <span class="text-[9px] font-black text-purple-500 uppercase tracking-widest leading-none">Step 4 of 4</span>
+                        <h4 class="text-xl font-black text-white uppercase tracking-tight">Body Weight & Gender</h4>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Your physical attributes for relative strength formulas.</p>
+                    </div>
+                    
+                    <div class="space-y-4 text-left">
+                        <div class="group">
+                            <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Your Body Weight</label>
+                            <div class="relative">
+                                <input type="number" id="onboard-bodyweight" value="180" min="45" max="1000" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm font-black text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all">
+                                <span class="absolute right-4 top-3 text-gray-500 font-black text-xs uppercase font-mono">LBS</span>
+                            </div>
+                        </div>
+
+                        <div class="group">
+                            <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Gender Preference</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" id="gender-male-btn" onclick="window.setOnboardingGender('male')" class="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer">Male</button>
+                                <button type="button" id="gender-female-btn" onclick="window.setOnboardingGender('female')" class="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer">Female</button>
+                                <button type="button" id="gender-other-btn" onclick="window.setOnboardingGender('other')" class="bg-white/10 border border-purple-500/60 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer">Other</button>
+                            </div>
+                            <input type="hidden" id="onboard-gender" value="other">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Slide 5: Done! -->
+                <div id="onboard-slide-5" class="onboard-slide space-y-4 text-center hidden">
+                    <div class="mx-auto w-16 h-16 bg-gradient-to-tr from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-green-500/20 mb-4 animate-bounce">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-black text-white uppercase tracking-tight">Calibration Complete</h3>
+                    <p class="text-gray-400 text-xs md:text-sm leading-relaxed max-w-sm mx-auto font-medium">
+                        Your lift benchmarks have been successfully customized. You are ready to log workouts and track your physical achievements!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="mt-8 flex items-center gap-3">
+                <button type="button" id="onboard-back-btn" onclick="window.prevOnboardingSlide()" class="hidden w-2/5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black py-3.5 rounded-2xl transition uppercase tracking-widest text-[9px] cursor-pointer">
+                    Back
+                </button>
+                <button type="button" id="onboard-next-btn" onclick="window.nextOnboardingSlide()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-3.5 rounded-2xl transition shadow-lg shadow-blue-500/10 uppercase tracking-widest text-[9px] cursor-pointer">
+                    Get Started
+                </button>
+            </div>
         </div>
     </div>
 
