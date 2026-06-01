@@ -151,10 +151,10 @@ function switchTab(tabId) {
         
         if (s === tabId) {
             desktopBtn.className = `px-4 py-2.5 rounded-lg text-xs font-black transition border shadow-md uppercase tracking-wider ${activeNavClasses.join(' ')}`;
-            mobileBtn.className = "flex flex-col items-center justify-center w-full text-blue-500 transition-colors";
+            mobileBtn.className = "glass-nav-btn active w-full transition-all duration-300";
         } else {
             desktopBtn.className = `px-4 py-2.5 rounded-lg text-xs font-bold transition border uppercase tracking-wider ${inactiveNavClasses.join(' ')}`;
-            mobileBtn.className = "flex flex-col items-center justify-center w-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors";
+            mobileBtn.className = "glass-nav-btn inactive w-full transition-all duration-300";
         }
     });
 
@@ -209,7 +209,7 @@ function renderDashboard() {
         <!-- SQUAT CARD -->
         <div class="flex flex-col items-start w-full">
             <span class="text-[9px] md:text-[11px] font-black uppercase tracking-widest mb-1.5 ml-1 text-red-500">SQUAT</span>
-            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border-2 border-red-500 dark:border-red-500 flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition" onclick="fillCalc(${program.squat})">
+            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border border-red-500/50 dark:border-red-500/40 border-l-[6px] border-l-red-500 glass-card-red flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition-all duration-300" onclick="fillCalc(${program.squat})">
                 <div class="flex items-baseline gap-0.5 sm:gap-1">
                     <span class="text-base sm:text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">${program.squat}</span>
                     <span class="text-[8px] sm:text-xs text-gray-500 font-bold uppercase ml-0.5 sm:ml-1">${userSettings.weightUnit.toUpperCase()}</span>
@@ -219,7 +219,7 @@ function renderDashboard() {
         <!-- BENCH CARD -->
         <div class="flex flex-col items-start w-full">
             <span class="text-[9px] md:text-[11px] font-black uppercase tracking-widest mb-1.5 ml-1 text-blue-500">BENCH</span>
-            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border-2 border-blue-500 dark:border-blue-500 flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition" onclick="fillCalc(${program.bench})">
+            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border border-blue-500/50 dark:border-blue-500/40 border-l-[6px] border-l-blue-500 glass-card-blue flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition-all duration-300" onclick="fillCalc(${program.bench})">
                 <div class="flex items-baseline gap-0.5 sm:gap-1">
                     <span class="text-base sm:text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">${program.bench}</span>
                     <span class="text-[8px] sm:text-xs text-gray-500 font-bold uppercase ml-0.5 sm:ml-1">${userSettings.weightUnit.toUpperCase()}</span>
@@ -229,7 +229,7 @@ function renderDashboard() {
         <!-- DEADLIFT CARD -->
         <div class="flex flex-col items-start w-full">
             <span class="text-[9px] md:text-[11px] font-black uppercase tracking-widest mb-1.5 ml-1 text-green-500">DEADLIFT</span>
-            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border-2 border-green-500 dark:border-green-500 flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition" onclick="fillCalc(${program.deadlift})">
+            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border border-green-500/50 dark:border-green-500/40 border-l-[6px] border-l-green-500 glass-card-green flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition-all duration-300" onclick="fillCalc(${program.deadlift})">
                 <div class="flex items-baseline gap-0.5 sm:gap-1">
                     <span class="text-base sm:text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">${program.deadlift}</span>
                     <span class="text-[8px] sm:text-xs text-gray-500 font-bold uppercase ml-0.5 sm:ml-1">${userSettings.weightUnit.toUpperCase()}</span>
@@ -375,9 +375,15 @@ function renderTodaySets() {
             
             const rpeBadge = set.rpe ? `<span class="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 px-2 py-0.5 rounded text-[9px] font-black leading-none ml-1 uppercase">@${set.rpe}</span>` : "";
             
+            const exerciseColorClass = {
+                SQUAT: "glass-card-red border-red-500/30 dark:border-red-500/20 bg-red-500/5 dark:bg-red-500/10 border-l-4 border-l-red-500 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25)]",
+                BENCH: "glass-card-blue border-blue-500/30 dark:border-blue-500/20 bg-blue-500/5 dark:bg-blue-500/10 border-l-4 border-l-blue-500 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25)]",
+                DEADLIFT: "glass-card-green border-green-500/30 dark:border-green-500/20 bg-green-500/5 dark:bg-green-500/10 border-l-4 border-l-green-500 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25)]"
+            }[set.exercise.toUpperCase()] || "bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800";
+            
             const row = document.createElement("div");
             row.id = `today-set-${set.id}`;
-            row.className = "bg-gray-50 dark:bg-gray-900/50 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 flex justify-between items-center transition-all duration-300";
+            row.className = `${exerciseColorClass} px-4 py-3 rounded-xl border flex justify-between items-center transition-all duration-300`;
             row.innerHTML = `
                 <div>
                     <div class="flex items-center gap-1">
@@ -561,18 +567,25 @@ let timerInterval;
 let timerTargetEndTime = null;
 
 function triggerRestTimer(seconds) {
+    if (!userSettings.showRestTimer) return;
     if (timerInterval) clearInterval(timerInterval);
     
     timerTargetEndTime = Date.now() + seconds * 1000;
+    localStorage.setItem("privatelift_timer_end", timerTargetEndTime);
     
-    const banner = document.getElementById("floating-rest-timer");
-    banner.classList.remove("hidden");
+    const capsule = document.getElementById("rest-timer-capsule");
+    if (capsule) {
+        capsule.classList.remove("hidden");
+        // Force flow reflow for CSS transition
+        void capsule.offsetWidth;
+        capsule.classList.remove("scale-95", "opacity-0");
+        capsule.classList.add("scale-100", "opacity-100");
+    }
     
-    // Trigger tick immediately
     tickRestTimer();
-    
     timerInterval = setInterval(tickRestTimer, 100);
 }
+window.triggerRestTimer = triggerRestTimer;
 
 function tickRestTimer() {
     if (!timerTargetEndTime) return;
@@ -582,8 +595,10 @@ function tickRestTimer() {
     
     if (remainingMs <= 0) {
         skipRestTimer();
-        // Play gentle audio sound or long haptic vibration
-        if (navigator.vibrate) {
+        // Play success haptic or vibration
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.haptic) {
+            window.webkit.messageHandlers.haptic.postMessage("success");
+        } else if (navigator.vibrate) {
             navigator.vibrate([100, 50, 100]);
         }
         return;
@@ -593,22 +608,60 @@ function tickRestTimer() {
     const m = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
     const s = String(totalSeconds % 60).padStart(2, '0');
     
-    document.getElementById("timer-countdown").innerText = `${m}:${s}`;
+    const countdownEl = document.getElementById("timer-countdown");
+    if (countdownEl) {
+        countdownEl.innerText = `${m}:${s}`;
+    }
 }
 
-function adjustRestTimer(seconds) {
-    if (!timerTargetEndTime) return;
-    timerTargetEndTime += seconds * 1000;
-    tickRestTimer();
-}
-
-function skipRestTimer() {
+function skipRestTimer(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
     if (timerInterval) clearInterval(timerInterval);
     timerTargetEndTime = null;
-    document.getElementById("floating-rest-timer").classList.add("hidden");
+    localStorage.removeItem("privatelift_timer_end");
+    
+    const capsule = document.getElementById("rest-timer-capsule");
+    if (capsule) {
+        capsule.classList.remove("scale-100", "opacity-100");
+        capsule.classList.add("scale-95", "opacity-0");
+        setTimeout(() => {
+            if (timerTargetEndTime === null) {
+                capsule.classList.add("hidden");
+            }
+        }, 300);
+    }
 }
+window.skipRestTimer = skipRestTimer;
 
-// Check timer resume on tab wake or app return
+// Check timer resume on tab wake, app return, or startup
+function checkTimerResume() {
+    const savedEndTime = localStorage.getItem("privatelift_timer_end");
+    if (savedEndTime) {
+        const endTime = parseInt(savedEndTime, 10);
+        const now = Date.now();
+        if (endTime > now) {
+            timerTargetEndTime = endTime;
+            const capsule = document.getElementById("rest-timer-capsule");
+            if (capsule) {
+                capsule.classList.remove("hidden");
+                void capsule.offsetWidth;
+                capsule.classList.remove("scale-95", "opacity-0");
+                capsule.classList.add("scale-100", "opacity-100");
+            }
+            tickRestTimer();
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(tickRestTimer, 100);
+        } else {
+            localStorage.removeItem("privatelift_timer_end");
+        }
+    }
+}
+window.checkTimerResume = checkTimerResume;
+
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && timerTargetEndTime) {
         tickRestTimer(); // refresh immediately
@@ -759,26 +812,39 @@ function computeBigLiftsStats(sets) {
     
     exercises.forEach(ex => {
         const labelColor = ex === "SQUAT" ? "text-red-500" : ex === "BENCH" ? "text-blue-500" : "text-green-500";
-        const borderClasses = ex === "SQUAT" ? "border border-red-500 dark:border-red-500 border-l-4" : ex === "BENCH" ? "border border-blue-500 dark:border-blue-500 border-l-4" : "border border-green-500 dark:border-green-500 border-l-4";
         const volColor = ex === "SQUAT" ? "text-red-400" : ex === "BENCH" ? "text-blue-400" : "text-green-400";
         
+        const cardClass = {
+            SQUAT: "glass-card-red border-red-500/30 dark:border-red-500/20 bg-red-500/5 dark:bg-red-500/10",
+            BENCH: "glass-card-blue border-blue-500/30 dark:border-blue-500/20 bg-blue-500/5 dark:bg-blue-500/10",
+            DEADLIFT: "glass-card-green border-green-500/30 dark:border-green-500/20 bg-green-500/5 dark:bg-green-500/10"
+        }[ex];
+
+        const boxClass = {
+            SQUAT: "glass-card-red border-red-500/30 dark:border-red-500/20 bg-red-500/5 dark:bg-red-500/10 border-l-4 border-l-red-500 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25)]",
+            BENCH: "glass-card-blue border-blue-500/30 dark:border-blue-500/20 bg-blue-500/5 dark:bg-blue-500/10 border-l-4 border-l-blue-500 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25)]",
+            DEADLIFT: "glass-card-green border-green-500/30 dark:border-green-500/20 bg-green-500/5 dark:bg-green-500/10 border-l-4 border-l-green-500 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25)]"
+        }[ex];
+        
         const card = document.createElement("div");
-        card.className = `bg-gray-50 dark:bg-gray-900/50 p-4 md:p-6 rounded-xl flex justify-between items-center ${borderClasses}`;
+        card.className = `bg-white dark:bg-gray-800 p-4 md:p-5 rounded-2xl flex flex-col md:flex-row gap-3 md:gap-4 justify-between items-stretch border border-gray-200 dark:border-gray-700 transition-all ${cardClass}`;
         card.innerHTML = `
-            <div class="w-1/4 text-left">
-                <h3 class="text-xs md:text-sm font-black ${labelColor} uppercase tracking-wider">${ex}</h3>
+            <div class="md:w-1/5 flex items-center justify-center md:justify-start">
+                <h3 class="text-xs md:text-sm font-black ${labelColor} uppercase tracking-widest">${ex}</h3>
             </div>
-            <div class="w-1/4 text-center">
-                <p class="text-[8px] md:text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider leading-none mb-1">Volume</p>
-                <p class="${volColor} font-black text-xs md:text-lg leading-none whitespace-nowrap">${metrics[ex].tonnage} <span class="text-[8px] md:text-xs text-gray-500 font-bold">${userSettings.weightUnit.toUpperCase()}</span></p>
-            </div>
-            <div class="w-1/4 text-center">
-                <p class="text-[8px] md:text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider leading-none mb-1">Reps</p>
-                <p class="text-green-400 font-black text-xs md:text-lg leading-none whitespace-nowrap">${metrics[ex].reps}</p>
-            </div>
-            <div class="w-1/4 text-right">
-                <p class="text-[8px] md:text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider leading-none mb-1">Peak e1RM</p>
-                <p class="text-amber-500 font-black text-xs md:text-lg leading-none whitespace-nowrap">${metrics[ex].peak} <span class="text-[8px] md:text-xs text-gray-500 font-bold">${userSettings.weightUnit.toUpperCase()}</span></p>
+            <div class="flex-grow grid grid-cols-3 gap-2.5">
+                <div class="${boxClass} p-2 rounded-xl text-center flex flex-col justify-center min-w-[70px]">
+                    <p class="text-[7px] md:text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider leading-none mb-1">Volume</p>
+                    <p class="${volColor} font-black text-xs md:text-base leading-none whitespace-nowrap">${metrics[ex].tonnage} <span class="text-[7px] md:text-[9px] text-gray-500 font-bold">${userSettings.weightUnit.toUpperCase()}</span></p>
+                </div>
+                <div class="${boxClass} p-2 rounded-xl text-center flex flex-col justify-center min-w-[70px]">
+                    <p class="text-[7px] md:text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider leading-none mb-1">Reps</p>
+                    <p class="text-green-400 font-black text-xs md:text-base leading-none whitespace-nowrap">${metrics[ex].reps}</p>
+                </div>
+                <div class="${boxClass} p-2 rounded-xl text-center flex flex-col justify-center min-w-[70px]">
+                    <p class="text-[7px] md:text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider leading-none mb-1">Peak e1RM</p>
+                    <p class="text-amber-500 font-black text-xs md:text-base leading-none whitespace-nowrap">${metrics[ex].peak} <span class="text-[7px] md:text-[9px] text-gray-500 font-bold">${userSettings.weightUnit.toUpperCase()}</span></p>
+                </div>
             </div>
         `;
         cardsContainer.appendChild(card);
@@ -857,7 +923,7 @@ function computeWeeklyVolumeStats(sets) {
             <div class="p-4 md:p-6 pt-0 border-t border-gray-200 dark:border-gray-700/50">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                     <!-- SQUAT -->
-                    <div class="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-red-500 dark:border-red-500 border-l-4 flex justify-between items-center">
+                    <div class="glass-card-red border-red-500/40 dark:border-red-500/30 bg-red-500/5 dark:bg-red-500/10 p-4 rounded-xl border border-l-4 border-l-red-500 flex justify-between items-center shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25)]">
                         <div>
                             <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider block">Squat Volume</span>
                             <span class="text-red-400 font-black text-base md:text-lg mt-0.5 block leading-none">${data.SQUAT.tonnage} ${userSettings.weightUnit.toUpperCase()}</span>
@@ -868,7 +934,7 @@ function computeWeeklyVolumeStats(sets) {
                         </div>
                     </div>
                     <!-- BENCH -->
-                    <div class="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-blue-500 dark:border-blue-500 border-l-4 flex justify-between items-center">
+                    <div class="glass-card-blue border-blue-500/40 dark:border-blue-500/30 bg-blue-500/5 dark:bg-blue-500/10 p-4 rounded-xl border border-l-4 border-l-blue-500 flex justify-between items-center shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25)]">
                         <div>
                             <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider block">Bench Volume</span>
                             <span class="text-blue-400 font-black text-base md:text-lg mt-0.5 block leading-none">${data.BENCH.tonnage} ${userSettings.weightUnit.toUpperCase()}</span>
@@ -879,7 +945,7 @@ function computeWeeklyVolumeStats(sets) {
                         </div>
                     </div>
                     <!-- DEADLIFT -->
-                    <div class="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-green-500 dark:border-green-500 border-l-4 flex justify-between items-center">
+                    <div class="glass-card-green border-green-500/40 dark:border-green-500/30 bg-green-500/5 dark:bg-green-500/10 p-4 rounded-xl border border-l-4 border-l-green-500 flex justify-between items-center shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25)]">
                         <div>
                             <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider block">Deadlift Volume</span>
                             <span class="text-green-400 font-black text-base md:text-lg mt-0.5 block leading-none">${data.DEADLIFT.tonnage} ${userSettings.weightUnit.toUpperCase()}</span>
@@ -1044,7 +1110,7 @@ function renderHistory() {
                 
                 const card = document.createElement("details");
                 card.id = `history-card-${session.date}`;
-                card.className = "group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-lg mb-4 md:mb-6 transition-all duration-300";
+                card.className = "group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 border-l-4 border-l-blue-500 dark:border-l-blue-500 shadow-sm dark:shadow-lg mb-4 md:mb-6 transition-all duration-300 glass-card-blue";
                 if (idx === 0) card.setAttribute("open", "");
                 
                 // Date sets lists layout
@@ -1062,8 +1128,14 @@ function renderHistory() {
                         }[s.set_type];
                         const rpeBadge = s.rpe ? `<span class="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 px-2 py-0.5 rounded text-[9px] font-black leading-none ml-1 uppercase">@${s.rpe}</span>` : "";
                         
+                        const exerciseBoxClass = {
+                            SQUAT: "glass-card-red border-red-500/30 dark:border-red-500/20 bg-red-500/5 dark:bg-red-500/10 border-l-4 border-l-red-500 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25)]",
+                            BENCH: "glass-card-blue border-blue-500/30 dark:border-blue-500/20 bg-blue-500/5 dark:bg-blue-500/10 border-l-4 border-l-blue-500 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25)]",
+                            DEADLIFT: "glass-card-green border-green-500/30 dark:border-green-500/20 bg-green-500/5 dark:bg-green-500/10 border-l-4 border-l-green-500 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25)]"
+                        }[s.exercise.toUpperCase()] || "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-800";
+
                         setsHtml += `
-                            <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-750/30 last:border-0">
+                            <div class="flex items-center justify-between p-3 rounded-xl border mb-2 last:mb-0 transition-all duration-300 ${exerciseBoxClass}">
                                 <div>
                                     <div class="flex items-center gap-1.5">
                                         <span class="text-xs font-black ${s.exercise === 'SQUAT' ? 'text-red-500' : s.exercise === 'BENCH' ? 'text-blue-500' : 'text-green-500'} uppercase">${s.exercise}</span>
@@ -1075,7 +1147,7 @@ function renderHistory() {
                                         ${rpeBadge}
                                     </div>
                                     <p class="text-xs font-black text-gray-800 dark:text-gray-100 mt-1">
-                                        ${s.weight} ${userSettings.weightUnit.toUpperCase()} <span class="text-gray-400">x</span> ${s.reps} reps
+                                        ${s.weight} ${userSettings.weightUnit.toUpperCase()} <span class="text-gray-400 font-bold">x</span> ${s.reps} reps
                                     </p>
                                 </div>
                                 <div class="flex items-center gap-3">
@@ -1105,7 +1177,7 @@ function renderHistory() {
                             </button>
                         </div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 dark:text-gray-400 transform group-open:rotate-180 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                         </svg>
                     </summary>
                     
@@ -1732,41 +1804,95 @@ function importCSV(event) {
     const reader = new FileReader();
     reader.onload = function(e) {
         const text = e.target.result;
-        const lines = text.split("\n");
+        // Split by lines, supporting both standard LF (\n) and CR+LF (\r\n)
+        const lines = text.split(/\r?\n/);
         if (lines.length <= 1) {
             alert("CSV file appears to be empty.");
+            event.target.value = "";
             return;
         }
         
-        if (!confirm("This will merge CSV entries into your local device database. Proceed?")) return;
+        if (!confirm("This will merge CSV entries into your local device database. Proceed?")) {
+            event.target.value = "";
+            return;
+        }
         
         const tx = db.transaction(["sessions", "sets"], "readwrite");
         const sessionStore = tx.objectStore("sessions");
         const setStore = tx.objectStore("sets");
         
-        // Simple CSV parser
+        let importCount = 0;
+        
+        // CSV parser loop
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if (!line) continue;
             
-            const cols = line.split(",");
+            // Auto-detect delimiter (comma vs semicolon)
+            let delimiter = ",";
+            if (line.includes(";") && !line.includes(",")) {
+                delimiter = ";";
+            } else if (line.includes(";")) {
+                const commas = (line.match(/,/g) || []).length;
+                const semicolons = (line.match(/;/g) || []).length;
+                if (semicolons > commas) {
+                    delimiter = ";";
+                }
+            }
+            
+            // Split fields and strip any wrapping single or double quotes
+            const cols = line.split(delimiter).map(col => {
+                let val = col.trim();
+                if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+                    val = val.substring(1, val.length - 1).trim();
+                }
+                return val;
+            });
+            
             if (cols.length < 4) continue;
             
-            const dateStr = cols[0].trim();
-            const exercise = cols[1].trim().toUpperCase();
-            const weight = parseInt(cols[2].trim());
-            const reps = parseInt(cols[3].trim());
-            const setType = cols[4] ? cols[4].trim().toLowerCase() : "working";
-            const rpeVal = cols[5] ? cols[5].trim() : "";
-            const rpe = rpeVal ? parseFloat(rpeVal) : null;
+            const dateStr = cols[0];
+            const exercise = cols[1].toUpperCase();
+            const weight = parseInt(cols[2]);
+            const reps = parseInt(cols[3]);
             
-            if (!dateStr || !exercise || isNaN(weight) || isNaN(reps)) continue;
+            // Set type, fallback to "working"
+            let setType = "working";
+            if (cols[4]) {
+                const sType = cols[4].toLowerCase();
+                if (sType.includes("warm") || sType.includes("warmup") || sType.includes("warm-up")) {
+                    setType = "warmup";
+                } else if (sType.includes("fail") || sType.includes("failure") || sType.includes("amrap")) {
+                    setType = "failure";
+                }
+            }
             
-            // Ensure session exists
+            // RPE clean parsing
+            let rpe = null;
+            if (cols[5]) {
+                const cleanRpe = cols[5].replace("@", "").trim();
+                if (cleanRpe && !isNaN(cleanRpe)) {
+                    rpe = parseFloat(cleanRpe);
+                }
+            }
+            
+            // Validate columns
+            if (!dateStr || !exercise || isNaN(weight) || isNaN(reps)) {
+                console.warn(`Skipping invalid CSV line ${i + 1}: ${line}`);
+                continue;
+            }
+            
+            if (exercise !== "SQUAT" && exercise !== "BENCH" && exercise !== "DEADLIFT") {
+                console.warn(`Skipping invalid exercise ${exercise} at line ${i + 1}`);
+                continue;
+            }
+            
+            // Ensure session exists in IndexedDB
             sessionStore.put({ date: dateStr, notes: "" });
             
             const calculatedE1RM = getE1RM(weight, reps, userSettings.formula);
             
+            // Add logged set
             setStore.add({
                 sessionDate: dateStr,
                 exercise: exercise,
@@ -1776,43 +1902,69 @@ function importCSV(event) {
                 rpe: rpe,
                 e1rm: calculatedE1RM
             });
+            
+            importCount++;
         }
         
         tx.oncomplete = function() {
-            alert("Successfully imported CSV history data! The screen will now reload.");
-            switchTab("history");
+            alert(`Successfully imported ${importCount} sets of CSV history data!`);
+            event.target.value = ""; // Reset input file element
+            
+            // Reload and navigate to history tab
+            if (activeTab === "history") {
+                renderHistory();
+            } else {
+                switchTab("history");
+            }
+        };
+        
+        tx.onerror = function(err) {
+            console.error("CSV Import transaction failed:", err);
+            alert("An error occurred during import. Some rows may not have been saved.");
+            event.target.value = "";
         };
     };
     reader.readAsText(file);
 }
 
 // 15. INITIALIZATION WAKE HOOKS
-document.addEventListener("DOMContentLoaded", async () => {
-    // 1. Initialize offline database
-    await initDB();
-    
-    // 2. Load preferences
-    loadLocalSettings();
-    
-    // 3. Set standard color themes based on preferences
-    setAppTheme(userSettings.theme);
-    
-    // Initialize intensity slider to last persisted value
-    const intensitySlider = document.getElementById("intensity-slider");
-    if (intensitySlider) {
-        intensitySlider.value = currentIntensity;
-    }
-    updateIntensity(currentIntensity);
-    
-    // 4. Load initial tab screen
-    switchTab("dashboard");
-    
-    // Request durable storage to prevent OS eviction
-    if (navigator.storage && navigator.storage.persist) {
-        navigator.storage.persist().then(persisted => {
-            if (persisted) {
-                console.log(" DURATION STORAGE OPTION: Active. Apple storage persistence fully secured.");
-            }
-        });
-    }
-});
+function initWakeHooks() {
+    initDB().then(() => {
+        // 2. Load preferences
+        loadLocalSettings();
+        
+        // 3. Set standard color themes based on preferences
+        setAppTheme(userSettings.theme);
+        
+        // Initialize intensity slider to last persisted value
+        const intensitySlider = document.getElementById("intensity-slider");
+        if (intensitySlider) {
+            intensitySlider.value = currentIntensity;
+        }
+        updateIntensity(currentIntensity);
+        
+        // Resume any pending rest timers from local storage
+        checkTimerResume();
+        
+        // 4. Load initial tab screen
+        switchTab("dashboard");
+        
+        // Request durable storage to prevent OS eviction
+        if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().then(persisted => {
+                if (persisted) {
+                    console.log(" DURATION STORAGE OPTION: Active. Apple storage persistence fully secured.");
+                }
+            });
+        }
+    }).catch(err => {
+        console.error("Wake hooks initialization failed:", err);
+    });
+}
+
+// Instantaneous readyState check to resolve WKWebView timing bugs
+if (document.readyState === "complete" || document.readyState === "interactive") {
+    initWakeHooks();
+} else {
+    document.addEventListener("DOMContentLoaded", initWakeHooks);
+}

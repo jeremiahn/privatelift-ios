@@ -88,7 +88,7 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
         if message.name == "theme", let theme = message.body as? String {
             if theme == "dark" {
                 statusBarStyle = .lightContent
-                webView.backgroundColor = UIColor(red: 0.07, green: 0.09, blue: 0.13, alpha: 1.0) // Dark theme color matches dark:bg-gray-900
+                webView.backgroundColor = UIColor.black // Pure pitch-black background to eliminate gray bleed
             } else {
                 statusBarStyle = .darkContent
                 webView.backgroundColor = UIColor(red: 0.98, green: 0.98, blue: 0.98, alpha: 1.0) // Light theme color matches bg-gray-50
