@@ -382,7 +382,11 @@ function renderTodaySets() {
                 <div>
                     <div class="flex items-center gap-1">
                         <span class="text-xs font-black ${set.exercise === 'SQUAT' ? 'text-red-500' : set.exercise === 'BENCH' ? 'text-blue-500' : 'text-green-500'} uppercase">${set.exercise}</span>
-                        <span class="text-[9px] uppercase font-black px-1.5 py-0.5 rounded ${badgeClasses}">${set.set_type}</span>
+                        <select onchange="updateSetType(${set.id}, this.value)" class="text-[9px] uppercase font-black px-1 py-0.5 rounded outline-none border-0 cursor-pointer ${badgeClasses}">
+                            <option value="warmup" ${set.set_type === 'warmup' ? 'selected' : ''}>Warm-up</option>
+                            <option value="working" ${set.set_type === 'working' ? 'selected' : ''}>Working</option>
+                            <option value="failure" ${set.set_type === 'failure' ? 'selected' : ''}>Failure</option>
+                        </select>
                         ${rpeBadge}
                     </div>
                     <p class="text-sm font-black text-gray-800 dark:text-gray-100 mt-1">
@@ -423,6 +427,32 @@ function deleteTodaySet(setId) {
         } else if (navigator.vibrate) {
             navigator.vibrate(15);
         }
+    };
+}
+
+// Update log set type dynamically after logging a set
+function updateSetType(setId, newType) {
+    const tx = db.transaction("sets", "readwrite");
+    const store = tx.objectStore("sets");
+    
+    store.get(setId).onsuccess = function(event) {
+        const set = event.target.result;
+        if (!set) return;
+        
+        set.set_type = newType;
+        store.put(set).onsuccess = function() {
+            console.log(`Set ${setId} type successfully updated to ${newType}`);
+            computeBigLiftsStats();
+            renderTodaySets();
+            if (activeTab === "history") {
+                renderHistoryList();
+            } else if (activeTab === "dashboard") {
+                renderDashboard();
+            }
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.haptic) {
+                window.webkit.messageHandlers.haptic.postMessage("success");
+            }
+        };
     };
 }
 
@@ -1037,7 +1067,11 @@ function renderHistory() {
                                 <div>
                                     <div class="flex items-center gap-1.5">
                                         <span class="text-xs font-black ${s.exercise === 'SQUAT' ? 'text-red-500' : s.exercise === 'BENCH' ? 'text-blue-500' : 'text-green-500'} uppercase">${s.exercise}</span>
-                                        <span class="text-[9px] uppercase font-black px-1.5 py-0.5 rounded ${badgeClasses}">${s.set_type}</span>
+                                        <select onchange="updateSetType(${s.id}, this.value)" class="text-[9px] uppercase font-black px-1 py-0.5 rounded outline-none border-0 cursor-pointer ${badgeClasses}">
+                                            <option value="warmup" ${s.set_type === 'warmup' ? 'selected' : ''}>Warm-up</option>
+                                            <option value="working" ${s.set_type === 'working' ? 'selected' : ''}>Working</option>
+                                            <option value="failure" ${s.set_type === 'failure' ? 'selected' : ''}>Failure</option>
+                                        </select>
                                         ${rpeBadge}
                                     </div>
                                     <p class="text-xs font-black text-gray-800 dark:text-gray-100 mt-1">
@@ -1342,11 +1376,27 @@ function saveSettings(event) {
 function clearAllAppStoreData() {
     if (!confirm("⚠️ DANGER ZONE! This will permanently delete all sets, custom templates, and settings. This cannot be undone. Are you absolutely sure?")) return;
     
+    // Close the persistent database connection first to prevent blocking!
+    if (db) {
+        db.close();
+    }
+    
     const dbreq = indexedDB.deleteDatabase(DB_NAME);
-    dbreq.onsuccess = function() {
+    
+    const reloadApp = () => {
         localStorage.clear();
         alert("All local data wiped successfully. The app will reload to default.");
         window.location.reload();
+    };
+    
+    dbreq.onsuccess = reloadApp;
+    dbreq.onblocked = function() {
+        console.warn("Delete database blocked. Reloading to clear remaining locks.");
+        reloadApp();
+    };
+    dbreq.onerror = function() {
+        console.error("Failed to delete database.");
+        reloadApp();
     };
 }
 
