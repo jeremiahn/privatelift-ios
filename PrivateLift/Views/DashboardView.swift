@@ -21,7 +21,7 @@ struct DashboardView: View {
     
     // Log Form Fields
     @State private var selectedExercise = "SQUAT" // "SQUAT" | "BENCH" | "DEADLIFT"
-    @State private var selectedSetType = "working" // "warmup" | "working" | "drop"
+    @State private var selectedSetType = "working" // "warmup" | "working" | "failed"
     @State private var weightInput = ""
     @State private var repsInput = "5"
     @State private var rpeInput = 8.0
@@ -123,7 +123,7 @@ struct DashboardView: View {
                                     title: exercise.displayName,
                                     weight: calculateTargetWeight(for: exercise.name),
                                     unit: activePrefs.weightUnit,
-                                    color: Color(hex: exercise.colorHex),
+                                    color: themeStyle == .night ? .plGray300 : Color(hex: exercise.colorHex),
                                     whiteText: brandColors.whiteText,
                                     isSelected: selectedExercise == exercise.name
                                 ) {
@@ -173,7 +173,7 @@ struct DashboardView: View {
                                 HStack(spacing: 8) {
                                     setTypePill(title: "Warmup", tag: "warmup", activeColor: brandColors.purple)
                                     setTypePill(title: "Working", tag: "working", activeColor: brandColors.purple)
-                                    setTypePill(title: "Drop", tag: "drop", activeColor: brandColors.purple)
+                                    setTypePill(title: "Failed", tag: "failed", activeColor: brandColors.purple)
                                 }
                             }
                             
@@ -183,20 +183,46 @@ struct DashboardView: View {
                                     Text("Weight (\(activePrefs.weightUnit.uppercased()))")
                                         .font(.system(size: 9, weight: .black))
                                         .foregroundColor(.plGray400)
-                                    TextField("0", text: $weightInput)
-                                        .focused($isFieldFocused)
-                                        .keyboardType(.decimalPad)
-                                        .font(.system(.body, design: .monospaced))
-                                        .fontWeight(.black)
-                                        .foregroundColor(brandColors.whiteText)
-                                        .padding(.horizontal, 12)
-                                        .frame(height: 48)
-                                        .background(brandColors.whiteText.opacity(0.04))
-                                        .cornerRadius(12)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(brandColors.whiteText.opacity(0.08), lineWidth: 1.5)
-                                        )
+                                    HStack(spacing: 4) {
+                                        Button(action: {
+                                            adjustWeight(by: -1)
+                                        }) {
+                                            Image(systemName: "minus")
+                                                .font(.system(size: 12, weight: .bold))
+                                                .foregroundColor(brandColors.whiteText)
+                                                .frame(width: 32, height: 48)
+                                                .background(brandColors.whiteText.opacity(0.04))
+                                                .cornerRadius(8)
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                        
+                                        TextField("0", text: $weightInput)
+                                            .focused($isFieldFocused)
+                                            .keyboardType(.decimalPad)
+                                            .font(.system(.body, design: .monospaced))
+                                            .fontWeight(.black)
+                                            .foregroundColor(brandColors.whiteText)
+                                            .multilineTextAlignment(.center)
+                                            .frame(height: 48)
+                                            .background(brandColors.whiteText.opacity(0.04))
+                                            .cornerRadius(8)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(brandColors.whiteText.opacity(0.08), lineWidth: 1.5)
+                                            )
+                                        
+                                        Button(action: {
+                                            adjustWeight(by: 1)
+                                        }) {
+                                            Image(systemName: "plus")
+                                                .font(.system(size: 12, weight: .bold))
+                                                .foregroundColor(brandColors.whiteText)
+                                                .frame(width: 32, height: 48)
+                                                .background(brandColors.whiteText.opacity(0.04))
+                                                .cornerRadius(8)
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                    }
                                 }
                                 
                                 VStack(alignment: .leading, spacing: 4) {
@@ -279,22 +305,54 @@ struct DashboardView: View {
                                 Text("BAR LOAD WEIGHT:")
                                     .font(.system(size: 9, weight: .black))
                                     .foregroundColor(.plGray400)
-                                Spacer()
+                                    .tracking(1.0)
                                 
                                 HStack(spacing: 4) {
+                                    Button(action: {
+                                        HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+                                        calcWeight = max(0.0, calcWeight - 1)
+                                    }) {
+                                        Image(systemName: "minus")
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(brandColors.whiteText)
+                                            .frame(width: 36, height: 52)
+                                            .background(brandColors.whiteText.opacity(0.04))
+                                            .cornerRadius(8)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
                                     TextField("Weight", value: $calcWeight, format: .number)
                                         .focused($isFieldFocused)
                                         .keyboardType(.decimalPad)
-                                        .font(.system(.title3, design: .monospaced))
+                                        .font(.system(.title2, design: .monospaced))
                                         .fontWeight(.black)
                                         .foregroundColor(brandColors.whiteText)
-                                        .frame(width: 80)
-                                        .multilineTextAlignment(.trailing)
+                                        .multilineTextAlignment(.center)
+                                        .frame(height: 52)
+                                        .background(brandColors.whiteText.opacity(0.04))
+                                        .cornerRadius(8)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(brandColors.whiteText.opacity(0.08), lineWidth: 1.5)
+                                        )
                                     
-                                    Text(activePrefs.weightUnit.uppercased())
-                                        .font(.system(size: 12, weight: .black))
-                                        .foregroundColor(.plGray400)
+                                    Button(action: {
+                                        HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+                                        calcWeight = calcWeight + 1
+                                    }) {
+                                        Image(systemName: "plus")
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(brandColors.whiteText)
+                                            .frame(width: 36, height: 52)
+                                            .background(brandColors.whiteText.opacity(0.04))
+                                            .cornerRadius(8)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
                                 }
+                                    
+                                Text(activePrefs.weightUnit.uppercased())
+                                    .font(.system(size: 12, weight: .black))
+                                    .foregroundColor(.plGray400)
                             }
                             
                             // Visual Barbell Drawing
@@ -315,10 +373,11 @@ struct DashboardView: View {
                             
                             VStack(spacing: 12) {
                                 ForEach(todaySets) { loggedSet in
-                                    let exerciseColor = Color(hex: exercises.first(where: { $0.name == loggedSet.exercise })?.colorHex ?? "#8b5cf6")
+                                    let rawColor = Color(hex: exercises.first(where: { $0.name == loggedSet.exercise })?.colorHex ?? "#8b5cf6")
+                                    let exerciseColor = themeStyle == .night ? Color.plGray300 : rawColor
                                     HStack {
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(loggedSet.exercise)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(exercises.first(where: { $0.name == loggedSet.exercise })?.displayName ?? loggedSet.exercise)
                                                 .font(.system(size: 14, weight: .black))
                                                 .foregroundColor(brandColors.whiteText)
                                             Menu {
@@ -336,16 +395,16 @@ struct DashboardView: View {
                                                         try? modelContext.save()
                                                     }
                                                 }
-                                                Button("Drop") {
+                                                Button("Failed") {
                                                     HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
                                                     withAnimation {
-                                                        loggedSet.setType = "drop"
+                                                        loggedSet.setType = "failed"
                                                         try? modelContext.save()
                                                     }
                                                 }
                                             } label: {
                                                 HStack(spacing: 2) {
-                                                    Text("\(loggedSet.setType.uppercased()) SET")
+                                                    Text("\((loggedSet.setType == "drop" || loggedSet.setType == "failed" ? "FAILED" : loggedSet.setType.uppercased())) SET")
                                                         .font(.system(size: 9, weight: .black))
                                                         .foregroundColor(loggedSet.setType == "working" ? exerciseColor : .plGray400)
                                                     Image(systemName: "chevron.up.chevron.down")
@@ -582,11 +641,23 @@ struct DashboardView: View {
         modelContext.delete(set)
         try? modelContext.save()
     }
+
+    private func adjustWeight(by increment: Double) {
+        HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+        let currentWeight = Double(weightInput) ?? 0.0
+        let newWeight = max(0.0, currentWeight + increment)
+        if newWeight.truncatingRemainder(dividingBy: 1.0) == 0 {
+            weightInput = String(format: "%.0f", newWeight)
+        } else {
+            weightInput = String(format: "%.1f", newWeight)
+        }
+    }
     
     private func exercisePill(title: String, tag: String, activeColor: Color) -> some View {
         let isActive = (selectedExercise == tag)
-        let pillBg = isActive ? activeColor : brandColors.whiteText.opacity(0.04)
-        let pillBorder = isActive ? activeColor : brandColors.whiteText.opacity(0.08)
+        let resolvedActiveColor = (themeStyle == .night) ? Color.plGray300 : activeColor
+        let pillBg = isActive ? resolvedActiveColor : brandColors.whiteText.opacity(0.04)
+        let pillBorder = isActive ? resolvedActiveColor : brandColors.whiteText.opacity(0.08)
         let pillText = isActive ? (themeStyle == .night ? .black : .white) : brandColors.whiteText.opacity(0.6)
         
         return Button(action: {

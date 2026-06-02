@@ -274,7 +274,8 @@ struct HistoryView: View {
                             ForEach(loggedExercises, id: \.self) { exName in
                                 if let ex = exercises.first(where: { $0.name == exName }) {
                                     let firstChar = String(ex.displayName.prefix(1)).uppercased()
-                                    exerciseBadge(label: firstChar, color: Color(hex: ex.colorHex))
+                                    let badgeColor = themeStyle == .night ? Color.plGray400 : Color(hex: ex.colorHex)
+                                    exerciseBadge(label: firstChar, color: badgeColor)
                                 } else {
                                     let firstChar = String(exName.prefix(1)).uppercased()
                                     exerciseBadge(label: firstChar, color: .secondary)
@@ -301,7 +302,8 @@ struct HistoryView: View {
                     // Display set listings
                     VStack(spacing: 8) {
                         ForEach(session.sets) { item in
-                            let itemColor = Color(hex: exercises.first(where: { $0.name == item.exercise })?.colorHex ?? "#8b5cf6")
+                            let rawColor = Color(hex: exercises.first(where: { $0.name == item.exercise })?.colorHex ?? "#8b5cf6")
+                            let itemColor = themeStyle == .night ? Color.plGray400 : rawColor
                             HStack {
                                 Text(item.exercise)
                                     .font(.system(size: 13, weight: .black))
@@ -323,16 +325,16 @@ struct HistoryView: View {
                                             try? modelContext.save()
                                         }
                                     }
-                                    Button("Drop") {
+                                    Button("Failed") {
                                         HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
                                         withAnimation {
-                                            item.setType = "drop"
+                                            item.setType = "failed"
                                             try? modelContext.save()
                                         }
                                     }
                                 } label: {
                                     HStack(spacing: 2) {
-                                        Text(item.setType.uppercased())
+                                        Text(item.setType == "drop" || item.setType == "failed" ? "FAILED" : item.setType.uppercased())
                                             .font(.system(size: 8, weight: .black))
                                             .foregroundColor(item.setType == "working" ? itemColor : .plGray400)
                                         Image(systemName: "chevron.up.chevron.down")

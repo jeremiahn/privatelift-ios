@@ -204,7 +204,8 @@ struct StatsView: View {
                                 ForEach(exercises) { exercise in
                                     let loggedMax = allSets.filter { $0.exercise == exercise.name }.map { $0.weight }.max() ?? 0.0
                                     let prVal = max(loggedMax, exercise.oneRepMax)
-                                    prMetric(title: exercise.displayName.uppercased(), value: prVal, unit: activePrefs.weightUnit, color: Color(hex: exercise.colorHex))
+                                    let metricColor = themeStyle == .night ? Color.plGray300 : Color(hex: exercise.colorHex)
+                                    prMetric(title: exercise.displayName.uppercased(), value: prVal, unit: activePrefs.weightUnit, color: metricColor)
                                         .frame(width: 100)
                                 }
                             }
@@ -226,7 +227,8 @@ struct StatsView: View {
                                 let count = sets.count
                                 let reps = sets.reduce(0) { $0 + $1.reps }
                                 let weight = sets.reduce(0.0) { $0 + ($1.weight * Double($1.reps)) }
-                                volumeBar(title: exercise.displayName.uppercased(), count: count, reps: reps, weight: weight, color: Color(hex: exercise.colorHex))
+                                let barColor = themeStyle == .night ? Color.plGray400 : Color(hex: exercise.colorHex)
+                                volumeBar(title: exercise.displayName.uppercased(), count: count, reps: reps, weight: weight, color: barColor)
                             }
                         }
                     }
