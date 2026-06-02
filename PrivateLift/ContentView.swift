@@ -1,5 +1,6 @@
 import SwiftUI
-                                                                                                                                                      
+import SwiftData
+
     // This wraps your custom ViewController so SwiftUI can display it
     struct ViewControllerRepresentable: UIViewControllerRepresentable {
         func makeUIViewController(context: Context) -> ViewController {
@@ -10,8 +11,13 @@ import SwiftUI
     }
                                                                                                                                                       
     struct ContentView: View {
+        @Environment(\.modelContext) private var modelContext
+
         var body: some View {
-            ViewControllerRepresentable()
-                .edgesIgnoringSafeArea(.all) // Bleed fullscreen, bypassing navigation bars
+            MainTabView()
+                .edgesIgnoringSafeArea(.all) // Bleed fullscreen
+                .task {
+                    DatabaseSeeder.seedDataIfNeeded(context: modelContext)
+                }
         }
     }                                                          

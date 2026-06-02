@@ -487,6 +487,31 @@
             background-image: none !important;
             animation: none !important;
             transition: background 0.5s ease;
+            color: #9ca3af !important; /* Elegant body gray (gray-400) */
+        }
+
+        /* Override white/gray-100 text to a sleek premium gray in Night Mode */
+        html.night .text-white,
+        html.night .dark\:text-white,
+        html.night .text-gray-100,
+        html.night .dark\:text-gray-100 {
+            color: #d1d5db !important; /* Crisp light gray (gray-300) instead of harsh white */
+        }
+
+        /* Ensure primary colored backgrounds, gradient components, and action buttons retain crisp white text for high contrast */
+        html.night .bg-blue-600,
+        html.night .bg-blue-600 *,
+        html.night .bg-blue-500,
+        html.night .bg-blue-500 *,
+        html.night .bg-gradient-to-tr,
+        html.night .bg-gradient-to-tr *,
+        html.night .bg-gradient-to-r,
+        html.night .bg-gradient-to-r *,
+        html.night button.bg-blue-600,
+        html.night button.bg-blue-500,
+        html.night #rest-timer-capsule,
+        html.night #rest-timer-capsule * {
+            color: #ffffff !important;
         }
         
         html.night .bg-white, html.night .dark\:bg-gray-800 {
