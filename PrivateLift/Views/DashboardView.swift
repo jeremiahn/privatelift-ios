@@ -11,6 +11,9 @@ struct DashboardView: View {
     // Fetch all sessions to access today's notes
     @Query private var allSessions: [WorkoutSession]
     
+    // Fetch dynamic exercises
+    @Query(sort: \CustomExercise.orderIndex) private var exercises: [CustomExercise]
+    
     @ObservedObject var timerManager: RestTimerManager
     @ObservedObject var healthService: HealthKitService
     
@@ -62,16 +65,9 @@ struct DashboardView: View {
         )
     }
     
-    // Dynamically calculate target weight for SQUAT, BENCH, DEADLIFT
-    private func calculateTargetWeight(for exercise: String) -> Double {
-        let max: Double
-        switch exercise {
-        case "SQUAT": max = activePrefs.squatMax
-        case "BENCH": max = activePrefs.benchMax
-        case "DEADLIFT": max = activePrefs.deadliftMax
-        default: max = 0
-        }
-        
+    // Dynamically calculate target weight for custom exercises
+    private func calculateTargetWeight(for exerciseName: String) -> Double {
+        let max = exercises.first(where: { $0.name == exerciseName })?.oneRepMax ?? 0.0
         let target = (max * (intensity / 100.0))
         return Double(Swift.max(45, Int(Foundation.round(target / 5.0) * 5.0)))
     }
@@ -116,28 +112,27 @@ struct DashboardView: View {
                     .padding(20)
                     .glassCard(style: themeStyle)
                     
-                    // 2. Program Targets Row (Squat, Bench, Deadlift)
-                    HStack(spacing: 6) {
-                        TargetCard(title: "SQUAT", weight: calculateTargetWeight(for: "SQUAT"), unit: activePrefs.weightUnit, color: brandColors.red, whiteText: brandColors.whiteText, isSelected: selectedExercise == "SQUAT") {
-                            HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
-                            selectedExercise = "SQUAT"
-                            updateWeightInputForSelectedExercise()
-                            calcWeight = calculateTargetWeight(for: "SQUAT")
+                    // 2. Program Targets Row (Dynamic Custom Exercises)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(exercises) { exercise in
+                                TargetCard(
+                                    title: exercise.displayName,
+                                    weight: calculateTargetWeight(for: exercise.name),
+                                    unit: activePrefs.weightUnit,
+                                    color: Color(hex: exercise.colorHex),
+                                    whiteText: brandColors.whiteText,
+                                    isSelected: selectedExercise == exercise.name
+                                ) {
+                                    HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+                                    selectedExercise = exercise.name
+                                    updateWeightInputForSelectedExercise()
+                                    calcWeight = calculateTargetWeight(for: exercise.name)
+                                }
+                                .frame(width: 110)
+                            }
                         }
-                        
-                        TargetCard(title: "BENCH", weight: calculateTargetWeight(for: "BENCH"), unit: activePrefs.weightUnit, color: brandColors.blue, whiteText: brandColors.whiteText, isSelected: selectedExercise == "BENCH") {
-                            HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
-                            selectedExercise = "BENCH"
-                            updateWeightInputForSelectedExercise()
-                            calcWeight = calculateTargetWeight(for: "BENCH")
-                        }
-                        
-                        TargetCard(title: "DEADLIFT", weight: calculateTargetWeight(for: "DEADLIFT"), unit: activePrefs.weightUnit, color: brandColors.green, whiteText: brandColors.whiteText, isSelected: selectedExercise == "DEADLIFT") {
-                            HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
-                            selectedExercise = "DEADLIFT"
-                            updateWeightInputForSelectedExercise()
-                            calcWeight = calculateTargetWeight(for: "DEADLIFT")
-                        }
+                        .padding(.horizontal, 16)
                     }
                     
                     // 3. Log New Set Form
@@ -148,17 +143,19 @@ struct DashboardView: View {
                             .tracking(2.0)
                         
                         VStack(spacing: 14) {
-                            // Exercise pills row
+                            // Exercise pills row (Dynamic)
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("EXERCISE")
                                     .font(.system(size: 9, weight: .black))
                                     .foregroundColor(.plGray400)
                                     .tracking(1.5)
                                 
-                                HStack(spacing: 8) {
-                                    exercisePill(title: "Squat", tag: "SQUAT", activeColor: brandColors.red)
-                                    exercisePill(title: "Bench", tag: "BENCH", activeColor: brandColors.blue)
-                                    exercisePill(title: "Deadlift", tag: "DEADLIFT", activeColor: brandColors.green)
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(exercises) { exercise in
+                                            exercisePill(title: exercise.displayName, tag: exercise.name, activeColor: Color(hex: exercise.colorHex))
+                                        }
+                                    }
                                 }
                             }
                             .padding(.bottom, 4)
@@ -265,12 +262,12 @@ struct DashboardView: View {
                             .foregroundColor(brandColors.teal)
                             .tracking(2.0)
                         
-                        HStack(spacing: 10) {
-                            Spacer()
-                            plateAutofillButton(exercise: "Squat", value: calculateTargetWeight(for: "SQUAT"))
-                            plateAutofillButton(exercise: "Bench", value: calculateTargetWeight(for: "BENCH"))
-                            plateAutofillButton(exercise: "Deadlift", value: calculateTargetWeight(for: "DEADLIFT"))
-                            Spacer()
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(exercises) { exercise in
+                                    plateAutofillButton(exercise: exercise.displayName, value: calculateTargetWeight(for: exercise.name))
+                                }
+                            }
                         }
                         .padding(.bottom, 4)
                         
@@ -315,7 +312,7 @@ struct DashboardView: View {
                             
                             VStack(spacing: 12) {
                                 ForEach(todaySets) { loggedSet in
-                                    let exerciseColor = loggedSet.exercise == "SQUAT" ? brandColors.red : (loggedSet.exercise == "BENCH" ? brandColors.blue : brandColors.green)
+                                    let exerciseColor = Color(hex: exercises.first(where: { $0.name == loggedSet.exercise })?.colorHex ?? "#8b5cf6")
                                     HStack {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(loggedSet.exercise)
@@ -468,7 +465,16 @@ struct DashboardView: View {
             .onAppear {
                 // Initialize default intensity
                 intensity = Double(activePrefs.lastIntensity)
+                if let firstExercise = exercises.first, !exercises.contains(where: { $0.name == selectedExercise }) {
+                    selectedExercise = firstExercise.name
+                }
                 updateWeightInputForSelectedExercise()
+            }
+            .onChange(of: exercises) { oldValue, newValue in
+                if let firstExercise = newValue.first, !newValue.contains(where: { $0.name == selectedExercise }) {
+                    selectedExercise = firstExercise.name
+                    updateWeightInputForSelectedExercise()
+                }
             }
             .alert("Confirm Set Deletion", isPresented: $showDeleteConfirmation) {
                 Button("Delete", role: .destructive) {
@@ -591,7 +597,7 @@ struct DashboardView: View {
             Text(title)
                 .font(.system(size: 12, weight: .black))
                 .foregroundColor(pillText)
-                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 16)
                 .frame(height: 38)
                 .background(pillBg)
                 .cornerRadius(10)

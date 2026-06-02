@@ -8,6 +8,7 @@ struct StatsView: View {
     // Fetch all sessions and sets to aggregate stats
     @Query private var allSessions: [WorkoutSession]
     @Query(sort: \WorkoutSet.timestamp, order: .forward) private var allSets: [WorkoutSet]
+    @Query(sort: \CustomExercise.orderIndex) private var exercises: [CustomExercise]
     
     var activePrefs: UserPreferences {
         preferences.first ?? UserPreferences()
@@ -31,18 +32,29 @@ struct StatsView: View {
     }
     
     var squatPR: Double {
-        let loggedMax = allSets.filter { $0.exercise == "SQUAT" }.map { $0.weight }.max() ?? 0.0
-        return max(loggedMax, activePrefs.squatMax)
+        let squatEx = exercises.first(where: { $0.isPowerlift && $0.powerliftType == "squat" })
+        let name = squatEx?.name ?? "SQUAT"
+        let loggedMax = allSets.filter { $0.exercise == name }.map { $0.weight }.max() ?? 0.0
+        return max(loggedMax, squatEx?.oneRepMax ?? activePrefs.squatMax)
     }
     
     var benchPR: Double {
-        let loggedMax = allSets.filter { $0.exercise == "BENCH" }.map { $0.weight }.max() ?? 0.0
-        return max(loggedMax, activePrefs.benchMax)
+        let benchEx = exercises.first(where: { $0.isPowerlift && $0.powerliftType == "bench" })
+        let name = benchEx?.name ?? "BENCH"
+        let loggedMax = allSets.filter { $0.exercise == name }.map { $0.weight }.max() ?? 0.0
+        return max(loggedMax, benchEx?.oneRepMax ?? activePrefs.benchMax)
     }
     
     var deadliftPR: Double {
-        let loggedMax = allSets.filter { $0.exercise == "DEADLIFT" }.map { $0.weight }.max() ?? 0.0
-        return max(loggedMax, activePrefs.deadliftMax)
+        let deadliftEx = exercises.first(where: { $0.isPowerlift && $0.powerliftType == "deadlift" })
+        let name = deadliftEx?.name ?? "DEADLIFT"
+        let loggedMax = allSets.filter { $0.exercise == name }.map { $0.weight }.max() ?? 0.0
+        return max(loggedMax, deadliftEx?.oneRepMax ?? activePrefs.deadliftMax)
+    }
+    
+    var maxExerciseVolume: Int {
+        let volumes = exercises.map { ex in allSets.filter { $0.exercise == ex.name }.count }
+        return Swift.max(1, volumes.max() ?? 1)
     }
     
     // MARK: - Wilks & DOTS Scores
@@ -124,20 +136,6 @@ struct StatsView: View {
         return totalPRKg * coeff
     }
     
-    // MARK: - Weekly Volume (relative values)
-    var squatVolume: Int { allSets.filter { $0.exercise == "SQUAT" }.count }
-    var benchVolume: Int { allSets.filter { $0.exercise == "BENCH" }.count }
-    var deadliftVolume: Int { allSets.filter { $0.exercise == "DEADLIFT" }.count }
-    
-    var squatRepsSum: Int { allSets.filter { $0.exercise == "SQUAT" }.reduce(0) { $0 + $1.reps } }
-    var squatWeightSum: Double { allSets.filter { $0.exercise == "SQUAT" }.reduce(0.0) { $0 + ($1.weight * Double($1.reps)) } }
-    
-    var benchRepsSum: Int { allSets.filter { $0.exercise == "BENCH" }.reduce(0) { $0 + $1.reps } }
-    var benchWeightSum: Double { allSets.filter { $0.exercise == "BENCH" }.reduce(0.0) { $0 + ($1.weight * Double($1.reps)) } }
-    
-    var deadliftRepsSum: Int { allSets.filter { $0.exercise == "DEADLIFT" }.reduce(0) { $0 + $1.reps } }
-    var deadliftWeightSum: Double { allSets.filter { $0.exercise == "DEADLIFT" }.reduce(0.0) { $0 + ($1.weight * Double($1.reps)) } }
-    
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -163,27 +161,28 @@ struct StatsView: View {
                     .padding(20)
                     .glassCard(style: themeStyle)
                     
-                    // 2. Personal Records Grid
+                    // 2. Personal Records Grid (Dynamic)
                     VStack(alignment: .leading, spacing: 16) {
                         Text("PERSONAL RECORDS")
                             .font(.system(size: 11, weight: .black))
                             .foregroundColor(brandColors.purple)
                             .tracking(2.0)
                         
-                        HStack(spacing: 12) {
-                            prMetric(title: "SQUAT", value: squatPR, unit: activePrefs.weightUnit, color: brandColors.red)
-                            prMetric(title: "BENCH", value: benchPR, unit: activePrefs.weightUnit, color: brandColors.blue)
-                            prMetric(title: "DEADLIFT", value: deadliftPR, unit: activePrefs.weightUnit, color: brandColors.green)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(exercises) { exercise in
+                                    let loggedMax = allSets.filter { $0.exercise == exercise.name }.map { $0.weight }.max() ?? 0.0
+                                    let prVal = max(loggedMax, exercise.oneRepMax)
+                                    prMetric(title: exercise.displayName.uppercased(), value: prVal, unit: activePrefs.weightUnit, color: Color(hex: exercise.colorHex))
+                                        .frame(width: 100)
+                                }
+                            }
                         }
                     }
                     .padding(20)
                     .glassCard(style: themeStyle)
                     
-                    
-                    
-
-                    
-                    // 4. Volume Breakdown bars
+                    // 4. Volume Breakdown bars (Dynamic)
                     VStack(alignment: .leading, spacing: 16) {
                         Text("WEEKLY VOLUME BREAKDOWN")
                             .font(.system(size: 11, weight: .black))
@@ -191,9 +190,13 @@ struct StatsView: View {
                             .tracking(2.0)
                         
                         VStack(spacing: 12) {
-                            volumeBar(title: "SQUAT", count: squatVolume, reps: squatRepsSum, weight: squatWeightSum, color: brandColors.red)
-                            volumeBar(title: "BENCH PRESS", count: benchVolume, reps: benchRepsSum, weight: benchWeightSum, color: brandColors.blue)
-                            volumeBar(title: "DEADLIFT", count: deadliftVolume, reps: deadliftRepsSum, weight: deadliftWeightSum, color: brandColors.green)
+                            ForEach(exercises) { exercise in
+                                let sets = allSets.filter { $0.exercise == exercise.name }
+                                let count = sets.count
+                                let reps = sets.reduce(0) { $0 + $1.reps }
+                                let weight = sets.reduce(0.0) { $0 + ($1.weight * Double($1.reps)) }
+                                volumeBar(title: exercise.displayName.uppercased(), count: count, reps: reps, weight: weight, color: Color(hex: exercise.colorHex))
+                            }
                         }
                     }
                     .padding(20)
@@ -282,8 +285,7 @@ struct StatsView: View {
     }
     
     private func volumeBar(title: String, count: Int, reps: Int, weight: Double, color: Color) -> some View {
-        let maxVolume = Swift.max(1, Swift.max(squatVolume, Swift.max(benchVolume, deadliftVolume)))
-        let pct = Double(count) / Double(maxVolume)
+        let pct = Double(count) / Double(maxExerciseVolume)
         
         return VStack(alignment: .leading, spacing: 6) {
             HStack {

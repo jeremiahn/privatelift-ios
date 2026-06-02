@@ -6,15 +6,37 @@ struct DatabaseSeeder {
     static func seedDataIfNeeded(context: ModelContext) {
         // 1. Seed Preferences if none exist
         let prefFetchDescriptor = FetchDescriptor<UserPreferences>()
+        var activePrefs = UserPreferences()
         do {
             let existingPrefs = try context.fetch(prefFetchDescriptor)
             if existingPrefs.isEmpty {
-                let defaultPrefs = UserPreferences()
-                context.insert(defaultPrefs)
+                context.insert(activePrefs)
                 print("Default user preferences seeded successfully.")
+            } else {
+                activePrefs = existingPrefs.first!
             }
         } catch {
             print("Error checking/seeding user preferences: \(error)")
+        }
+        
+        // 2. Seed Custom Exercises if none exist (backward-compatible migration)
+        let exerciseFetchDescriptor = FetchDescriptor<CustomExercise>()
+        do {
+            let existingExercises = try context.fetch(exerciseFetchDescriptor)
+            if existingExercises.isEmpty {
+                let defaults = [
+                    CustomExercise(name: "SQUAT", displayName: "Squat", oneRepMax: activePrefs.squatMax, colorHex: "#ef4444", orderIndex: 0, isPowerlift: true, powerliftType: "squat"),
+                    CustomExercise(name: "BENCH", displayName: "Bench Press", oneRepMax: activePrefs.benchMax, colorHex: "#3b82f6", orderIndex: 1, isPowerlift: true, powerliftType: "bench"),
+                    CustomExercise(name: "DEADLIFT", displayName: "Deadlift", oneRepMax: activePrefs.deadliftMax, colorHex: "#10b981", orderIndex: 2, isPowerlift: true, powerliftType: "deadlift")
+                ]
+                for item in defaults {
+                    context.insert(item)
+                }
+                try context.save()
+                print("Default custom exercises seeded successfully.")
+            }
+        } catch {
+            print("Error checking/seeding custom exercises: \(error)")
         }
         
         // 2. Seed Routine Templates if none exist

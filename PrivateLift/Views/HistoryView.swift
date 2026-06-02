@@ -12,6 +12,9 @@ struct HistoryView: View {
     // Query all workout sets to calculate E1RM progression
     @Query(sort: \WorkoutSet.timestamp, order: .forward) private var allSets: [WorkoutSet]
     
+    // Query all custom exercises
+    @Query(sort: \CustomExercise.orderIndex) private var exercises: [CustomExercise]
+    
     @State private var expandedSessionDate: String? = nil
     @State private var sessionNotesText = ""
     
@@ -72,13 +75,7 @@ struct HistoryView: View {
                   let lifts = dailyMaxes[dateStr] else { continue }
             
             for (lift, val) in lifts {
-                let displayName: String
-                switch lift {
-                case "SQUAT": displayName = "Squat"
-                case "BENCH": displayName = "Bench Press"
-                case "DEADLIFT": displayName = "Deadlift"
-                default: displayName = lift
-                }
+                let displayName = exercises.first(where: { $0.name == lift })?.displayName ?? lift.capitalized
                 points.append(ChartDataPoint(date: date, liftName: displayName, e1RM: val))
             }
         }
@@ -270,14 +267,15 @@ struct HistoryView: View {
                     HStack(spacing: 12) {
                         // Exercise badges summary
                         HStack(spacing: 4) {
-                            if session.sets.contains(where: { $0.exercise == "SQUAT" }) {
-                                exerciseBadge(label: "S", color: brandColors.red)
-                            }
-                            if session.sets.contains(where: { $0.exercise == "BENCH" }) {
-                                exerciseBadge(label: "B", color: brandColors.blue)
-                            }
-                            if session.sets.contains(where: { $0.exercise == "DEADLIFT" }) {
-                                exerciseBadge(label: "D", color: brandColors.green)
+                            let loggedExercises = Array(Set(session.sets.map { $0.exercise })).sorted()
+                            ForEach(loggedExercises, id: \.self) { exName in
+                                if let ex = exercises.first(where: { $0.name == exName }) {
+                                    let firstChar = String(ex.displayName.prefix(1)).uppercased()
+                                    exerciseBadge(label: firstChar, color: Color(hex: ex.colorHex))
+                                } else {
+                                    let firstChar = String(exName.prefix(1)).uppercased()
+                                    exerciseBadge(label: firstChar, color: .secondary)
+                                }
                             }
                         }
                         
@@ -300,7 +298,7 @@ struct HistoryView: View {
                     // Display set listings
                     VStack(spacing: 8) {
                         ForEach(session.sets) { item in
-                            let itemColor = item.exercise == "SQUAT" ? brandColors.red : (item.exercise == "BENCH" ? brandColors.blue : brandColors.green)
+                            let itemColor = Color(hex: exercises.first(where: { $0.name == item.exercise })?.colorHex ?? "#8b5cf6")
                             HStack {
                                 Text(item.exercise)
                                     .font(.system(size: 13, weight: .black))

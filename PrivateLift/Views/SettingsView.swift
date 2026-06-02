@@ -8,7 +8,8 @@ struct SettingsView: View {
     
     // Fetch all sessions/sets for export/reset logic
     @Query private var allSessions: [WorkoutSession]
-    @Query private var allSets: [WorkoutSet]
+    @Query(sort: \WorkoutSet.timestamp, order: .forward) private var allSets: [WorkoutSet]
+    @Query(sort: \CustomExercise.orderIndex) private var customExercises: [CustomExercise]
     
     @ObservedObject var healthService: HealthKitService
     
@@ -141,44 +142,14 @@ struct SettingsView: View {
     
     private var strengthBenchmarksSection: some View {
         Section(header: Text("STRENGTH BENCHMARKS & PROFILE").font(.system(size: 10, weight: .black))) {
-            HStack {
-                Text("Squat 1RM Max")
-                    .fontWeight(.bold)
-                Spacer()
-                TextField("lbs", value: Bindable(activePrefs).squatMax, format: .number)
-                    .focused($isFieldFocused)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 100)
-                    .font(.system(.body, design: .monospaced))
-                    .fontWeight(.black)
+            NavigationLink(destination: ManageExercisesView()) {
+                HStack {
+                    Text("Manage Exercises & Maxes")
+                        .fontWeight(.bold)
+                    Spacer()
+                }
             }
-            
-            HStack {
-                Text("Bench 1RM Max")
-                    .fontWeight(.bold)
-                Spacer()
-                TextField("lbs", value: Bindable(activePrefs).benchMax, format: .number)
-                    .focused($isFieldFocused)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 100)
-                    .font(.system(.body, design: .monospaced))
-                    .fontWeight(.black)
-            }
-            
-            HStack {
-                Text("Deadlift 1RM Max")
-                    .fontWeight(.bold)
-                Spacer()
-                TextField("lbs", value: Bindable(activePrefs).deadliftMax, format: .number)
-                    .focused($isFieldFocused)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 100)
-                    .font(.system(.body, design: .monospaced))
-                    .fontWeight(.black)
-            }
+            .tint(brandColors.blue)
             
             HStack {
                 Text("Body Weight")
@@ -362,6 +333,10 @@ struct SettingsView: View {
         activePrefs.deadliftMax = Foundation.round(activePrefs.deadliftMax * multiplier)
         activePrefs.bodyWeight = Foundation.round(activePrefs.bodyWeight * multiplier)
         
+        for exercise in customExercises {
+            exercise.oneRepMax = Foundation.round(exercise.oneRepMax * multiplier)
+        }
+        
         // 2. Convert All sets
         for item in allSets {
             item.weight = Foundation.round(item.weight * multiplier)
@@ -464,6 +439,17 @@ struct SettingsView: View {
             activePrefs.hasMigratedWebData = payload.settings.hasMigratedWebData ?? false
             activePrefs.lastIntensity = payload.settings.lastIntensity ?? 85
             activePrefs.theme = payload.settings.theme ?? "system"
+            
+            // Update CustomExercises with imported values for powerlifts
+            for exercise in customExercises {
+                if exercise.name == "SQUAT" {
+                    exercise.oneRepMax = payload.settings.squatMax
+                } else if exercise.name == "BENCH" {
+                    exercise.oneRepMax = payload.settings.benchMax
+                } else if exercise.name == "DEADLIFT" {
+                    exercise.oneRepMax = payload.settings.deadliftMax
+                }
+            }
             
             // 2. Ingest sessions/sets
             for sessionData in payload.sessions {
@@ -590,6 +576,7 @@ struct SettingsView: View {
         // Clear all workouts and sets
         for set in allSets { modelContext.delete(set) }
         for session in allSessions { modelContext.delete(session) }
+        for exercise in customExercises { modelContext.delete(exercise) }
         
         // Reset preferences to standard defaults
         activePrefs.squatMax = 315.0

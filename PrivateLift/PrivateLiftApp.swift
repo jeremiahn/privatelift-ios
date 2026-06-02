@@ -44,7 +44,8 @@ struct PrivateLiftApp: App {
             WorkoutSession.self,
             WorkoutSet.self,
             RoutineTemplate.self,
-            RoutineExerciseTarget.self
+            RoutineExerciseTarget.self,
+            CustomExercise.self
         ])
         
         let iCloudEnabled = UserDefaults.standard.bool(forKey: "iCloudSyncEnabled")
