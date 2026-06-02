@@ -480,6 +480,57 @@
             border-color: rgba(59, 130, 246, 0.8) !important;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
         }
+
+        /* Night Mode blackout with grey highlights overrides */
+        html.night body {
+            background: #000000 !important;
+            background-image: none !important;
+            animation: none !important;
+            transition: background 0.5s ease;
+        }
+        
+        html.night .bg-white, html.night .dark\:bg-gray-800 {
+            background: #0d0e11 !important; /* pitch-black blackout card */
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            border: 1.5px solid #2e3035 !important; /* solid grey highlights border */
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.95),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.02) !important;
+        }
+
+        html.night .border-gray-200, html.night .dark\:border-gray-700 {
+            border-color: #2e3035 !important;
+        }
+
+        html.night .glass-input {
+            background: #15161a !important; /* dark blackout input field */
+            border: 1.5px solid #2e3035 !important; /* solid grey highlights border */
+            box-shadow: inset 0 1px 2px 0 rgba(0, 0, 0, 0.5) !important;
+        }
+
+        html.night .glass-input:focus-within {
+            border-color: #4b5563 !important; /* grey focus highlight border */
+            box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.25) !important;
+        }
+        
+        html.night .dark\:bg-gray-900, html.night .bg-gray-50 {
+            background: #000000 !important;
+            border-color: #2e3035 !important;
+        }
+
+        html.night #intensity-slider {
+            background: #15161a !important;
+            border: 1.5px solid #2e3035 !important;
+        }
+
+        html.night .glass-card-blue,
+        html.night .glass-card-purple,
+        html.night .glass-card-green,
+        html.night .glass-card-red,
+        html.night .glass-card-teal {
+            border: 1.5px solid #2e3035 !important;
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.95) !important;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-black dark:text-gray-100 min-h-screen transition-colors duration-200 relative pb-24 md:pb-6">
@@ -1007,7 +1058,7 @@
                     <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 pb-2 mb-4">App Preferences & Security</h3>
                     
                     <!-- Lbs / Kg toggle switcher -->
-                    <div class="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-150 dark:border-gray-800/80 flex items-center justify-between gap-4">
+                    <div class="glass-input p-4 rounded-xl border flex items-center justify-between gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-0.5">Weight Unit Preference</label>
                             <span class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">Toggle weight display. Changing units converts all past logged workout weights!</span>
@@ -1029,6 +1080,19 @@
                             <div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                         </label>
                     </div>
+
+                    <!-- Apple Health Sync Toggle -->
+                    <div class="glass-input p-4 rounded-xl border flex items-center justify-between gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-0.5">Apple Health Integration</label>
+                            <span class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">Sync logged training sessions and body weight directly to the Apple Health app</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer select-none shrink-0">
+                            <input type="checkbox" id="pref-apple-health" class="sr-only peer" onchange="toggleAppleHealthPref(this.checked)">
+                            <div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+
 
                     <!-- 1RM Formula Preference Switcher -->
                     <div class="glass-input p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1054,9 +1118,10 @@
                             <label class="block text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-0.5">Color Preference</label>
                             <span class="text-[10px] md:text-xs text-gray-500">Toggle between light, dark, or system defaults</span>
                         </div>
-                        <div class="flex bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shrink-0">
+                        <div class="flex bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shrink-0 flex-wrap gap-1">
                             <button type="button" id="pref-theme-light" onclick="setAppTheme('light')" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-1.5 rounded-md text-xs font-black transition flex items-center gap-1.5">Light</button>
                             <button type="button" id="pref-theme-dark" onclick="setAppTheme('dark')" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-1.5 rounded-md text-xs font-black transition flex items-center gap-1.5">Dark</button>
+                            <button type="button" id="pref-theme-night" onclick="setAppTheme('night')" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-1.5 rounded-md text-xs font-black transition flex items-center gap-1.5">Night</button>
                             <button type="button" id="pref-theme-system" onclick="setAppTheme('system')" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-1.5 rounded-md text-xs font-black transition flex items-center gap-1.5">System</button>
                         </div>
                     </div>
@@ -1069,7 +1134,7 @@
                     <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest">Backup & Restore Center</h3>
                     
                     <!-- Format Switcher -->
-                    <div class="flex bg-gray-50 dark:bg-gray-900 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shrink-0">
+                    <div class="flex bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shrink-0">
                         <button type="button" id="backup-format-json" onclick="setBackupFormat('json')" class="px-3 py-1.5 rounded-md text-[10px] font-black transition uppercase bg-blue-600 text-white shadow-sm">JSON</button>
                         <button type="button" id="backup-format-csv" onclick="setBackupFormat('csv')" class="px-3 py-1.5 rounded-md text-[10px] font-black transition uppercase text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">CSV</button>
                     </div>
