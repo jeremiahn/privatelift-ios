@@ -897,7 +897,7 @@ function computeWeeklyVolumeStats(sets) {
     const weeksSorted = Object.keys(weeklyData).sort().reverse();
     
     if (weeksSorted.length === 0) {
-        container.innerHTML = `<p class="text-gray-400 dark:text-gray-500 text-xs italic text-center py-4">No logged sets to compute weekly statistics yet.</p>`;
+        container.innerHTML = `<p class="text-gray-400 dark:text-white text-xs italic text-center py-4">No logged sets to compute weekly statistics yet.</p>`;
         return;
     }
     
