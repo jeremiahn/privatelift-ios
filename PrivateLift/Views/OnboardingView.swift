@@ -17,7 +17,7 @@ struct OnboardingView: View {
     @State private var weightUnit: String = "lbs"
     @State private var trackWeightAndGender: Bool = true
     
-    private let totalSteps = 5
+    private let totalSteps = 6
     
     var body: some View {
         ZStack {
@@ -52,18 +52,19 @@ struct OnboardingView: View {
                 // Content Cards
                 TabView(selection: $currentStep) {
                     welcomeStep.tag(0)
-                    liftMaxStep(title: "Squat 1RM Max", description: "Your estimated single rep maximum for Squats.", value: $squatMax, range: 45...800, step: 5, accentColor: .plRed, stepLabel: "Step 1 of 4").tag(1)
-                    liftMaxStep(title: "Bench 1RM Max", description: "Your estimated single rep maximum for Bench Press.", value: $benchMax, range: 45...600, step: 5, accentColor: .plBlue, stepLabel: "Step 2 of 4").tag(2)
-                    liftMaxStep(title: "Deadlift 1RM Max", description: "Your estimated single rep maximum for Deadlifts.", value: $deadliftMax, range: 45...1000, step: 5, accentColor: .plGreen, stepLabel: "Step 3 of 4").tag(3)
+                    liftMaxStep(title: "Squat 1RM Max", description: "Your estimated single rep maximum for Squats.", value: $squatMax, range: 45...800, step: 5, accentColor: .plRed, stepLabel: "Step 1 of 5").tag(1)
+                    liftMaxStep(title: "Bench 1RM Max", description: "Your estimated single rep maximum for Bench Press.", value: $benchMax, range: 45...600, step: 5, accentColor: .plBlue, stepLabel: "Step 2 of 5").tag(2)
+                    liftMaxStep(title: "Deadlift 1RM Max", description: "Your estimated single rep maximum for Deadlifts.", value: $deadliftMax, range: 45...1000, step: 5, accentColor: .plGreen, stepLabel: "Step 3 of 5").tag(3)
                     bodyWeightGenderStep.tag(4)
-                    completionStep.tag(5)
+                    settingsExplanationStep.tag(5)
+                    completionStep.tag(6)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut, value: currentStep)
                 
                 // Navigation buttons
                 HStack(spacing: 16) {
-                    if currentStep > 0 && currentStep < 5 {
+                    if currentStep > 0 && currentStep < 6 {
                         Button(action: {
                             HapticService.play(.medium)
                             withAnimation { currentStep -= 1 }
@@ -84,21 +85,21 @@ struct OnboardingView: View {
                     
                     Button(action: {
                         HapticService.play(.medium)
-                        if currentStep < 5 {
+                        if currentStep < 6 {
                             withAnimation { currentStep += 1 }
                         } else {
                             completeOnboarding()
                         }
                     }) {
-                        Text(currentStep == 0 ? "GET STARTED" : (currentStep == 5 ? "START LIFTING" : "NEXT"))
+                        Text(currentStep == 0 ? "GET STARTED" : (currentStep == 6 ? "START LIFTING" : "NEXT"))
                             .font(.system(size: 11, weight: .black))
                             .tracking(1.5)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
-                            .background(currentStep == 5 ? Color.plGreen : Color.plBlue)
+                            .background(currentStep == 6 ? Color.plGreen : Color.plBlue)
                             .cornerRadius(16)
-                            .shadow(color: (currentStep == 5 ? Color.plGreen : Color.plBlue).opacity(0.3), radius: 10, y: 5)
+                            .shadow(color: (currentStep == 6 ? Color.plGreen : Color.plBlue).opacity(0.3), radius: 10, y: 5)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -217,7 +218,7 @@ struct OnboardingView: View {
             Spacer()
             
             VStack(alignment: .leading, spacing: 4) {
-                Text("STEP 4 OF 4")
+                Text("STEP 4 OF 5")
                     .font(.system(size: 10, weight: .black))
                     .foregroundColor(.plPurple)
                     .tracking(1.5)
@@ -338,6 +339,98 @@ struct OnboardingView: View {
         }
     }
     
+    // MARK: - Settings Explanation Step
+    private var settingsExplanationStep: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Spacer()
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("STEP 5 OF 5")
+                    .font(.system(size: 10, weight: .black))
+                    .foregroundColor(.plBlue)
+                    .tracking(1.5)
+                
+                Text("App Preferences & Settings")
+                    .font(.system(size: 24, weight: .black))
+                    .foregroundColor(.white)
+                
+                Text("Customize your strength experience at any time.")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.plGray400)
+            }
+            .padding(.horizontal, 24)
+            
+            VStack(spacing: 16) {
+                HStack(spacing: 16) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.plBlue)
+                        .frame(width: 40)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("PREFERENCES & THEMES")
+                            .font(.system(size: 10, weight: .black))
+                            .foregroundColor(.plGray400)
+                            .tracking(1.0)
+                        Text("Select weight units, themes (including OLED Night mode), and lift formulas.")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white)
+                    }
+                }
+                
+                Divider()
+                    .background(Color.white.opacity(0.1))
+                
+                HStack(spacing: 16) {
+                    Image(systemName: "globe")
+                        .font(.system(size: 24))
+                        .foregroundColor(.plGreen)
+                        .frame(width: 40)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("TIME ZONE & CALENDAR")
+                            .font(.system(size: 10, weight: .black))
+                            .foregroundColor(.plGray400)
+                            .tracking(1.0)
+                        Text("Set custom Time Zones and choose the day of the week your workouts start on.")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white)
+                    }
+                }
+                
+                Divider()
+                    .background(Color.white.opacity(0.1))
+                
+                HStack(spacing: 16) {
+                    Image(systemName: "icloud.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.plPurple)
+                        .frame(width: 40)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("SYNC & BACKUPS")
+                            .font(.system(size: 10, weight: .black))
+                            .foregroundColor(.plGray400)
+                            .tracking(1.0)
+                        Text("Toggle Apple Health workout sync, iCloud backup sync, and manual database export/import.")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white)
+                    }
+                }
+            }
+            .padding(24)
+            .background(Color.white.opacity(0.04))
+            .cornerRadius(24)
+            .overlay(
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1.5)
+            )
+            .padding(.horizontal, 24)
+            
+            Spacer()
+        }
+    }
+
     // MARK: - Calibration Completion Step
     private var completionStep: some View {
         VStack(spacing: 24) {

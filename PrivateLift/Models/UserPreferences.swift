@@ -20,6 +20,8 @@ final class UserPreferences {
     var hasMigratedWebData: Bool = false
     var lastIntensity: Int = 85
     var theme: String = "system" // "system" | "light" | "dark" | "night"
+    var timeZoneIdentifier: String = TimeZone.current.identifier
+    var startOfWeekDay: Int = Calendar.current.firstWeekday // 1 = Sunday, 2 = Monday, ... 7 = Saturday
 
     init(
         squatMax: Double = 315.0,
@@ -38,7 +40,9 @@ final class UserPreferences {
         isOnboarded: Bool = false,
         hasMigratedWebData: Bool = false,
         lastIntensity: Int = 85,
-        theme: String = "system"
+        theme: String = "system",
+        timeZoneIdentifier: String = TimeZone.current.identifier,
+        startOfWeekDay: Int = Calendar.current.firstWeekday
     ) {
         self.squatMax = squatMax
         self.benchMax = benchMax
@@ -57,5 +61,7 @@ final class UserPreferences {
         self.hasMigratedWebData = hasMigratedWebData
         self.lastIntensity = lastIntensity
         self.theme = theme
+        self.timeZoneIdentifier = timeZoneIdentifier
+        self.startOfWeekDay = startOfWeekDay
     }
 }

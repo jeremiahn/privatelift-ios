@@ -40,6 +40,9 @@ struct DashboardView: View {
     var todayString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
+        if let timeZone = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
+            formatter.timeZone = timeZone
+        }
         return formatter.string(from: Date())
     }
     

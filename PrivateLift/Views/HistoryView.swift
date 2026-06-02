@@ -64,6 +64,9 @@ struct HistoryView: View {
         
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
+        if let tz = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
+            formatter.timeZone = tz
+        }
         
         var points: [ChartDataPoint] = []
         
@@ -444,10 +447,16 @@ struct HistoryView: View {
     private func formatSessionDate(_ rawString: String) -> String {
         let formatterInput = DateFormatter()
         formatterInput.dateFormat = "yyyy-MM-dd"
+        if let tz = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
+            formatterInput.timeZone = tz
+        }
         guard let date = formatterInput.date(from: rawString) else { return rawString }
         
         let formatterOutput = DateFormatter()
         formatterOutput.dateFormat = "EEEE, MMMM d, yyyy"
+        if let tz = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
+            formatterOutput.timeZone = tz
+        }
         return formatterOutput.string(from: date).uppercased()
     }
     

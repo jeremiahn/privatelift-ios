@@ -21,6 +21,37 @@ struct StatsView: View {
     var brandColors: BrandColors {
         BrandColors(theme: themeStyle)
     }
+
+    var userCalendar: Calendar {
+        var cal = Calendar.current
+        if let tz = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
+            cal.timeZone = tz
+        }
+        cal.firstWeekday = activePrefs.startOfWeekDay
+        return cal
+    }
+
+    var currentWeekSets: [WorkoutSet] {
+        let cal = userCalendar
+        let now = Date()
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        if let tz = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
+            formatter.timeZone = tz
+        }
+
+        return allSets.filter { set in
+            guard let dateStr = set.session?.dateString,
+                  let setDate = formatter.date(from: dateStr) else {
+                return false
+            }
+            if let interval = cal.dateInterval(of: .weekOfYear, for: now) {
+                return setDate >= interval.start && setDate < interval.end
+            }
+            return false
+        }
+    }
     
     // MARK: - Aggregated Metrics
     var totalTonnage: Double {
@@ -191,7 +222,7 @@ struct StatsView: View {
                         
                         VStack(spacing: 12) {
                             ForEach(exercises) { exercise in
-                                let sets = allSets.filter { $0.exercise == exercise.name }
+                                let sets = currentWeekSets.filter { $0.exercise == exercise.name }
                                 let count = sets.count
                                 let reps = sets.reduce(0) { $0 + $1.reps }
                                 let weight = sets.reduce(0.0) { $0 + ($1.weight * Double($1.reps)) }

@@ -247,6 +247,30 @@ struct SettingsView: View {
             }
             .fontWeight(.bold)
             .tint(.plBlue)
+
+            NavigationLink(destination: TimeZoneSelectionView(preferences: activePrefs)) {
+                HStack {
+                    Text("Time Zone")
+                        .fontWeight(.bold)
+                    Spacer()
+                    Text(activePrefs.timeZoneIdentifier.replacingOccurrences(of: "_", with: " "))
+                        .foregroundColor(.secondary)
+                        .font(.body)
+                }
+            }
+            .tint(.plBlue)
+
+            Picker("First Day of Week", selection: Bindable(activePrefs).startOfWeekDay) {
+                Text("Sunday").tag(1)
+                Text("Monday").tag(2)
+                Text("Tuesday").tag(3)
+                Text("Wednesday").tag(4)
+                Text("Thursday").tag(5)
+                Text("Friday").tag(6)
+                Text("Saturday").tag(7)
+            }
+            .fontWeight(.bold)
+            .tint(.plBlue)
         }
     }
     
@@ -377,7 +401,9 @@ struct SettingsView: View {
             isOnboarded: activePrefs.isOnboarded,
             hasMigratedWebData: activePrefs.hasMigratedWebData,
             lastIntensity: activePrefs.lastIntensity,
-            theme: activePrefs.theme
+            theme: activePrefs.theme,
+            timeZoneIdentifier: activePrefs.timeZoneIdentifier,
+            startOfWeekDay: activePrefs.startOfWeekDay
         )
         
         let payload = BackupPayload(settings: settings, sessions: exportSessions)
@@ -439,6 +465,8 @@ struct SettingsView: View {
             activePrefs.hasMigratedWebData = payload.settings.hasMigratedWebData ?? false
             activePrefs.lastIntensity = payload.settings.lastIntensity ?? 85
             activePrefs.theme = payload.settings.theme ?? "system"
+            activePrefs.timeZoneIdentifier = payload.settings.timeZoneIdentifier ?? TimeZone.current.identifier
+            activePrefs.startOfWeekDay = payload.settings.startOfWeekDay ?? Calendar.current.firstWeekday
             
             // Update CustomExercises with imported values for powerlifts
             for exercise in customExercises {
@@ -586,6 +614,8 @@ struct SettingsView: View {
         activePrefs.gender = "other"
         activePrefs.isOnboarded = false
         activePrefs.theme = "system"
+        activePrefs.timeZoneIdentifier = TimeZone.current.identifier
+        activePrefs.startOfWeekDay = Calendar.current.firstWeekday
         
         try? modelContext.save()
         HapticService.play(.success, enabled: activePrefs.hapticsEnabled)
@@ -644,6 +674,8 @@ private struct BackupSettings: Codable {
     let hasMigratedWebData: Bool?
     let lastIntensity: Int?
     let theme: String?
+    let timeZoneIdentifier: String?
+    let startOfWeekDay: Int?
 }
 private struct BackupSession: Codable {
     let date: String
@@ -656,4 +688,46 @@ private struct BackupSet: Codable {
     let reps: Int
     let rpe: Double
     let setType: String
+}
+
+// MARK: - Time Zone Selection View
+struct TimeZoneSelectionView: View {
+    @Bindable var preferences: UserPreferences
+    @State private var searchText = ""
+    @Environment(\.dismiss) private var dismiss
+    
+    var filteredTimeZones: [String] {
+        if searchText.isEmpty {
+            return TimeZone.knownTimeZoneIdentifiers
+        } else {
+            return TimeZone.knownTimeZoneIdentifiers.filter { 
+                $0.localizedCaseInsensitiveContains(searchText) 
+            }
+        }
+    }
+    
+    var body: some View {
+        List {
+            ForEach(filteredTimeZones, id: \.self) { tz in
+                Button(action: {
+                    preferences.timeZoneIdentifier = tz
+                    dismiss()
+                }) {
+                    HStack {
+                        Text(tz.replacingOccurrences(of: "_", with: " "))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        if preferences.timeZoneIdentifier == tz {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.plBlue)
+                                .fontWeight(.bold)
+                        }
+                    }
+                }
+            }
+        }
+        .searchable(text: $searchText, prompt: "Search Time Zones")
+        .navigationTitle("Select Time Zone")
+        .navigationBarTitleDisplayMode(.inline)
+    }
 }
