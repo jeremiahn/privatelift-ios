@@ -16,6 +16,7 @@ struct OnboardingView: View {
     @State private var gender: String = "male"
     @State private var weightUnit: String = "lbs"
     @State private var trackWeightAndGender: Bool = true
+    @FocusState private var isInputFocused: Bool
     
     private let totalSteps = 6
     
@@ -113,6 +114,14 @@ struct OnboardingView: View {
                 .padding(.bottom, 24)
             }
         }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    isInputFocused = false
+                }
+            }
+        }
     }
     
     // MARK: - Welcome Step
@@ -192,6 +201,7 @@ struct OnboardingView: View {
             VStack(spacing: 32) {
                 VStack(spacing: 4) {
                     TextField(title, value: value, format: .number)
+                        .focused($isInputFocused)
                         .font(.system(size: 64, weight: .black, design: .monospaced))
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
@@ -278,6 +288,7 @@ struct OnboardingView: View {
                         
                         HStack {
                             TextField("Weight", value: $bodyWeight, format: .number)
+                                .focused($isInputFocused)
                                 .font(.system(size: 18, weight: .black, design: .monospaced))
                                 .foregroundColor(.white)
                                 .keyboardType(.decimalPad)
