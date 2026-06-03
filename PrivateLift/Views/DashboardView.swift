@@ -795,7 +795,7 @@ struct BarbellPlateGraphic: View {
         guard weight > bar else { return [] }
         let sideWeight = (weight - bar) / 2.0
         
-        let lbsPlates = [45.0, 35.0, 25.0, 10.0, 5.0, 2.5]
+        let lbsPlates = [45.0, 35.0, 25.0, 10.0, 5.0, 2.5, 1.0]
         let kgPlates = [25.0, 20.0, 15.0, 10.0, 5.0, 2.5, 1.25]
         let config = isLbs ? lbsPlates : kgPlates
         
@@ -924,7 +924,8 @@ struct BarbellPlateGraphic: View {
             case 25: return 60
             case 10: return 50
             case 5: return 40
-            default: return 30
+            case 2.5: return 30
+            default: return 24
             }
         } else {
             switch wt {
