@@ -4,6 +4,9 @@ import UserNotifications
 #if canImport(ActivityKit)
 import ActivityKit
 #endif
+#if canImport(AppIntents)
+import AppIntents
+#endif
 
 #if canImport(ActivityKit)
 struct RestTimerAttributes: ActivityAttributes {
@@ -15,6 +18,8 @@ struct RestTimerAttributes: ActivityAttributes {
 #endif
 
 class RestTimerManager: ObservableObject {
+    static let shared = RestTimerManager()
+    
     @Published var timeRemaining: TimeInterval = 180
     @Published var isActive = false
     
@@ -112,3 +117,20 @@ class RestTimerManager: ObservableObject {
     }
     #endif
 }
+
+#if canImport(AppIntents) && canImport(ActivityKit)
+@available(iOS 17.0, macOS 14.0, watchOS 10.0, tvOS 17.0, *)
+struct SkipTimerIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Skip Rest Timer"
+    
+    init() {}
+    
+    func perform() async throws -> some IntentResult {
+        await MainActor.run {
+            RestTimerManager.shared.stopTimer()
+        }
+        return .result()
+    }
+}
+#endif
+

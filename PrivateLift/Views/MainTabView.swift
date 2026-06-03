@@ -5,7 +5,7 @@ struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var preferences: [UserPreferences]
     
-    @StateObject private var timerManager = RestTimerManager()
+    @StateObject private var timerManager = RestTimerManager.shared
     @StateObject private var healthKitService = HealthKitService()
     @State private var selectedTab = 0
     @State private var showOnboarding = false
