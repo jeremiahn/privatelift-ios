@@ -61,6 +61,10 @@ struct ManageExercisesView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(exercise.displayName)
+                    .accessibilityValue("\(Int(exercise.oneRepMax)) \(activePrefs.weightUnit)" + (exercise.isPowerlift ? ", Powerlifting \(exercise.powerliftType ?? "") contributor" : ""))
+                    .accessibilityHint("Double tap to edit this exercise")
                 }
                 .onDelete(perform: deleteExercises)
                 .onMove(perform: moveExercises)
@@ -211,6 +215,10 @@ struct AddExerciseSheet: View {
                                     HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
                                     selectedColorHex = color.0
                                 }
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel("\(color.1) color tag")
+                                .accessibilityAddTraits(selectedColorHex == color.0 ? [.isButton, .isSelected] : [.isButton])
+                                .accessibilityHint("Selects \(color.1) as the theme color for this exercise")
                         }
                     }
                     .padding(.vertical, 8)
@@ -343,6 +351,10 @@ struct EditExerciseSheet: View {
                                     HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
                                     selectedColorHex = color.0
                                 }
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel("\(color.1) color tag")
+                                .accessibilityAddTraits(selectedColorHex == color.0 ? [.isButton, .isSelected] : [.isButton])
+                                .accessibilityHint("Selects \(color.1) as the theme color for this exercise")
                         }
                     }
                     .padding(.vertical, 8)

@@ -100,22 +100,28 @@ struct RestTimerFloatingCapsule: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "timer")
-                .font(.headline)
-                .foregroundColor(brandColors.darkBgText)
-                .symbolEffect(.pulse, isActive: true)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text("REST TIMER")
-                    .font(.system(size: 8, weight: .black))
-                    .tracking(1.5)
-                    .foregroundColor(brandColors.darkBgText.opacity(0.7))
-                
-                Text(timeString(from: timerManager.timeRemaining))
-                    .font(.system(.title3, design: .monospaced))
-                    .fontWeight(.black)
+            HStack(spacing: 12) {
+                Image(systemName: "timer")
+                    .font(.headline)
                     .foregroundColor(brandColors.darkBgText)
+                    .symbolEffect(.pulse, isActive: true)
+                    .accessibilityHidden(true)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("REST TIMER")
+                        .font(.system(size: 8, weight: .black))
+                        .tracking(1.5)
+                        .foregroundColor(brandColors.darkBgText.opacity(0.7))
+                    
+                    Text(timeString(from: timerManager.timeRemaining))
+                        .font(.system(.title3, design: .monospaced))
+                        .fontWeight(.black)
+                        .foregroundColor(brandColors.darkBgText)
+                }
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Rest Timer")
+            .accessibilityValue(accessibilityTimeString(from: timerManager.timeRemaining))
             
             Spacer()
             
@@ -131,6 +137,8 @@ struct RestTimerFloatingCapsule: View {
                     .background(brandColors.darkBgText.opacity(0.2))
                     .cornerRadius(8)
             }
+            .accessibilityLabel("Skip rest timer")
+            .accessibilityHint("Double tap to skip the remaining rest duration")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -149,6 +157,16 @@ struct RestTimerFloatingCapsule: View {
         let mins = Int(interval) / 60
         let secs = Int(interval) % 60
         return String(format: "%02d:%02d", mins, secs)
+    }
+    
+    private func accessibilityTimeString(from interval: TimeInterval) -> String {
+        let mins = Int(interval) / 60
+        let secs = Int(interval) % 60
+        if mins > 0 {
+            return "\(mins) minute\(mins > 1 ? "s" : "") and \(secs) second\(secs != 1 ? "s" : "") remaining"
+        } else {
+            return "\(secs) second\(secs != 1 ? "s" : "") remaining"
+        }
     }
 }
 

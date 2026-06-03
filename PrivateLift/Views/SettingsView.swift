@@ -162,6 +162,8 @@ struct SettingsView: View {
                     .frame(width: 100)
                     .font(.system(.body, design: .monospaced))
                     .fontWeight(.black)
+                    .accessibilityLabel("Body weight")
+                    .accessibilityValue("\(activePrefs.bodyWeight) \(activePrefs.weightUnit)")
             }
             
             Picker("Gender", selection: Bindable(activePrefs).gender) {
@@ -248,17 +250,7 @@ struct SettingsView: View {
             .fontWeight(.bold)
             .tint(.plBlue)
 
-            NavigationLink(destination: TimeZoneSelectionView(preferences: activePrefs)) {
-                HStack {
-                    Text("Time Zone")
-                        .fontWeight(.bold)
-                    Spacer()
-                    Text(activePrefs.timeZoneIdentifier.replacingOccurrences(of: "_", with: " "))
-                        .foregroundColor(.secondary)
-                        .font(.body)
-                }
-            }
-            .tint(.plBlue)
+
 
             Picker("First Day of Week", selection: Bindable(activePrefs).startOfWeekDay) {
                 Text("Sunday").tag(1)
@@ -340,6 +332,9 @@ struct SettingsView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Delete all workout data")
+            .accessibilityHint("Permanently deletes all of your logged strength sessions and benchmarks. This action cannot be undone.")
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
         }
@@ -626,6 +621,7 @@ struct SettingsView: View {
             Image(systemName: icon)
                 .font(.system(size: 18, weight: .bold))
                 .foregroundColor(color)
+                .accessibilityHidden(true)
             
             VStack(spacing: 2) {
                 Text(title)
@@ -646,6 +642,8 @@ struct SettingsView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(brandColors.whiteText.opacity(0.06), lineWidth: 1.0)
         )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title) as \(format)")
     }
 }
 
@@ -690,44 +688,4 @@ private struct BackupSet: Codable {
     let setType: String
 }
 
-// MARK: - Time Zone Selection View
-struct TimeZoneSelectionView: View {
-    @Bindable var preferences: UserPreferences
-    @State private var searchText = ""
-    @Environment(\.dismiss) private var dismiss
-    
-    var filteredTimeZones: [String] {
-        if searchText.isEmpty {
-            return TimeZone.knownTimeZoneIdentifiers
-        } else {
-            return TimeZone.knownTimeZoneIdentifiers.filter { 
-                $0.localizedCaseInsensitiveContains(searchText) 
-            }
-        }
-    }
-    
-    var body: some View {
-        List {
-            ForEach(filteredTimeZones, id: \.self) { tz in
-                Button(action: {
-                    preferences.timeZoneIdentifier = tz
-                    dismiss()
-                }) {
-                    HStack {
-                        Text(tz.replacingOccurrences(of: "_", with: " "))
-                            .foregroundColor(.primary)
-                        Spacer()
-                        if preferences.timeZoneIdentifier == tz {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.plBlue)
-                                .fontWeight(.bold)
-                        }
-                    }
-                }
-            }
-        }
-        .searchable(text: $searchText, prompt: "Search Time Zones")
-        .navigationTitle("Select Time Zone")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
+

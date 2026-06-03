@@ -48,6 +48,9 @@ struct OnboardingView: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 24)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Onboarding progress")
+                .accessibilityValue("Step \(currentStep + 1) of 7")
                 
                 // Content Cards
                 TabView(selection: $currentStep) {
@@ -81,6 +84,8 @@ struct OnboardingView: View {
                                         .stroke(Color.white.opacity(0.1), lineWidth: 1.5)
                                 )
                         }
+                        .accessibilityLabel("Back")
+                        .accessibilityHint("Go back to the previous onboarding step")
                     }
                     
                     Button(action: {
@@ -101,6 +106,8 @@ struct OnboardingView: View {
                             .cornerRadius(16)
                             .shadow(color: (currentStep == 6 ? Color.plGreen : Color.plBlue).opacity(0.3), radius: 10, y: 5)
                     }
+                    .accessibilityLabel(currentStep == 0 ? "Get Started" : (currentStep == 6 ? "Start Lifting" : "Next"))
+                    .accessibilityHint(currentStep == 6 ? "Completes calibration onboarding and enters the main application" : "Advance to the next onboarding step")
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
@@ -125,6 +132,7 @@ struct OnboardingView: View {
                     .foregroundColor(.white)
             }
             .scaleEffect(1.0)
+            .accessibilityHidden(true)
             
             VStack(spacing: 8) {
                 HStack(spacing: 2) {
@@ -136,6 +144,8 @@ struct OnboardingView: View {
                         .foregroundColor(.plBlue)
                 }
                 .tracking(-0.5)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Private Lift")
                 
                 Text("Your private, offline-first strength companion. Let's calibrate your starting profile to customize your target weight intensities.")
                     .font(.system(size: 13, weight: .medium))
@@ -181,22 +191,27 @@ struct OnboardingView: View {
             // Main input card
             VStack(spacing: 32) {
                 VStack(spacing: 4) {
-                    TextField("", value: value, format: .number)
+                    TextField(title, value: value, format: .number)
                         .font(.system(size: 64, weight: .black, design: .monospaced))
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
                         .keyboardType(.numberPad)
                         .frame(maxWidth: 240)
+                        .accessibilityLabel("\(title) value")
+                        .accessibilityValue("\(Int(value.wrappedValue)) \(weightUnit)")
                     
                     Text(weightUnit.uppercased())
                         .font(.system(size: 14, weight: .black))
                         .foregroundColor(.plGray400)
                         .tracking(2.0)
+                        .accessibilityHidden(true)
                 }
                 
                 Slider(value: value, in: range, step: step)
                     .tint(accentColor)
                     .padding(.horizontal, 16)
+                    .accessibilityLabel("\(title) slider")
+                    .accessibilityValue("\(Int(value.wrappedValue)) \(weightUnit)")
             }
             .padding(.vertical, 32)
             .padding(.horizontal, 16)
@@ -267,6 +282,8 @@ struct OnboardingView: View {
                                 .foregroundColor(.white)
                                 .keyboardType(.decimalPad)
                                 .disabled(!trackWeightAndGender)
+                                .accessibilityLabel("Body weight")
+                                .accessibilityValue("\(bodyWeight) \(weightUnit)")
                             
                             Spacer()
                             
@@ -277,6 +294,7 @@ struct OnboardingView: View {
                             .pickerStyle(.segmented)
                             .frame(width: 100)
                             .disabled(!trackWeightAndGender)
+                            .accessibilityLabel("Body weight unit")
                         }
                         .padding(.horizontal, 16)
                         .frame(height: 52)
@@ -337,6 +355,9 @@ struct OnboardingView: View {
                         .stroke(gender == tag ? Color.plPurple : Color.white.opacity(0.08), lineWidth: 1.5)
                 )
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(gender == tag ? [.isButton, .isSelected] : [.isButton])
     }
     
     // MARK: - Settings Explanation Step
@@ -366,6 +387,7 @@ struct OnboardingView: View {
                         .font(.system(size: 24))
                         .foregroundColor(.plBlue)
                         .frame(width: 40)
+                        .accessibilityHidden(true)
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text("PREFERENCES & THEMES")
@@ -377,26 +399,29 @@ struct OnboardingView: View {
                             .foregroundColor(.white)
                     }
                 }
+                .accessibilityElement(children: .combine)
                 
                 Divider()
                     .background(Color.white.opacity(0.1))
                 
                 HStack(spacing: 16) {
-                    Image(systemName: "globe")
+                    Image(systemName: "calendar")
                         .font(.system(size: 24))
                         .foregroundColor(.plGreen)
                         .frame(width: 40)
+                        .accessibilityHidden(true)
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("TIME ZONE & CALENDAR")
+                        Text("CALENDAR & WEEKSTART")
                             .font(.system(size: 10, weight: .black))
                             .foregroundColor(.plGray400)
                             .tracking(1.0)
-                        Text("Set custom Time Zones and choose the day of the week your workouts start on.")
+                        Text("Choose the day of the week your strength workouts start on.")
                             .font(.system(size: 12))
                             .foregroundColor(.white)
                     }
                 }
+                .accessibilityElement(children: .combine)
                 
                 Divider()
                     .background(Color.white.opacity(0.1))
@@ -406,6 +431,7 @@ struct OnboardingView: View {
                         .font(.system(size: 24))
                         .foregroundColor(.plPurple)
                         .frame(width: 40)
+                        .accessibilityHidden(true)
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text("SYNC & BACKUPS")
@@ -417,6 +443,7 @@ struct OnboardingView: View {
                             .foregroundColor(.white)
                     }
                 }
+                .accessibilityElement(children: .combine)
             }
             .padding(24)
             .background(Color.white.opacity(0.04))
@@ -430,7 +457,7 @@ struct OnboardingView: View {
             Spacer()
         }
     }
-
+    
     // MARK: - Calibration Completion Step
     private var completionStep: some View {
         VStack(spacing: 24) {
@@ -447,6 +474,7 @@ struct OnboardingView: View {
                     .font(.system(size: 36, weight: .black))
                     .foregroundColor(.white)
             }
+            .accessibilityHidden(true)
             
             VStack(spacing: 8) {
                 Text("CALIBRATION COMPLETE")

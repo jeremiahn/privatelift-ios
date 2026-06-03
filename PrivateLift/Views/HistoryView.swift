@@ -142,6 +142,9 @@ struct HistoryView: View {
                                 "Deadlift": brandColors.green
                             ])
                             .frame(height: 220)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("Estimated 1RM Progression Chart")
+                            .accessibilityValue(chartPoints.isEmpty ? "No data available." : "Showing 1RM trends over time for your lifts.")
                         }
                     }
                     .padding(20)
@@ -291,6 +294,10 @@ struct HistoryView: View {
                 }
                 .padding(16)
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(formatSessionDate(session.dateString)) workout session")
+            .accessibilityValue("\(session.sets.count) sets, total volume \(Int(totalVolume)) \(activePrefs.weightUnit). Exercises completed: \(Array(Set(session.sets.map { item in exercises.first(where: { $0.name == item.exercise })?.displayName ?? item.exercise })).joined(separator: ", "))")
+            .accessibilityHint(isExpanded ? "Double tap to collapse details" : "Double tap to expand details")
             
             // Expanded detail section
             if isExpanded {
@@ -309,6 +316,7 @@ struct HistoryView: View {
                                     .font(.system(size: 13, weight: .black))
                                     .foregroundColor(brandColors.whiteText)
                                     .frame(width: 80, alignment: .leading)
+                                    .accessibilityLabel(exercises.first(where: { $0.name == item.exercise })?.displayName ?? item.exercise)
                                 
                                 Menu {
                                     Button("Warmup") {
@@ -343,12 +351,17 @@ struct HistoryView: View {
                                     }
                                 }
                                 .buttonStyle(PlainButtonStyle())
+                                .accessibilityLabel("Set type")
+                                .accessibilityValue(item.setType == "drop" || item.setType == "failed" ? "failed" : item.setType)
+                                .accessibilityHint("Double tap to change set type")
                                 
                                 Spacer()
                                 
                                 Text("\(Int(item.weight)) \(activePrefs.weightUnit) x \(item.reps)")
                                     .font(.system(size: 13, weight: .black, design: .monospaced))
                                     .foregroundColor(brandColors.whiteText)
+                                    .accessibilityLabel("Weight and reps")
+                                    .accessibilityValue("\(Int(item.weight)) \(activePrefs.weightUnit) for \(item.reps) repetitions")
                                 
                                 Menu {
                                     ForEach(Array(stride(from: 5.0, through: 10.0, by: 0.5)), id: \.self) { val in
@@ -375,6 +388,9 @@ struct HistoryView: View {
                                     .cornerRadius(4)
                                 }
                                 .buttonStyle(PlainButtonStyle())
+                                .accessibilityLabel("Rate of perceived exertion")
+                                .accessibilityValue("RPE \(String(format: "%.1f", item.rpe))")
+                                .accessibilityHint("Double tap to change RPE value")
                                 
                                 Button(action: {
                                      setToDelete = item
@@ -386,6 +402,8 @@ struct HistoryView: View {
                                          .foregroundColor(brandColors.red.opacity(0.7))
                                          .padding(.leading, 6)
                                  }
+                                 .accessibilityLabel("Delete set")
+                                 .accessibilityHint("Double tap to permanently remove this set from history")
                             }
                             .padding(.vertical, 8)
                             .padding(.horizontal, 12)
@@ -412,6 +430,7 @@ struct HistoryView: View {
                                     .stroke(brandColors.whiteText.opacity(0.08), lineWidth: 1.0)
                             )
                             .focused($isNotesFocused)
+                            .accessibilityLabel("Session notes")
                     }
                     
                     // Bottom actions row (Delete entire session)
@@ -425,6 +444,8 @@ struct HistoryView: View {
                                 .font(.system(size: 10, weight: .black))
                                 .foregroundColor(brandColors.red)
                         }
+                        .accessibilityLabel("Delete entire workout session")
+                        .accessibilityHint("Permanently deletes this entire workout session from your logs")
                     }
                     .padding(.top, 4)
                 }

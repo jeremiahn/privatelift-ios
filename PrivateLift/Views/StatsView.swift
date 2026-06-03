@@ -287,6 +287,9 @@ struct StatsView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(brandColors.whiteText.opacity(0.06), lineWidth: 1.0)
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue("\(value) \(unit)")
     }
     
     private func prMetric(title: String, value: Double, unit: String, color: Color) -> some View {
@@ -315,6 +318,9 @@ struct StatsView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(brandColors.whiteText.opacity(0.06), lineWidth: 1.0)
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title) Personal Record")
+        .accessibilityValue("\(Int(value)) \(unit)")
     }
     
     private func volumeBar(title: String, count: Int, reps: Int, weight: Double, color: Color) -> some View {
@@ -345,5 +351,8 @@ struct StatsView: View {
             }
             .frame(height: 8)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title) volume breakdown")
+        .accessibilityValue("\(count) sets, \(reps) repetitions, and total volume of \(Int(weight)) \(activePrefs.weightUnit)")
     }
 }

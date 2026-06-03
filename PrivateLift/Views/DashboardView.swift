@@ -111,6 +111,8 @@ struct DashboardView: View {
                                 activePrefs.lastIntensity = Int(newValue)
                                 updateWeightInputForSelectedExercise()
                             }
+                            .accessibilityLabel("Target intensity percentage")
+                            .accessibilityValue("\(Int(intensity)) percent")
                     }
                     .padding(20)
                     .glassCard(style: themeStyle)
@@ -195,6 +197,7 @@ struct DashboardView: View {
                                                 .cornerRadius(8)
                                         }
                                         .buttonStyle(PlainButtonStyle())
+                                        .accessibilityLabel("Decrease weight by 1")
                                         
                                         TextField("0", text: $weightInput)
                                             .focused($isFieldFocused)
@@ -210,6 +213,8 @@ struct DashboardView: View {
                                                 RoundedRectangle(cornerRadius: 8)
                                                     .stroke(brandColors.whiteText.opacity(0.08), lineWidth: 1.5)
                                             )
+                                            .accessibilityLabel("Weight")
+                                            .accessibilityValue("\(weightInput) \(activePrefs.weightUnit)")
                                         
                                         Button(action: {
                                             adjustWeight(by: 1)
@@ -222,6 +227,7 @@ struct DashboardView: View {
                                                 .cornerRadius(8)
                                         }
                                         .buttonStyle(PlainButtonStyle())
+                                        .accessibilityLabel("Increase weight by 1")
                                     }
                                 }
                                 
@@ -243,6 +249,8 @@ struct DashboardView: View {
                                             RoundedRectangle(cornerRadius: 12)
                                                 .stroke(brandColors.whiteText.opacity(0.08), lineWidth: 1.5)
                                         )
+                                        .accessibilityLabel("Reps")
+                                        .accessibilityValue("\(repsInput)")
                                 }
                             }
                             
@@ -261,6 +269,8 @@ struct DashboardView: View {
                                 
                                 Slider(value: $rpeInput, in: 5...10, step: 0.5)
                                     .tint(brandColors.purple)
+                                    .accessibilityLabel("RPE rating")
+                                    .accessibilityValue(String(format: "%.1f", rpeInput))
                             }
                             
                             // Save Button
@@ -278,6 +288,8 @@ struct DashboardView: View {
                                 .cornerRadius(12)
                                 .shadow(color: brandColors.purple.opacity(0.3), radius: 8, y: 4)
                             }
+                            .accessibilityLabel("Log Completed Set")
+                            .accessibilityHint("Saves this workout set to your log database")
                             .padding(.top, 8)
                         }
                     }
@@ -320,6 +332,7 @@ struct DashboardView: View {
                                             .cornerRadius(8)
                                     }
                                     .buttonStyle(PlainButtonStyle())
+                                    .accessibilityLabel("Decrease calculator weight by 1")
                                     
                                     TextField("Weight", value: $calcWeight, format: .number)
                                         .focused($isFieldFocused)
@@ -335,6 +348,8 @@ struct DashboardView: View {
                                             RoundedRectangle(cornerRadius: 8)
                                                 .stroke(brandColors.whiteText.opacity(0.08), lineWidth: 1.5)
                                         )
+                                        .accessibilityLabel("Plate calculator weight")
+                                        .accessibilityValue("\(Int(calcWeight)) \(activePrefs.weightUnit)")
                                     
                                     Button(action: {
                                         HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
@@ -348,6 +363,7 @@ struct DashboardView: View {
                                             .cornerRadius(8)
                                     }
                                     .buttonStyle(PlainButtonStyle())
+                                    .accessibilityLabel("Increase calculator weight by 1")
                                 }
                                     
                                 Text(activePrefs.weightUnit.uppercased())
@@ -568,6 +584,9 @@ struct DashboardView: View {
                         .stroke(brandColors.teal.opacity(0.3), lineWidth: 1.0)
                 )
         }
+        .accessibilityLabel("Autofill weight for \(exercise)")
+        .accessibilityValue("\(Int(value)) \(activePrefs.weightUnit)")
+        .accessibilityHint("Loads \(Int(value)) \(activePrefs.weightUnit) into the plate calculator")
     }
     
     private func updateWeightInputForSelectedExercise() {
@@ -681,6 +700,10 @@ struct DashboardView: View {
                 )
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isActive ? [.isButton, .isSelected] : [.isButton])
+        .accessibilityHint("Selects \(title) for logging")
     }
     
     private func setTypePill(title: String, tag: String, activeColor: Color) -> some View {
@@ -708,6 +731,10 @@ struct DashboardView: View {
                 )
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isActive ? [.isButton, .isSelected] : [.isButton])
+        .accessibilityHint("Selects \(title) set type")
     }
 }
 
@@ -749,6 +776,11 @@ struct TargetCard: View {
                     .stroke(isSelected ? color : whiteText.opacity(0.08), lineWidth: 1.5)
             )
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue("\(Int(weight)) \(unit)")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : [.isButton])
+        .accessibilityHint("Double tap to select \(title) for logging, and load this weight into the plate calculator.")
     }
 }
 
@@ -778,6 +810,28 @@ struct BarbellPlateGraphic: View {
         }
         
         return resolvedPlates
+    }
+    
+    private var barbellAccessibilityValue: String {
+        let unitStr = isLbs ? "pounds" : "kilograms"
+        let bar = isLbs ? 45.0 : 20.0
+        if weight <= bar {
+            return "Empty \(Int(bar)) \(unitStr) barbell."
+        }
+        
+        let plateCounts = plates.reduce(into: [Double: Int]()) { counts, p in
+            counts[p, default: 0] += 1
+        }
+        
+        let sortedPlates = plateCounts.keys.sorted().reversed()
+        let plateDescriptionList = sortedPlates.map { p in
+            let count = plateCounts[p] ?? 0
+            let pStr = p == Double(Int(p)) ? "\(Int(p))" : "\(p)"
+            return "\(count) \(pStr) \(unitStr) plate\(count > 1 ? "s" : "")"
+        }
+        
+        let platesText = plateDescriptionList.joined(separator: ", ")
+        return "Total weight \(Int(weight)) \(unitStr). Loaded with \(platesText) per side on a \(Int(bar)) \(unitStr) barbell."
     }
     
     private func plateColor(for wt: Double, isNight: Bool) -> Color {
@@ -965,5 +1019,8 @@ struct BarbellPlateGraphic: View {
             Spacer()
         }
         .padding(.vertical, 8)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Visual barbell diagram")
+        .accessibilityValue(barbellAccessibilityValue)
     }
 }
