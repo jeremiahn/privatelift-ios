@@ -242,6 +242,13 @@ struct SettingsView: View {
             .fontWeight(.bold)
             .tint(.plBlue)
             
+            Picker("Dashboard Layout", selection: Bindable(activePrefs).useGridMode) {
+                Text("Carousel").tag(false)
+                Text("Grid").tag(true)
+            }
+            .fontWeight(.bold)
+            .tint(.plBlue)
+            
             Picker("1RM Formula", selection: Bindable(activePrefs).formula) {
                 Text("Epley").tag("epley")
                 Text("Brzycki").tag("brzycki")

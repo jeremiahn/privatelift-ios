@@ -20,6 +20,7 @@ final class UserPreferences {
     var hasMigratedWebData: Bool = false
     var lastIntensity: Int = 85
     var theme: String = "system" // "system" | "light" | "dark" | "night"
+    var useGridMode: Bool = false
     var timeZoneIdentifier: String = TimeZone.current.identifier
     var startOfWeekDay: Int = Calendar.current.firstWeekday // 1 = Sunday, 2 = Monday, ... 7 = Saturday
 
@@ -41,6 +42,7 @@ final class UserPreferences {
         hasMigratedWebData: Bool = false,
         lastIntensity: Int = 85,
         theme: String = "system",
+        useGridMode: Bool = false,
         timeZoneIdentifier: String = TimeZone.current.identifier,
         startOfWeekDay: Int = Calendar.current.firstWeekday
     ) {
@@ -61,6 +63,7 @@ final class UserPreferences {
         self.hasMigratedWebData = hasMigratedWebData
         self.lastIntensity = lastIntensity
         self.theme = theme
+        self.useGridMode = useGridMode
         self.timeZoneIdentifier = timeZoneIdentifier
         self.startOfWeekDay = startOfWeekDay
     }

@@ -118,27 +118,7 @@ struct DashboardView: View {
                     .glassCard(style: themeStyle)
                     
                     // 2. Program Targets Row (Dynamic Custom Exercises)
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(exercises) { exercise in
-                                TargetCard(
-                                    title: exercise.displayName,
-                                    weight: calculateTargetWeight(for: exercise.name),
-                                    unit: activePrefs.weightUnit,
-                                    color: themeStyle == .night ? .plGray300 : Color(hex: exercise.colorHex),
-                                    whiteText: brandColors.whiteText,
-                                    isSelected: selectedExercise == exercise.name
-                                ) {
-                                    HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
-                                    selectedExercise = exercise.name
-                                    updateWeightInputForSelectedExercise()
-                                    calcWeight = calculateTargetWeight(for: exercise.name)
-                                }
-                                .frame(width: 110)
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                    }
+                    programTargetsSection
                     
                     // 3. Log New Set Form
                     VStack(alignment: .leading, spacing: 16) {
@@ -155,13 +135,7 @@ struct DashboardView: View {
                                     .foregroundColor(.plGray400)
                                     .tracking(1.5)
                                 
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 8) {
-                                        ForEach(exercises) { exercise in
-                                            exercisePill(title: exercise.displayName, tag: exercise.name, activeColor: Color(hex: exercise.colorHex))
-                                        }
-                                    }
-                                }
+                                exerciseSelectionSection
                             }
                             .padding(.bottom, 4)
                             
@@ -303,13 +277,7 @@ struct DashboardView: View {
                             .foregroundColor(brandColors.teal)
                             .tracking(2.0)
                         
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 10) {
-                                ForEach(exercises) { exercise in
-                                    plateAutofillButton(exercise: exercise.displayName, value: calculateTargetWeight(for: exercise.name))
-                                }
-                            }
-                        }
+                        plateCalculatorAutofillSection
                         .padding(.bottom, 4)
                         
                         VStack(spacing: 20) {
@@ -567,22 +535,128 @@ struct DashboardView: View {
         }
     }
     
-    private func plateAutofillButton(exercise: String, value: Double) -> some View {
+    @ViewBuilder
+    private var programTargetsSection: some View {
+        if activePrefs.useGridMode {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                ForEach(exercises) { exercise in
+                    TargetCard(
+                        title: exercise.displayName,
+                        weight: calculateTargetWeight(for: exercise.name),
+                        unit: activePrefs.weightUnit,
+                        color: themeStyle == .night ? .plGray300 : Color(hex: exercise.colorHex),
+                        whiteText: brandColors.whiteText,
+                        isSelected: selectedExercise == exercise.name,
+                        isSquare: true
+                    ) {
+                        HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+                        selectedExercise = exercise.name
+                        updateWeightInputForSelectedExercise()
+                        calcWeight = calculateTargetWeight(for: exercise.name)
+                    }
+                    .aspectRatio(1.0, contentMode: .fill)
+                }
+            }
+            .padding(.horizontal, 16)
+        } else {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(exercises) { exercise in
+                        TargetCard(
+                            title: exercise.displayName,
+                            weight: calculateTargetWeight(for: exercise.name),
+                            unit: activePrefs.weightUnit,
+                            color: themeStyle == .night ? .plGray300 : Color(hex: exercise.colorHex),
+                            whiteText: brandColors.whiteText,
+                            isSelected: selectedExercise == exercise.name,
+                            isSquare: false
+                        ) {
+                            HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+                            selectedExercise = exercise.name
+                            updateWeightInputForSelectedExercise()
+                            calcWeight = calculateTargetWeight(for: exercise.name)
+                        }
+                        .frame(width: 110)
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var exerciseSelectionSection: some View {
+        if activePrefs.useGridMode {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                ForEach(exercises) { exercise in
+                    exercisePill(title: exercise.displayName, tag: exercise.name, activeColor: Color(hex: exercise.colorHex), isSquare: true)
+                        .aspectRatio(1.0, contentMode: .fill)
+                }
+            }
+        } else {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(exercises) { exercise in
+                        exercisePill(title: exercise.displayName, tag: exercise.name, activeColor: Color(hex: exercise.colorHex), isSquare: false)
+                    }
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var plateCalculatorAutofillSection: some View {
+        if activePrefs.useGridMode {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                ForEach(exercises) { exercise in
+                    plateAutofillButton(exercise: exercise.displayName, value: calculateTargetWeight(for: exercise.name), isSquare: true)
+                        .aspectRatio(1.0, contentMode: .fill)
+                }
+            }
+        } else {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(exercises) { exercise in
+                        plateAutofillButton(exercise: exercise.displayName, value: calculateTargetWeight(for: exercise.name), isSquare: false)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func plateAutofillButton(exercise: String, value: Double, isSquare: Bool = false) -> some View {
         Button(action: {
             HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
             calcWeight = value
         }) {
-            Text(exercise.uppercased())
-                .font(.system(size: 9, weight: .black))
-                .foregroundColor(brandColors.whiteText)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(brandColors.teal.opacity(0.2))
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(brandColors.teal.opacity(0.3), lineWidth: 1.0)
-                )
+            VStack(spacing: 4) {
+                if isSquare {
+                    Spacer(minLength: 0)
+                }
+                Text(exercise.uppercased())
+                    .font(.system(size: 9, weight: .black))
+                    .foregroundColor(brandColors.whiteText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 4)
+                
+                if isSquare {
+                    Spacer(minLength: 0)
+                    Text("\(Int(value))")
+                        .font(.system(size: 12, weight: .black, design: .monospaced))
+                        .foregroundColor(brandColors.teal)
+                        .padding(.bottom, 4)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: isSquare ? nil : nil)
+            .padding(.horizontal, isSquare ? 4 : 8)
+            .padding(.vertical, isSquare ? 8 : 4)
+            .background(brandColors.teal.opacity(0.2))
+            .cornerRadius(6)
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(brandColors.teal.opacity(0.3), lineWidth: 1.0)
+            )
         }
         .accessibilityLabel("Autofill weight for \(exercise)")
         .accessibilityValue("\(Int(value)) \(activePrefs.weightUnit)")
@@ -672,7 +746,7 @@ struct DashboardView: View {
         }
     }
     
-    private func exercisePill(title: String, tag: String, activeColor: Color) -> some View {
+    private func exercisePill(title: String, tag: String, activeColor: Color, isSquare: Bool = false) -> some View {
         let isActive = (selectedExercise == tag)
         let resolvedActiveColor = (themeStyle == .night) ? Color.plGray300 : activeColor
         let pillBg = isActive ? resolvedActiveColor : brandColors.whiteText.opacity(0.04)
@@ -687,17 +761,28 @@ struct DashboardView: View {
                 calcWeight = calculateTargetWeight(for: tag)
             }
         }) {
-            Text(title)
-                .font(.system(size: 12, weight: .black))
-                .foregroundColor(pillText)
-                .padding(.horizontal, 16)
-                .frame(height: 38)
-                .background(pillBg)
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(pillBorder, lineWidth: 1.5)
-                )
+            VStack {
+                if isSquare {
+                    Spacer(minLength: 0)
+                }
+                Text(title)
+                    .font(.system(size: 12, weight: .black))
+                    .foregroundColor(pillText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 8)
+                if isSquare {
+                    Spacer(minLength: 0)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: isSquare ? nil : 38)
+            .padding(.vertical, isSquare ? 8 : 0)
+            .background(pillBg)
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(pillBorder, lineWidth: 1.5)
+            )
         }
         .buttonStyle(PlainButtonStyle())
         .accessibilityElement(children: .ignore)
@@ -746,6 +831,7 @@ struct TargetCard: View {
     var color: Color
     var whiteText: Color
     var isSelected: Bool
+    var isSquare: Bool = false
     var onTap: () -> Void
     
     var body: some View {
@@ -755,6 +841,10 @@ struct TargetCard: View {
                     .font(.system(size: 10, weight: .black))
                     .foregroundColor(color)
                     .tracking(1.0)
+                
+                if isSquare {
+                    Spacer(minLength: 0)
+                }
                 
                 HStack(alignment: .lastTextBaseline, spacing: 2) {
                     Text("\(Int(weight))")
@@ -769,6 +859,7 @@ struct TargetCard: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxHeight: isSquare ? .infinity : nil, alignment: .leading)
             .background(isSelected ? color.opacity(0.12) : whiteText.opacity(0.04))
             .cornerRadius(16)
             .overlay(
