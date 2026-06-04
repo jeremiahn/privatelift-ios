@@ -512,9 +512,13 @@ struct OnboardingView: View {
             let existingPrefs = try modelContext.fetch(prefsFetch)
             let prefs = existingPrefs.first ?? UserPreferences()
             
-            prefs.squatMax = max(45, min(squatMax, 800))
-            prefs.benchMax = max(45, min(benchMax, 600))
-            prefs.deadliftMax = max(45, min(deadliftMax, 1000))
+            let finalSquat = max(45, min(squatMax, 800))
+            let finalBench = max(45, min(benchMax, 600))
+            let finalDeadlift = max(45, min(deadliftMax, 1000))
+            
+            prefs.squatMax = finalSquat
+            prefs.benchMax = finalBench
+            prefs.deadliftMax = finalDeadlift
             prefs.bodyWeight = bodyWeight
             prefs.gender = gender
             prefs.weightUnit = weightUnit
@@ -522,6 +526,22 @@ struct OnboardingView: View {
             
             if existingPrefs.isEmpty {
                 modelContext.insert(prefs)
+            }
+            
+            // Sync with pre-seeded CustomExercise objects
+            DatabaseSeeder.seedDataIfNeeded(context: modelContext)
+            
+            let exerciseFetch = FetchDescriptor<CustomExercise>()
+            let exercises = try modelContext.fetch(exerciseFetch)
+            
+            if let squatExercise = exercises.first(where: { $0.name == "SQUAT" }) {
+                squatExercise.oneRepMax = finalSquat
+            }
+            if let benchExercise = exercises.first(where: { $0.name == "BENCH" }) {
+                benchExercise.oneRepMax = finalBench
+            }
+            if let deadliftExercise = exercises.first(where: { $0.name == "DEADLIFT" }) {
+                deadliftExercise.oneRepMax = finalDeadlift
             }
             
             try modelContext.save()

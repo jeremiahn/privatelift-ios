@@ -106,6 +106,18 @@ struct ManageExercisesView: View {
             AddExerciseSheet(onSave: { newExercise in
                 modelContext.insert(newExercise)
                 enforcePowerliftingUniqueness(for: newExercise)
+                
+                // Sync powerlift oneRepMax back to activePrefs if it's a powerlift
+                if newExercise.isPowerlift, let type = newExercise.powerliftType {
+                    if type == "squat" {
+                        activePrefs.squatMax = newExercise.oneRepMax
+                    } else if type == "bench" {
+                        activePrefs.benchMax = newExercise.oneRepMax
+                    } else if type == "deadlift" {
+                        activePrefs.deadliftMax = newExercise.oneRepMax
+                    }
+                }
+                
                 reorderIndexes()
                 try? modelContext.save()
             }, activePrefs: activePrefs, brandColors: brandColors)
@@ -113,6 +125,18 @@ struct ManageExercisesView: View {
         .sheet(item: $selectedExerciseToEdit) { exercise in
             EditExerciseSheet(exercise: exercise, onSave: {
                 enforcePowerliftingUniqueness(for: exercise)
+                
+                // Sync powerlift oneRepMax back to activePrefs
+                if exercise.isPowerlift, let type = exercise.powerliftType {
+                    if type == "squat" {
+                        activePrefs.squatMax = exercise.oneRepMax
+                    } else if type == "bench" {
+                        activePrefs.benchMax = exercise.oneRepMax
+                    } else if type == "deadlift" {
+                        activePrefs.deadliftMax = exercise.oneRepMax
+                    }
+                }
+                
                 try? modelContext.save()
             }, activePrefs: activePrefs, brandColors: brandColors)
         }

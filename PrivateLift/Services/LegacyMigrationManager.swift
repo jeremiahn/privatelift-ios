@@ -162,6 +162,26 @@ class LegacyMigrationManager: NSObject, WKNavigationDelegate, WKScriptMessageHan
                 if existingPrefs.isEmpty {
                     modelContext.insert(prefs)
                 }
+                
+                // Seed custom exercises first if not seeded
+                DatabaseSeeder.seedDataIfNeeded(context: modelContext)
+                
+                // Sync with custom exercises
+                let exerciseFetch = FetchDescriptor<CustomExercise>()
+                do {
+                    let exercises = try modelContext.fetch(exerciseFetch)
+                    if let squatExercise = exercises.first(where: { $0.name == "SQUAT" }) {
+                        squatExercise.oneRepMax = settings.squatMax
+                    }
+                    if let benchExercise = exercises.first(where: { $0.name == "BENCH" }) {
+                        benchExercise.oneRepMax = settings.benchMax
+                    }
+                    if let deadliftExercise = exercises.first(where: { $0.name == "DEADLIFT" }) {
+                        deadliftExercise.oneRepMax = settings.deadliftMax
+                    }
+                } catch {
+                    print("Failed to sync exercises during migration: \(error)")
+                }
             } else {
                 // If there is no settings payload, it means this was a fresh install with no legacy data.
                 // We will still mark it as migrated to skip further triggers.
