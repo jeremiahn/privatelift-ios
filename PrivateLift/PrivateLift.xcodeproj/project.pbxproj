@@ -15,9 +15,22 @@
 		277DFE122FCCA24300D40D44 /* web */ = {isa = PBXFileReference; lastKnownFileType = folder; path = web; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		27DEDF642FD1DA8A00A52EBA /* Exceptions for "PrivateLift" folder in "PrivateLift" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 277DFDEE2FCC95C900D40D44 /* PrivateLift */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		277DFDF12FCC95C900D40D44 /* PrivateLift */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				27DEDF642FD1DA8A00A52EBA /* Exceptions for "PrivateLift" folder in "PrivateLift" target */,
+			);
 			path = PrivateLift;
 			sourceTree = "<group>";
 		};
@@ -263,6 +276,7 @@
 				DEVELOPMENT_TEAM = D42P76Y3LR;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PrivateLift/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = PersonalLift;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
@@ -303,6 +317,7 @@
 				DEVELOPMENT_TEAM = D42P76Y3LR;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PrivateLift/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = PersonalLift;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";

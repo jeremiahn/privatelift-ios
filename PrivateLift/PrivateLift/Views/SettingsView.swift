@@ -226,6 +226,11 @@ struct SettingsView: View {
             Toggle("Show Rest Timer", isOn: Bindable(activePrefs).showRestTimer)
                 .fontWeight(.bold)
                 .tint(.plBlue)
+                
+            // Apple Watch support toggle
+            Toggle("Apple Watch Support", isOn: Bindable(activePrefs).showWatchSupport)
+                .fontWeight(.bold)
+                .tint(.plBlue)
             
             if activePrefs.showRestTimer {
                 Picker("Default Rest Duration", selection: Bindable(activePrefs).defaultRestDuration) {

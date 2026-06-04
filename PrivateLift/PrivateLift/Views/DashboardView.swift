@@ -622,7 +622,7 @@ struct DashboardView: View {
                     HStack(spacing: 10) {
                         ForEach(chunk) { exercise in
                             plateAutofillButton(exercise: exercise.displayName, value: calculateTargetWeight(for: exercise.name), isSquare: false)
-                                .frame(minWidth: 95, minHeight: 48, maxWidth: .infinity, maxHeight: .infinity)
+                                .frame(minWidth: 95, maxWidth: .infinity, minHeight: 48, maxHeight: .infinity)
                         }
                     }
                 }
@@ -632,7 +632,7 @@ struct DashboardView: View {
                 HStack(spacing: 10) {
                     ForEach(exercises) { exercise in
                         plateAutofillButton(exercise: exercise.displayName, value: calculateTargetWeight(for: exercise.name), isSquare: false)
-                            .frame(minWidth: 95, minHeight: 48, maxWidth: .infinity, maxHeight: .infinity)
+                            .frame(minWidth: 95, maxWidth: .infinity, minHeight: 48, maxHeight: .infinity)
                     }
                 }
             }

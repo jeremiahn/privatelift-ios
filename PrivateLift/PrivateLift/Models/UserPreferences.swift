@@ -21,6 +21,7 @@ final class UserPreferences {
     var lastIntensity: Int = 85
     var theme: String = "system" // "system" | "light" | "dark" | "night"
     var useGridMode: Bool = false
+    var showWatchSupport: Bool = false
     var timeZoneIdentifier: String = TimeZone.current.identifier
     var startOfWeekDay: Int = Calendar.current.firstWeekday // 1 = Sunday, 2 = Monday, ... 7 = Saturday
 
