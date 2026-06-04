@@ -60,6 +60,12 @@ struct SettingsView: View {
                 }
                 dangerZoneSection
             }
+            .onChange(of: activePrefs.bodyWeight) { oldValue, newValue in
+                try? modelContext.save()
+            }
+            .onChange(of: activePrefs.gender) { oldValue, newValue in
+                try? modelContext.save()
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {

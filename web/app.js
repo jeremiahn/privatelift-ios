@@ -1522,6 +1522,7 @@ function saveSettings(event) {
         });
     }
     
+    renderStats();
     alert("Profile settings successfully saved locally!");
 }
 
