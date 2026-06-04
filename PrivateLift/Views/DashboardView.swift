@@ -607,17 +607,20 @@ struct DashboardView: View {
     @ViewBuilder
     private var plateCalculatorAutofillSection: some View {
         if activePrefs.useGridMode {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+            HStack(spacing: 10) {
+                Spacer()
                 ForEach(exercises) { exercise in
                     plateAutofillButton(exercise: exercise.displayName, value: calculateTargetWeight(for: exercise.name), isSquare: true)
-                        .aspectRatio(1.0, contentMode: .fill)
+                        .frame(width: 65, height: 65)
                 }
+                Spacer()
             }
         } else {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(exercises) { exercise in
                         plateAutofillButton(exercise: exercise.displayName, value: calculateTargetWeight(for: exercise.name), isSquare: false)
+                            .frame(width: 95, height: 48)
                     }
                 }
             }
@@ -629,28 +632,21 @@ struct DashboardView: View {
             HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
             calcWeight = value
         }) {
-            VStack(spacing: 4) {
-                if isSquare {
-                    Spacer(minLength: 0)
-                }
+            VStack(spacing: 2) {
+                Spacer(minLength: 0)
                 Text(exercise.uppercased())
-                    .font(.system(size: 9, weight: .black))
+                    .font(.system(size: 8, weight: .black))
                     .foregroundColor(brandColors.whiteText)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 4)
                 
-                if isSquare {
-                    Spacer(minLength: 0)
-                    Text("\(Int(value))")
-                        .font(.system(size: 12, weight: .black, design: .monospaced))
-                        .foregroundColor(brandColors.teal)
-                        .padding(.bottom, 4)
-                }
+                Spacer(minLength: 0)
+                Text("\(Int(value))")
+                    .font(.system(size: 11, weight: .black, design: .monospaced))
+                    .foregroundColor(brandColors.teal)
+                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: isSquare ? nil : nil)
-            .padding(.horizontal, isSquare ? 4 : 8)
-            .padding(.vertical, isSquare ? 8 : 4)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(brandColors.teal.opacity(0.2))
             .cornerRadius(6)
             .overlay(
