@@ -7,6 +7,8 @@ struct OnboardingView: View {
     @Query private var preferences: [UserPreferences]
     
     @State private var currentStep = 0
+    @State private var isLightMode = false
+    @Environment(\.colorScheme) private var colorScheme
     
     // Intermediate onboarding fields
     @State private var squatMax: Double = 315.0
@@ -20,10 +22,50 @@ struct OnboardingView: View {
     
     private let totalSteps = 6
     
+    // Dynamic Theme Colors
+    private var bgColor: Color {
+        isLightMode ? Color(red: 0.96, green: 0.96, blue: 0.98) : Color.black
+    }
+    
+    private var textColor: Color {
+        isLightMode ? Color.black : Color.white
+    }
+    
+    private var subtextColor: Color {
+        isLightMode ? Color(red: 0.4, green: 0.4, blue: 0.4) : Color.plGray400
+    }
+    
+    private var secondarySubtextColor: Color {
+        isLightMode ? Color(red: 0.3, green: 0.3, blue: 0.3) : Color.plGray300
+    }
+    
+    private var cardBgColor: Color {
+        isLightMode ? Color.white : Color.white.opacity(0.04)
+    }
+    
+    private var cardStrokeColor: Color {
+        isLightMode ? Color.black.opacity(0.06) : Color.white.opacity(0.08)
+    }
+    
+    private var textInputBgColor: Color {
+        isLightMode ? Color.black.opacity(0.03) : Color.black.opacity(0.3)
+    }
+    
+    private var textInputStrokeColor: Color {
+        isLightMode ? Color.black.opacity(0.08) : Color.white.opacity(0.1)
+    }
+
+    private var backButtonBg: Color {
+        isLightMode ? Color.black.opacity(0.04) : Color.white.opacity(0.05)
+    }
+
+    private var backButtonStroke: Color {
+        isLightMode ? Color.black.opacity(0.08) : Color.white.opacity(0.1)
+    }
+    
     var body: some View {
         ZStack {
-            // Elegant blackout background matching Night Mode
-            Color.black.edgesIgnoringSafeArea(.all)
+            bgColor.edgesIgnoringSafeArea(.all)
                 .onTapGesture {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 }
@@ -38,13 +80,30 @@ struct OnboardingView: View {
                     
                     Spacer()
                     
-                    HStack(spacing: 6) {
-                        ForEach(0..<totalSteps, id: \.self) { index in
-                            Circle()
-                                .fill(index == currentStep ? Color.plBlue : (index < currentStep ? Color.plBlue.opacity(0.4) : Color.plGray700))
-                                .frame(width: 6, height: 6)
-                                .animation(.spring(), value: currentStep)
+                    HStack(spacing: 16) {
+                        HStack(spacing: 6) {
+                            ForEach(0..<totalSteps, id: \.self) { index in
+                                Circle()
+                                    .fill(index == currentStep ? Color.plBlue : (index < currentStep ? Color.plBlue.opacity(0.4) : (isLightMode ? Color.plGray300 : Color.plGray700)))
+                                    .frame(width: 6, height: 6)
+                                    .animation(.spring(), value: currentStep)
+                            }
                         }
+                        
+                        Button(action: {
+                            HapticService.play(.medium)
+                            withAnimation {
+                                isLightMode.toggle()
+                            }
+                        }) {
+                            Image(systemName: isLightMode ? "moon.fill" : "sun.max.fill")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(isLightMode ? .plBlue : .white)
+                                .frame(width: 28, height: 28)
+                                .background(isLightMode ? Color.black.opacity(0.04) : Color.white.opacity(0.1))
+                                .clipShape(Circle())
+                        }
+                        .accessibilityLabel("Toggle light mode")
                     }
                 }
                 .padding(.horizontal, 24)
@@ -76,13 +135,13 @@ struct OnboardingView: View {
                             Text("BACK")
                                 .font(.system(size: 11, weight: .black))
                                 .tracking(1.5)
-                                .foregroundColor(.white)
+                                .foregroundColor(textColor)
                                 .frame(width: 100, height: 50)
-                                .background(Color.white.opacity(0.05))
+                                .background(backButtonBg)
                                 .cornerRadius(16)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 16)
-                                        .stroke(Color.white.opacity(0.1), lineWidth: 1.5)
+                                        .stroke(backButtonStroke, lineWidth: 1.5)
                                 )
                         }
                         .accessibilityLabel("Back")
@@ -122,6 +181,12 @@ struct OnboardingView: View {
                 }
             }
         }
+        .onAppear {
+            isLightMode = (colorScheme == .light)
+        }
+        .onChange(of: colorScheme) { oldValue, newValue in
+            isLightMode = (newValue == .light)
+        }
     }
     
     // MARK: - Welcome Step
@@ -147,7 +212,7 @@ struct OnboardingView: View {
                 HStack(spacing: 2) {
                     Text("PERSONAL")
                         .font(.system(size: 28, weight: .black))
-                        .foregroundColor(.white)
+                        .foregroundColor(textColor)
                     Text("LIFT")
                         .font(.system(size: 28, weight: .black))
                         .foregroundColor(.plBlue)
@@ -158,7 +223,7 @@ struct OnboardingView: View {
                 
                 Text("Your personal, offline-first strength companion. Let's calibrate your starting profile to customize your target weight intensities.")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.plGray300)
+                    .foregroundColor(secondarySubtextColor)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
                     .padding(.horizontal, 32)
@@ -189,11 +254,11 @@ struct OnboardingView: View {
                 
                 Text(title)
                     .font(.system(size: 24, weight: .black))
-                    .foregroundColor(.white)
+                    .foregroundColor(textColor)
                 
                 Text(description)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.plGray400)
+                    .foregroundColor(subtextColor)
             }
             .padding(.horizontal, 24)
             
@@ -203,7 +268,7 @@ struct OnboardingView: View {
                     TextField(title, value: value, format: .number)
                         .focused($isInputFocused)
                         .font(.system(size: 64, weight: .black, design: .monospaced))
-                        .foregroundColor(.white)
+                        .foregroundColor(textColor)
                         .multilineTextAlignment(.center)
                         .keyboardType(.numberPad)
                         .frame(maxWidth: 240)
@@ -212,7 +277,7 @@ struct OnboardingView: View {
                     
                     Text(weightUnit.uppercased())
                         .font(.system(size: 14, weight: .black))
-                        .foregroundColor(.plGray400)
+                        .foregroundColor(subtextColor)
                         .tracking(2.0)
                         .accessibilityHidden(true)
                 }
@@ -225,11 +290,11 @@ struct OnboardingView: View {
             }
             .padding(.vertical, 32)
             .padding(.horizontal, 16)
-            .background(Color.white.opacity(0.04))
+            .background(cardBgColor)
             .cornerRadius(24)
             .overlay(
                 RoundedRectangle(cornerRadius: 24)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1.5)
+                    .stroke(cardStrokeColor, lineWidth: 1.5)
             )
             .padding(.horizontal, 24)
             
@@ -250,11 +315,11 @@ struct OnboardingView: View {
                 
                 Text("Body Weight & Gender")
                     .font(.system(size: 24, weight: .black))
-                    .foregroundColor(.white)
+                    .foregroundColor(textColor)
                 
                 Text("We use these metrics to calculate advanced power-to-weight lifting ratios.")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.plGray400)
+                    .foregroundColor(subtextColor)
             }
             .padding(.horizontal, 24)
             
@@ -263,7 +328,7 @@ struct OnboardingView: View {
                     .tint(.plPurple)
                     .fontWeight(.bold)
                     .font(.system(size: 13))
-                    .foregroundColor(.white)
+                    .foregroundColor(textColor)
                     .onChange(of: trackWeightAndGender) { oldValue, newValue in
                         HapticService.play(.medium)
                         if !newValue {
@@ -276,21 +341,21 @@ struct OnboardingView: View {
                     }
                 
                 Divider()
-                    .background(Color.white.opacity(0.1))
+                    .background(isLightMode ? Color.black.opacity(0.08) : Color.white.opacity(0.1))
                 
                 VStack(spacing: 24) {
                     // Weight input
                     VStack(alignment: .leading, spacing: 8) {
                         Text("BODY WEIGHT")
                             .font(.system(size: 9, weight: .black))
-                            .foregroundColor(.plGray400)
+                            .foregroundColor(subtextColor)
                             .tracking(1.5)
                         
                         HStack {
                             TextField("Weight", value: $bodyWeight, format: .number)
                                 .focused($isInputFocused)
                                 .font(.system(size: 18, weight: .black, design: .monospaced))
-                                .foregroundColor(.white)
+                                .foregroundColor(textColor)
                                 .keyboardType(.decimalPad)
                                 .disabled(!trackWeightAndGender)
                                 .accessibilityLabel("Body weight")
@@ -309,11 +374,11 @@ struct OnboardingView: View {
                         }
                         .padding(.horizontal, 16)
                         .frame(height: 52)
-                        .background(Color.black.opacity(0.3))
+                        .background(textInputBgColor)
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1.5)
+                                .stroke(textInputStrokeColor, lineWidth: 1.5)
                         )
                     }
                     
@@ -321,7 +386,7 @@ struct OnboardingView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("GENDER")
                             .font(.system(size: 9, weight: .black))
-                            .foregroundColor(.plGray400)
+                            .foregroundColor(subtextColor)
                             .tracking(1.5)
                         
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
@@ -337,11 +402,11 @@ struct OnboardingView: View {
                 .animation(.easeInOut, value: trackWeightAndGender)
             }
             .padding(24)
-            .background(Color.white.opacity(0.04))
+            .background(cardBgColor)
             .cornerRadius(24)
             .overlay(
                 RoundedRectangle(cornerRadius: 24)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1.5)
+                    .stroke(cardStrokeColor, lineWidth: 1.5)
             )
             .padding(.horizontal, 24)
             
@@ -356,14 +421,14 @@ struct OnboardingView: View {
         }) {
             Text(label)
                 .font(.system(size: 10, weight: .black))
-                .foregroundColor(.white)
+                .foregroundColor(gender == tag ? .white : textColor)
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
-                .background(gender == tag ? Color.plPurple.opacity(0.3) : Color.white.opacity(0.04))
+                .background(gender == tag ? Color.plPurple : (isLightMode ? Color.black.opacity(0.04) : Color.white.opacity(0.04)))
                 .cornerRadius(12)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(gender == tag ? Color.plPurple : Color.white.opacity(0.08), lineWidth: 1.5)
+                        .stroke(gender == tag ? Color.plPurple : cardStrokeColor, lineWidth: 1.5)
                 )
         }
         .accessibilityElement(children: .ignore)
@@ -384,11 +449,11 @@ struct OnboardingView: View {
                 
                 Text("App Preferences & Settings")
                     .font(.system(size: 24, weight: .black))
-                    .foregroundColor(.white)
+                    .foregroundColor(textColor)
                 
                 Text("Customize your strength experience at any time.")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.plGray400)
+                    .foregroundColor(subtextColor)
             }
             .padding(.horizontal, 24)
             
@@ -403,17 +468,17 @@ struct OnboardingView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("PREFERENCES & THEMES")
                             .font(.system(size: 10, weight: .black))
-                            .foregroundColor(.plGray400)
+                            .foregroundColor(subtextColor)
                             .tracking(1.0)
                         Text("Select weight units, themes (including OLED Night mode), and lift formulas.")
                             .font(.system(size: 12))
-                            .foregroundColor(.white)
+                            .foregroundColor(textColor)
                     }
                 }
                 .accessibilityElement(children: .combine)
                 
                 Divider()
-                    .background(Color.white.opacity(0.1))
+                    .background(isLightMode ? Color.black.opacity(0.08) : Color.white.opacity(0.1))
                 
                 HStack(spacing: 16) {
                     Image(systemName: "calendar")
@@ -425,17 +490,17 @@ struct OnboardingView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("CALENDAR & WEEKSTART")
                             .font(.system(size: 10, weight: .black))
-                            .foregroundColor(.plGray400)
+                            .foregroundColor(subtextColor)
                             .tracking(1.0)
                         Text("Choose the day of the week your strength workouts start on.")
                             .font(.system(size: 12))
-                            .foregroundColor(.white)
+                            .foregroundColor(textColor)
                     }
                 }
                 .accessibilityElement(children: .combine)
                 
                 Divider()
-                    .background(Color.white.opacity(0.1))
+                    .background(isLightMode ? Color.black.opacity(0.08) : Color.white.opacity(0.1))
                 
                 HStack(spacing: 16) {
                     Image(systemName: "icloud.fill")
@@ -447,21 +512,21 @@ struct OnboardingView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("SYNC & BACKUPS")
                             .font(.system(size: 10, weight: .black))
-                            .foregroundColor(.plGray400)
+                            .foregroundColor(subtextColor)
                             .tracking(1.0)
                         Text("Toggle Apple Health workout sync, iCloud backup sync, and manual database export/import.")
                             .font(.system(size: 12))
-                            .foregroundColor(.white)
+                            .foregroundColor(textColor)
                     }
                 }
                 .accessibilityElement(children: .combine)
             }
             .padding(24)
-            .background(Color.white.opacity(0.04))
+            .background(cardBgColor)
             .cornerRadius(24)
             .overlay(
                 RoundedRectangle(cornerRadius: 24)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1.5)
+                    .stroke(cardStrokeColor, lineWidth: 1.5)
             )
             .padding(.horizontal, 24)
             
@@ -490,12 +555,12 @@ struct OnboardingView: View {
             VStack(spacing: 8) {
                 Text("CALIBRATION COMPLETE")
                     .font(.system(size: 20, weight: .black))
-                    .foregroundColor(.white)
+                    .foregroundColor(textColor)
                     .tracking(-0.5)
                 
                 Text("Your strength benchmarks have been established. Your workout intensity target weight plates will now adapt automatically.")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.plGray300)
+                    .foregroundColor(secondarySubtextColor)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
                     .padding(.horizontal, 32)
@@ -523,6 +588,7 @@ struct OnboardingView: View {
             prefs.gender = gender
             prefs.weightUnit = weightUnit
             prefs.isOnboarded = true
+            prefs.theme = isLightMode ? "light" : "dark" // Save theme preference selected during setup
             
             if existingPrefs.isEmpty {
                 modelContext.insert(prefs)
