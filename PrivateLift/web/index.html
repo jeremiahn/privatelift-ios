@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PersonalLift | Performance Tracking</title>
+    <!-- Offline CSS & Script hooks -->
+    <script src="tailwind.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <script src="chart.js"></script>
+    <style>
+        /* Base typography & native mobile adjustments */
+        html {
+            font-size: 108% !important;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        input, textarea, [contenteditable="true"] {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+        }
+        @media (max-width: 640px) {
+            html {
+                font-size: 114% !important;
+            }
+        }
+        body {
+            overscroll-behavior-y: contain;
+        }
+        /* Custom spacing overrides */
+        .text-\[6px\] { font-size: 8.5px !important; }
+        .text-\[7px\] { font-size: 9.5px !important; }
+        .text-\[8px\] { font-size: 11px !important; }
+        .text-\[9px\] { font-size: 12px !important; }
+        .text-\[10px\] { font-size: 13px !important; }
+        .text-\[11px\] { font-size: 14px !important; }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.25);
+            border-radius: 4px;
+        }
+        
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        
+        /* Rest Timer Floating Banner animations */
+        @keyframes slideInUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up {
+            animation: slideInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Custom range slider styling */
+        #intensity-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #111827; /* dark bg matching bg-gray-950 */
+            border-radius: 9999px;
+            outline: none;
+        }
+
+        #intensity-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #3b82f6; /* Tailwind blue-500 */
+            border: 4.5px solid #ffffff;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.1s ease, background-color 0.1s ease;
+        }
+
+        #intensity-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        #intensity-slider::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #3b82f6;
+            border: 4.5px solid #ffffff;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.1s ease, background-color 0.1s ease;
+        }
+
+        #intensity-slider::-moz-range-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        /* Add top safe area padding to the main content container to prevent overlapping iOS status bar */
+        main {
+            padding-top: calc(env(safe-area-inset-top) + 16px) !important;
+        }
+        @media (min-width: 640px) {
+            main {
+                padding-top: calc(env(safe-area-inset-top) + 24px) !important;
+            }
+        }
+
+        /* ==================== APPLE LIQUID GLASS UI DESIGN SYSTEM ==================== */
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        body {
+            background: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.06) 0%, transparent 50%),
+                        radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
+                        radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.04) 0%, transparent 60%),
+                        #f4f6fc !important;
+            background-size: 200% 200%;
+            animation: gradientFlow 15s ease infinite;
+            transition: background 0.5s ease;
+        }
+        
+        html.dark body {
+            background: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
+                        radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
+                        radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 60%),
+                        #000000 !important;
+            background-size: 200% 200%;
+            animation: gradientFlow 15s ease infinite;
+            transition: background 0.5s ease;
+        }
+
+        /* Glassmorphism Panels */
+        .bg-white, .dark\:bg-gray-800 {
+            background: rgba(255, 255, 255, 0.45) !important;
+            backdrop-filter: blur(20px) saturate(190%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.35) !important;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.3) !important;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease, border-color 0.4s ease !important;
+        }
+        
+        html.dark .bg-white, html.dark .dark\:bg-gray-800 {
+            background: rgba(10, 10, 10, 0.8) !important; /* Pitch-black obsidian glass */
+            backdrop-filter: blur(20px) saturate(190%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.06) !important;
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.65),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.02) !important;
+        }
+
+        .border-gray-200, .dark\:border-gray-700 {
+            border-color: rgba(255, 255, 255, 0.35) !important;
+        }
+        
+        html.dark .border-gray-200, html.dark .dark\:border-gray-700 {
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        /* Fluid Shimmer Buttons */
+        .bg-blue-600 {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.3),
+                        inset 0 1px 0px 0 rgba(255, 255, 255, 0.4) !important;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        
+        .bg-blue-600:hover {
+            transform: translateY(-1px) scale(1.01);
+            box-shadow: 0 6px 18px 0 rgba(59, 130, 246, 0.45),
+                        inset 0 1px 0px 0 rgba(255, 255, 255, 0.5) !important;
+        }
+        
+        .bg-blue-600::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -50%;
+            width: 200%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transform: skewX(-25deg);
+            transition: 0.75s;
+        }
+        
+        .bg-blue-600:hover::after {
+            left: 125%;
+        }
+
+        /* Glassmorphic Form Controls */
+        .bg-gray-50, .dark\:bg-gray-900 {
+            background: rgba(255, 255, 255, 0.4) !important;
+            border: 1px solid rgba(255, 255, 255, 0.35) !important;
+            box-shadow: inset 0 1px 2px 0 rgba(0, 0, 0, 0.03) !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        html.dark .bg-gray-50, html.dark .dark\:bg-gray-900 {
+            background: rgba(15, 15, 15, 0.65) !important; /* Rich Obsidian black form backgrounds */
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            box-shadow: inset 0 1px 2px 0 rgba(0, 0, 0, 0.25) !important;
+        }
+        
+        .bg-gray-50:focus-within, .dark\:bg-gray-900:focus-within {
+            border-color: rgba(59, 130, 246, 0.6) !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15),
+                        inset 0 1px 2px 0 rgba(0, 0, 0, 0.02) !important;
+        }
+
+        /* Floating Crystal Bottom Navigation Dock */
+        .md\:hidden.fixed.bottom-0 {
+            left: 16px !important;
+            right: 16px !important;
+            bottom: 20px !important;
+            width: calc(100% - 32px) !important;
+            height: 68px !important;
+            border-radius: 28px !important;
+            background: rgba(255, 255, 255, 0.45) !important;
+            backdrop-filter: blur(24px) saturate(190%) !important;
+            -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.45) !important;
+            box-shadow: 0 10px 40px rgba(31, 38, 135, 0.06),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.3) !important;
+            padding-bottom: 0 !important; /* Floating capsule removes tab bar bleed padding */
+            display: flex !important;
+            justify-content: space-around !important;
+            align-items: center !important;
+        }
+        
+        html.dark .md\:hidden.fixed.bottom-0 {
+            background: rgba(8, 12, 21, 0.6) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.05) !important;
+        }
+
+        /* Capsule Bottom Navigation Tab Buttons */
+        .glass-nav-btn {
+            height: 52px !important;
+            border-radius: 20px !important;
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 8px !important;
+            margin: 0 4px !important;
+        }
+        
+        .glass-nav-btn.active {
+            background: rgba(255, 255, 255, 0.6) !important;
+            box-shadow: 0 4px 15px 0 rgba(31, 38, 135, 0.04),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.4) !important;
+            border: 1px solid rgba(255, 255, 255, 0.5) !important;
+            color: #1d4ed8 !important; /* Accent Blue */
+        }
+        
+        html.dark .glass-nav-btn.active {
+            background: rgba(255, 255, 255, 0.12) !important;
+            box-shadow: 0 4px 15px 0 rgba(0, 0, 0, 0.2),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            color: #60a5fa !important; /* Bright active blue */
+        }
+        
+        .glass-nav-btn.inactive {
+            background: transparent !important;
+            border: 1px solid transparent !important;
+            color: #6b7280 !important;
+        }
+        
+        html.dark .glass-nav-btn.inactive {
+            color: #9ca3af !important;
+        }
+
+        /* Glassmorphic Lift Cards */
+        .border-red-500 {
+            border-color: rgba(239, 68, 68, 0.7) !important;
+            background: rgba(239, 68, 68, 0.03) !important;
+            box-shadow: 0 8px 32px 0 rgba(239, 68, 68, 0.05),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.25) !important;
+        }
+        html.dark .border-red-500 {
+            border-color: rgba(239, 68, 68, 0.4) !important;
+            background: rgba(239, 68, 68, 0.05) !important;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        .border-blue-500 {
+            border-color: rgba(59, 130, 246, 0.7) !important;
+            background: rgba(59, 130, 246, 0.03) !important;
+            box-shadow: 0 8px 32px 0 rgba(59, 130, 246, 0.05),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.25) !important;
+        }
+        html.dark .border-blue-500 {
+            border-color: rgba(59, 130, 246, 0.4) !important;
+            background: rgba(59, 130, 246, 0.05) !important;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        .border-green-500 {
+            border-color: rgba(34, 197, 94, 0.7) !important;
+            background: rgba(34, 197, 94, 0.03) !important;
+            box-shadow: 0 8px 32px 0 rgba(34, 197, 94, 0.05),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.25) !important;
+        }
+        html.dark .border-green-500 {
+            border-color: rgba(34, 197, 94, 0.4) !important;
+            background: rgba(34, 197, 94, 0.05) !important;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2) !important;
+        }
+
+        /* Dynamic Specular Glass Card Colorsets */
+        .glass-card-blue {
+            border: 1px solid rgba(59, 130, 246, 0.25) !important;
+            box-shadow: 0 8px 32px 0 rgba(59, 130, 246, 0.04),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.3) !important;
+        }
+        html.dark .glass-card-blue {
+            border: 1px solid rgba(59, 130, 246, 0.12) !important;
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45) !important;
+        }
+
+        .glass-card-purple {
+            border: 1px solid rgba(139, 92, 246, 0.25) !important;
+            box-shadow: 0 8px 32px 0 rgba(139, 92, 246, 0.04),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.3) !important;
+        }
+        html.dark .glass-card-purple {
+            border: 1px solid rgba(139, 92, 246, 0.12) !important;
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45) !important;
+        }
+
+        .glass-card-green {
+            border: 1px solid rgba(34, 197, 94, 0.25) !important;
+            box-shadow: 0 8px 32px 0 rgba(34, 197, 94, 0.04),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.3) !important;
+        }
+        html.dark .glass-card-green {
+            border: 1px solid rgba(34, 197, 94, 0.12) !important;
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45) !important;
+        }
+
+        .glass-card-red {
+            border: 1px solid rgba(239, 68, 68, 0.25) !important;
+            box-shadow: 0 8px 32px 0 rgba(239, 68, 68, 0.04),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.3) !important;
+        }
+        html.dark .glass-card-red {
+            border: 1px solid rgba(239, 68, 68, 0.12) !important;
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45) !important;
+        }
+
+        .glass-card-teal {
+            border: 1px solid rgba(20, 184, 166, 0.25) !important;
+            box-shadow: 0 8px 32px 0 rgba(20, 184, 166, 0.04),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.3) !important;
+        }
+        html.dark .glass-card-teal {
+            border: 1px solid rgba(20, 184, 166, 0.12) !important;
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45) !important;
+        }
+
+        /* Fade-In and Scale Animation */
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fade-in {
+            animation: fadeInScale 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+        }
+
+        /* Dynamic Island Rest Timer Capsule Styles */
+        #rest-timer-capsule {
+            bottom: 102px !important;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        @media (min-width: 768px) {
+            #rest-timer-capsule {
+                bottom: 24px !important;
+                right: 24px !important;
+                left: auto !important;
+                width: 384px !important;
+                max-width: none !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
+        }
+        #rest-timer-capsule button {
+            cursor: pointer !important;
+            -webkit-tap-highlight-color: rgba(255, 255, 255, 0.3) !important;
+        }
+
+        /* Onboarding Slide Animation Styles */
+        .onboard-slide {
+            transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            transform: scale(1);
+            opacity: 1;
+        }
+        .onboard-slide.hidden {
+            display: none !important;
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        /* Glass Input Styles */
+        .glass-input {
+            background: rgba(255, 255, 255, 0.4) !important;
+            border: 1px solid rgba(255, 255, 255, 0.35) !important;
+            box-shadow: inset 0 1px 2px 0 rgba(0, 0, 0, 0.02) !important;
+            transition: all 0.3s ease !important;
+        }
+        html.dark .glass-input {
+            background: rgba(15, 15, 15, 0.6) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            box-shadow: inset 0 1px 2px 0 rgba(0, 0, 0, 0.2) !important;
+        }
+        .glass-input:focus-within {
+            border-color: rgba(59, 130, 246, 0.6) !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+        }
+
+        /* Highlighting boxes in Log New Set (Purple Card) */
+        .glass-card-purple .glass-input {
+            border: 2px solid rgba(139, 92, 246, 0.45) !important;
+            background: rgba(139, 92, 246, 0.05) !important;
+        }
+        html.dark .glass-card-purple .glass-input {
+            border: 2px solid rgba(139, 92, 246, 0.35) !important;
+            background: rgba(139, 92, 246, 0.1) !important;
+        }
+        .glass-card-purple .glass-input:focus,
+        .glass-card-purple .glass-input:focus-within {
+            border-color: rgba(139, 92, 246, 0.8) !important;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25) !important;
+        }
+
+        /* Highlighting boxes in Plate Calc (Teal Card) */
+        .glass-card-teal .glass-input {
+            border: 2px solid rgba(20, 184, 166, 0.45) !important;
+            background: rgba(20, 184, 166, 0.05) !important;
+        }
+        html.dark .glass-card-teal .glass-input {
+            border: 2px solid rgba(20, 184, 166, 0.35) !important;
+            background: rgba(20, 184, 166, 0.1) !important;
+        }
+        .glass-card-teal .glass-input:focus,
+        .glass-card-teal .glass-input:focus-within {
+            border-color: rgba(20, 184, 166, 0.8) !important;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.25) !important;
+        }
+
+        /* Highlighting boxes in Strength Benchmarks & Profile (Blue Card) */
+        .glass-card-blue .glass-input {
+            border: 2px solid rgba(59, 130, 246, 0.45) !important;
+            background: rgba(59, 130, 246, 0.05) !important;
+        }
+        html.dark .glass-card-blue .glass-input {
+            border: 2px solid rgba(59, 130, 246, 0.35) !important;
+            background: rgba(59, 130, 246, 0.1) !important;
+        }
+        .glass-card-blue .glass-input:focus,
+        .glass-card-blue .glass-input:focus-within {
+            border-color: rgba(59, 130, 246, 0.8) !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+        }
+
+        /* Night Mode blackout with grey highlights overrides */
+        html.night body {
+            background: #000000 !important;
+            background-image: none !important;
+            animation: none !important;
+            transition: background 0.5s ease;
+            color: #9ca3af !important; /* Elegant body gray (gray-400) */
+        }
+
+        /* Override white/gray-100 text to a sleek premium gray in Night Mode */
+        html.night .text-white,
+        html.night .dark\:text-white,
+        html.night .text-gray-100,
+        html.night .dark\:text-gray-100 {
+            color: #d1d5db !important; /* Crisp light gray (gray-300) instead of harsh white */
+        }
+
+        /* Ensure primary colored backgrounds, gradient components, and action buttons retain crisp white text for high contrast */
+        html.night .bg-blue-600,
+        html.night .bg-blue-600 *,
+        html.night .bg-blue-500,
+        html.night .bg-blue-500 *,
+        html.night .bg-gradient-to-tr,
+        html.night .bg-gradient-to-tr *,
+        html.night .bg-gradient-to-r,
+        html.night .bg-gradient-to-r *,
+        html.night button.bg-blue-600,
+        html.night button.bg-blue-500,
+        html.night #rest-timer-capsule,
+        html.night #rest-timer-capsule * {
+            color: #ffffff !important;
+        }
+        
+        html.night .bg-white, html.night .dark\:bg-gray-800 {
+            background: #0d0e11 !important; /* pitch-black blackout card */
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            border: 1.5px solid #2e3035 !important; /* solid grey highlights border */
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.95),
+                        inset 0 1px 1px 0 rgba(255, 255, 255, 0.02) !important;
+        }
+
+        html.night .border-gray-200, html.night .dark\:border-gray-700 {
+            border-color: #2e3035 !important;
+        }
+
+        html.night .glass-input {
+            background: #15161a !important; /* dark blackout input field */
+            border: 1.5px solid #2e3035 !important; /* solid grey highlights border */
+            box-shadow: inset 0 1px 2px 0 rgba(0, 0, 0, 0.5) !important;
+        }
+
+        html.night .glass-input:focus-within {
+            border-color: #4b5563 !important; /* grey focus highlight border */
+            box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.25) !important;
+        }
+        
+        html.night .dark\:bg-gray-900, html.night .bg-gray-50 {
+            background: #000000 !important;
+            border-color: #2e3035 !important;
+        }
+
+        html.night #intensity-slider {
+            background: #15161a !important;
+            border: 1.5px solid #2e3035 !important;
+        }
+
+        html.night .glass-card-blue,
+        html.night .glass-card-purple,
+        html.night .glass-card-green,
+        html.night .glass-card-red,
+        html.night .glass-card-teal {
+            border: 1.5px solid #2e3035 !important;
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.95) !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-black dark:text-gray-100 min-h-screen transition-colors duration-200 relative pb-24 md:pb-6">
+
+    <!-- Gorgeous Dynamic Island Rest Timer Capsule -->
+    <div id="rest-timer-capsule" class="hidden fixed left-4 right-4 z-[9999] bg-blue-600 text-white p-3.5 rounded-2xl border-2 border-blue-500/80 shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 transform scale-95 opacity-0 pointer-events-auto dark:bg-black dark:border-blue-600 dark:shadow-[0_0_25px_rgba(59,130,246,0.3)] md:max-w-md md:mx-auto">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-white/10 dark:bg-blue-600/20 rounded-xl shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 animate-pulse text-white dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="text-left">
+                <span class="text-[8px] uppercase font-black text-blue-200 dark:text-blue-400 block tracking-widest leading-none mb-1">Rest Time Remaining</span>
+                <span id="timer-countdown" class="text-xl font-black leading-none block font-mono text-white">03:00</span>
+            </div>
+        </div>
+        <div class="flex items-center shrink-0">
+            <button id="timer-skip-btn" 
+                    onclick="window.skipRestTimer(event)" 
+                    ontouchstart="window.skipRestTimer(event)" 
+                    class="bg-white/15 hover:bg-white/25 active:bg-white/35 dark:bg-blue-600/20 dark:hover:bg-blue-600/30 dark:active:bg-blue-600/40 text-white font-black text-[11px] uppercase px-4 py-2.5 rounded-xl border border-white/20 dark:border-blue-500/30 transition shadow-sm select-none cursor-pointer">
+                Skip
+            </button>
+        </div>
+    </div>
+
+    <!-- Beautiful Full-Screen Onboarding Wizard Overlay -->
+    <div id="onboarding-overlay" class="hidden fixed inset-0 z-[10000] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4 transition-all duration-500 opacity-0 pointer-events-auto">
+        <div class="w-full max-w-md bg-gray-950/40 rounded-3xl border border-white/10 p-6 md:p-8 shadow-2xl relative transition-all duration-500 transform scale-95 flex flex-col min-h-[460px] justify-between overflow-hidden font-sans">
+            
+            <!-- Progress indicator dot bar -->
+            <div class="flex items-center justify-between mb-8">
+                <span class="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none">Onboarding</span>
+                <div class="flex items-center gap-1.5" id="onboarding-progress-dots">
+                    <div class="w-1.5 h-1.5 rounded-full bg-blue-600 transition-all duration-300"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-gray-800 transition-all duration-300"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-gray-800 transition-all duration-300"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-gray-800 transition-all duration-300"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-gray-800 transition-all duration-300"></div>
+                </div>
+            </div>
+
+            <!-- Slide containers -->
+            <div class="flex-grow flex flex-col justify-center relative">
+                
+                <!-- Slide 0: Welcome -->
+                <div id="onboard-slide-0" class="onboard-slide space-y-4 text-center">
+                    <div class="mx-auto w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 mb-4 animate-pulse">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
+                        PERSONAL<span class="text-blue-500">LIFT</span>
+                    </h3>
+                    <p class="text-gray-400 text-xs md:text-sm leading-relaxed max-w-sm mx-auto font-medium">
+                        Your personal, offline-first strength companion. Let's calibrate your starting profile to customize your target weight intensities.
+                    </p>
+                </div>
+
+                <!-- Slide 1: Squat Max -->
+                <div id="onboard-slide-1" class="onboard-slide space-y-6 text-center hidden">
+                    <div class="text-left space-y-1">
+                        <span class="text-[9px] font-black text-red-500 uppercase tracking-widest leading-none">Step 1 of 4</span>
+                        <h4 class="text-xl font-black text-white uppercase tracking-tight">Squat 1RM Max</h4>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Your estimated single rep maximum for Squats.</p>
+                    </div>
+                    
+                    <div class="space-y-4 py-2">
+                        <div class="relative inline-block w-full">
+                            <input type="number" id="onboard-squat" value="315" min="45" max="1000" class="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-center text-4xl font-black text-white focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all font-mono">
+                            <span class="absolute right-6 top-6 text-gray-500 font-black text-sm uppercase">LBS</span>
+                        </div>
+                        <input type="range" min="45" max="600" step="5" value="315" oninput="document.getElementById('onboard-squat').value = this.value" class="w-full accent-red-500 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Slide 2: Bench Max -->
+                <div id="onboard-slide-2" class="onboard-slide space-y-6 text-center hidden">
+                    <div class="text-left space-y-1">
+                        <span class="text-[9px] font-black text-blue-500 uppercase tracking-widest leading-none">Step 2 of 4</span>
+                        <h4 class="text-xl font-black text-white uppercase tracking-tight">Bench 1RM Max</h4>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Your estimated single rep maximum for Bench Press.</p>
+                    </div>
+                    
+                    <div class="space-y-4 py-2">
+                        <div class="relative inline-block w-full">
+                            <input type="number" id="onboard-bench" value="225" min="45" max="1000" class="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-center text-4xl font-black text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-mono">
+                            <span class="absolute right-6 top-6 text-gray-500 font-black text-sm uppercase">LBS</span>
+                        </div>
+                        <input type="range" min="45" max="500" step="5" value="225" oninput="document.getElementById('onboard-bench').value = this.value" class="w-full accent-blue-500 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Slide 3: Deadlift Max -->
+                <div id="onboard-slide-3" class="onboard-slide space-y-6 text-center hidden">
+                    <div class="text-left space-y-1">
+                        <span class="text-[9px] font-black text-green-500 uppercase tracking-widest leading-none">Step 3 of 4</span>
+                        <h4 class="text-xl font-black text-white uppercase tracking-tight">Deadlift 1RM Max</h4>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Your estimated single rep maximum for Deadlifts.</p>
+                    </div>
+                    
+                    <div class="space-y-4 py-2">
+                        <div class="relative inline-block w-full">
+                            <input type="number" id="onboard-deadlift" value="405" min="45" max="1000" class="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-center text-4xl font-black text-white focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all font-mono">
+                            <span class="absolute right-6 top-6 text-gray-500 font-black text-sm uppercase">LBS</span>
+                        </div>
+                        <input type="range" min="45" max="700" step="5" value="405" oninput="document.getElementById('onboard-deadlift').value = this.value" class="w-full accent-green-500 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Slide 4: Body Weight & Gender -->
+                <div id="onboard-slide-4" class="onboard-slide space-y-6 text-center hidden">
+                    <div class="text-left space-y-1">
+                        <span class="text-[9px] font-black text-purple-500 uppercase tracking-widest leading-none">Step 4 of 4</span>
+                        <h4 class="text-xl font-black text-white uppercase tracking-tight">Body Weight & Gender</h4>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Your physical attributes for relative strength formulas.</p>
+                    </div>
+                    
+                    <div class="space-y-4 text-left">
+                        <div class="group">
+                            <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Your Body Weight</label>
+                            <div class="relative">
+                                <input type="number" id="onboard-bodyweight" value="180" min="45" max="1000" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm font-black text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all">
+                                <span class="absolute right-4 top-3 text-gray-500 font-black text-xs uppercase font-mono">LBS</span>
+                            </div>
+                        </div>
+
+                        <div class="group">
+                            <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Gender Preference</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" id="gender-male-btn" onclick="window.setOnboardingGender('male')" class="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer">Male</button>
+                                <button type="button" id="gender-female-btn" onclick="window.setOnboardingGender('female')" class="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer">Female</button>
+                                <button type="button" id="gender-nb-btn" onclick="window.setOnboardingGender('non_binary')" class="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer">Non-Binary</button>
+                                <button type="button" id="gender-other-btn" onclick="window.setOnboardingGender('other')" class="bg-white/10 border border-purple-500/60 rounded-xl py-3 text-xs font-black text-white transition uppercase text-center cursor-pointer">Other</button>
+                            </div>
+                            <input type="hidden" id="onboard-gender" value="other">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Slide 5: Done! -->
+                <div id="onboard-slide-5" class="onboard-slide space-y-4 text-center hidden">
+                    <div class="mx-auto w-16 h-16 bg-gradient-to-tr from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-green-500/20 mb-4 animate-bounce">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-black text-white uppercase tracking-tight">Calibration Complete</h3>
+                    <p class="text-gray-400 text-xs md:text-sm leading-relaxed max-w-sm mx-auto font-medium">
+                        Your lift benchmarks have been successfully customized. You are ready to log workouts and track your physical achievements!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="mt-8 flex items-center gap-3">
+                <button type="button" id="onboard-back-btn" onclick="window.prevOnboardingSlide()" class="hidden w-2/5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black py-3.5 rounded-2xl transition uppercase tracking-widest text-[9px] cursor-pointer">
+                    Back
+                </button>
+                <button type="button" id="onboard-next-btn" onclick="window.nextOnboardingSlide()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-3.5 rounded-2xl transition shadow-lg shadow-blue-500/10 uppercase tracking-widest text-[9px] cursor-pointer">
+                    Get Started
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-6xl mx-auto px-2 pb-4 sm:px-4 sm:pb-6">
+        <!-- Top Accent Bar -->
+        <div class="h-1.5 bg-gradient-to-r from-red-500 via-blue-500 to-green-500 w-full rounded-full mb-3 shadow-[0_2px_10px_rgba(59,130,246,0.15)]"></div>
+        <!-- Top App Header -->
+        <header class="flex flex-row justify-between items-center bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-lg mb-4 md:mb-8 transition-colors">
+            <!-- Left Side Navigation (Desktop Header Mode) -->
+            <div class="flex items-center">
+                <nav class="hidden md:flex items-center gap-2">
+                    <button onclick="switchTab('dashboard')" id="nav-btn-dashboard" class="px-4 py-2.5 rounded-lg text-xs font-bold transition border uppercase tracking-wider">
+                        Dashboard
+                    </button>
+                    <button onclick="switchTab('stats')" id="nav-btn-stats" class="px-4 py-2.5 rounded-lg text-xs font-bold transition border uppercase tracking-wider">
+                        Stats
+                    </button>
+                    <button onclick="switchTab('history')" id="nav-btn-history" class="px-4 py-2.5 rounded-lg text-xs font-black transition border shadow-md uppercase tracking-wider">
+                        History
+                    </button>
+                    <button onclick="switchTab('settings')" id="nav-btn-settings" class="px-4 py-2.5 rounded-lg text-xs font-bold transition border uppercase tracking-wider">
+                        Settings
+                    </button>
+                </nav>
+                
+                <!-- Mobile Tagline (Hidden on Desktop) -->
+                <span class="md:hidden text-[6px] min-[360px]:text-[6px] sm:text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">
+                    Performance Tracking
+                </span>
+            </div>
+
+            <!-- Right Side: Brand Logo -->
+            <div class="flex flex-col items-end text-right">
+                <span class="text-xl md:text-2xl font-black text-gray-900 dark:text-white tracking-tight leading-none uppercase">
+                    PERSONAL<span class="text-blue-500">LIFT</span>
+                </span>
+                <p class="text-[7px] sm:text-[8px] text-gray-500 dark:text-gray-400 font-semibold mt-1 uppercase tracking-wider hidden md:block">Performance Tracking</p>
+            </div>
+        </header>
+
+        <!-- Space for dashboard tab screen contents -->
+        <section id="screen-dashboard" class="hidden space-y-4 md:space-y-6">
+            <!-- Weekly Intensity Program -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition-colors glass-card-blue">
+                <div class="border-b border-gray-100 dark:border-gray-700 pb-4 md:pb-6 mb-4 md:mb-6">
+                    <div class="text-left mb-3">
+                        <h2 class="text-lg md:text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Weekly Program</h2>
+                        <p class="text-gray-500 dark:text-gray-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mt-0.5">
+                            Intensity: <span id="intensity-display" class="text-blue-600 dark:text-blue-400">85%</span> of 1RM
+                        </p>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 w-full px-1">
+                        <div class="flex-grow">
+                            <input type="range" id="intensity-slider" min="50" max="100" step="5" value="85"
+                                   class="w-full cursor-pointer"
+                                   oninput="updateIntensity(this.value)">
+                        </div>
+                        <span id="intensity-large-display" class="text-xl md:text-2xl font-black text-blue-600 dark:text-blue-400 select-none w-14 text-right leading-none">85%</span>
+                    </div>
+                </div>
+
+                <!-- Benchmarks Weights Grid -->
+                <div class="grid grid-cols-3 gap-3 w-full" id="weight-cards-container">
+                    <!-- Dynamic rendering from app.js -->
+                </div>
+            </div>
+
+            <!-- Log New Set Card (Full Width) -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition-colors glass-card-purple">
+                <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">Log New Set</h3>
+                
+                <form id="log-set-form" onsubmit="handleLogSubmit(event)" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Exercise Type -->
+                        <div class="group">
+                            <label for="log-exercise" class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Exercise</label>
+                            <div class="relative">
+                                <select id="log-exercise" class="w-full glass-input rounded-lg py-2.5 px-3 pr-8 text-gray-900 dark:text-white font-bold text-xs md:text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11 appearance-none">
+                                    <option value="SQUAT">Squat</option>
+                                    <option value="BENCH">Bench Press</option>
+                                    <option value="DEADLIFT">Deadlift</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">
+                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Set Type -->
+                        <div class="group">
+                            <label for="log-type" class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Set Type</label>
+                            <div class="relative">
+                                <select id="log-type" onchange="setLogType(this.value)" class="w-full glass-input rounded-lg py-2.5 px-3 pr-8 text-gray-900 dark:text-white font-bold text-xs md:text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11 appearance-none">
+                                    <option value="warmup">Warm-up Set</option>
+                                    <option value="working" selected>Working Set</option>
+                                    <option value="failure">To Failure (AMRAP)</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">
+                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <!-- Weight -->
+                        <div class="group">
+                            <label for="log-weight" class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Weight</label>
+                            <div class="relative">
+                                <input type="number" id="log-weight" required min="0" class="w-full glass-input rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11">
+                                <span class="absolute right-2.5 top-3 text-[9px] font-bold text-gray-400 uppercase calc-unit-label">LBS</span>
+                            </div>
+                        </div>
+
+                        <!-- Reps -->
+                        <div class="group">
+                            <label for="log-reps" class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Reps</label>
+                            <input type="number" id="log-reps" required min="1" max="100" class="w-full glass-input rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11">
+                        </div>
+
+                        <!-- RPE -->
+                        <div class="group">
+                            <label for="log-rpe" class="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">RPE (1-10)</label>
+                            <select id="log-rpe" class="w-full glass-input rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-bold text-xs md:text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11 appearance-none">
+                                <option value="">None</option>
+                                <option value="10">@10.0</option>
+                                <option value="9.5">@9.5</option>
+                                <option value="9">@9.0</option>
+                                <option value="8.5">@8.5</option>
+                                <option value="8">@8.0</option>
+                                <option value="7.5">@7.5</option>
+                                <option value="7">@7.0</option>
+                                <option value="6.5">@6.5</option>
+                                <option value="6">@6.0</option>
+                                <option value="5.5">@5.5</option>
+                                <option value="5">@5.0</option>
+                                <option value="4.5">@4.5</option>
+                                <option value="4">@4.0</option>
+                                <option value="3.5">@3.5</option>
+                                <option value="3">@3.0</option>
+                                <option value="2.5">@2.5</option>
+                                <option value="2">@2.0</option>
+                                <option value="1.5">@1.5</option>
+                                <option value="1">@1.0</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="pt-2">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-3 rounded-xl transition shadow-md shadow-blue-500/10 uppercase tracking-widest text-[10px]">
+                            Log Set
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Plate Calculator & Today's History split -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <!-- Plate Calculator Card -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition-colors flex flex-col justify-between glass-card-teal">
+                    <div>
+                        <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">Plate Calculator</h3>
+                        
+                        <div class="flex flex-col gap-6">
+                            <!-- Left Inputs -->
+                            <div class="space-y-4">
+                                <div class="group">
+                                    <label class="block text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Target Weight</label>
+                                    <div class="relative">
+                                        <input type="number" id="calc-weight-input" value="135" min="45"
+                                               class="w-full glass-input rounded-lg py-3 px-3 text-gray-900 dark:text-white font-black text-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent transition outline-none"
+                                               oninput="calculatePlates()">
+                                        <span class="absolute right-4 top-3.5 text-gray-400 dark:text-gray-600 font-bold text-xs uppercase calc-unit-label">LBS</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Auto-Fill Buttons -->
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button onclick="autofillCalc('squat')" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black py-2 rounded-lg transition uppercase tracking-wider">Squat</button>
+                                    <button onclick="autofillCalc('bench')" class="bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 text-[10px] font-black py-2 rounded-lg transition uppercase tracking-wider">Bench</button>
+                                    <button onclick="autofillCalc('deadlift')" class="bg-green-500/10 hover:bg-green-500/20 text-green-500 text-[10px] font-black py-2 rounded-lg transition uppercase tracking-wider">Deadlift</button>
+                                </div>
+                            </div>
+
+                            <!-- Right Barbell Display -->
+                            <div class="flex flex-col items-center justify-center p-4 rounded-xl border border-teal-500/30 dark:border-teal-500/20 bg-teal-500/5 dark:bg-teal-500/10 border-l-4 border-l-teal-500 glass-card-teal min-h-[160px] relative overflow-hidden">
+                                <!-- Barbell Bar Visual representation -->
+                                <div class="flex items-center gap-1.5 w-full justify-center max-w-md" id="barbell-graphic">
+                                    <!-- Rendered dynamically by app.js -->
+                                </div>
+                                <div id="plates-breakdown-text" class="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-wider mt-4 text-center">
+                                    <!-- Plate text math list -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Today's logged list -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 transition-colors glass-card-green">
+                    <div class="flex justify-between items-center mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
+                        <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest">Today's Platform Logs</h3>
+                        <button onclick="openTemplateSaver()" class="bg-green-500/10 hover:bg-green-500/20 text-green-500 text-[9px] font-black px-2.5 py-1.5 rounded-lg transition uppercase tracking-wider">
+                            Save as routine
+                        </button>
+                    </div>
+
+                    <div class="space-y-2 max-h-[300px] overflow-y-auto pr-1" id="todays-sets-container">
+                        <!-- Dynamic sets loaded by app.js -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SCREEN 2: STATS/ANALYTICS ==================== -->
+        <section id="screen-stats" class="hidden space-y-8 md:space-y-10">
+            <!-- Lifetime metrics banner -->
+            <div class="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-lg transition-colors glass-card-blue">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b border-gray-100 dark:border-gray-700 pb-4 gap-3">
+                    <div>
+                        <h2 class="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight leading-none">Lifetime Totals</h2>
+                        <p class="text-[10px] md:text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mt-1.5 leading-none">Volume and lifts accumulated</p>
+                    </div>
+                    <div class="flex items-center gap-3 bg-gray-50 dark:bg-gray-900 p-2.5 rounded-lg border border-gray-200 dark:border-gray-800 self-stretch sm:self-auto justify-between sm:justify-start">
+                        <div class="text-left sm:text-right pr-2 border-r border-gray-200 dark:border-gray-850">
+                            <span class="text-[8px] uppercase font-black text-gray-400 dark:text-gray-500 block leading-none mb-1">Sessions</span>
+                            <span id="stats-total-sessions" class="text-xs md:text-sm font-black text-blue-500 dark:text-blue-400 block leading-none">0</span>
+                        </div>
+                        <div class="text-left sm:text-right pr-2 border-r border-gray-200 dark:border-gray-850">
+                            <span class="text-[8px] uppercase font-black text-gray-400 dark:text-gray-500 block leading-none mb-1">DOTS</span>
+                            <span id="stats-dots-score" class="text-xs md:text-sm font-black text-indigo-500 dark:text-indigo-400 block leading-none">0.00</span>
+                        </div>
+                        <div class="text-right pl-1">
+                            <span class="text-[8px] uppercase font-black text-gray-400 dark:text-gray-500 block leading-none mb-1">Wilks</span>
+                            <span id="stats-wilks-score" class="text-xs md:text-sm font-black text-purple-500 dark:text-purple-400 block leading-none">0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exercise Big Stats Cards -->
+                <div class="grid grid-cols-1 gap-3 md:gap-4" id="stats-exercise-cards">
+                    <!-- Rendered dynamically by app.js -->
+                </div>
+            </div>
+
+            <!-- Weekly breakdown collapsible cards -->
+            <div class="space-y-4 md:space-y-6">
+                <h2 class="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Weekly Volume Breakdown</h2>
+                <div class="space-y-3" id="stats-weekly-breakdown-container">
+                    <!-- COLLAPSIBLE ACCORDIONS DYNAMICALLY RENDERED BY APP.JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SCREEN 3: HISTORY ==================== -->
+        <section id="screen-history" class="space-y-4 md:space-y-6">
+            <div class="flex justify-between items-center mb-4 md:mb-6">
+                <h2 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white tracking-tight uppercase">Logged Sessions</h2>
+            </div>
+
+            <!-- Line chart progress -->
+            <div id="stats-chart-card" class="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-lg transition-colors glass-card-purple">
+                <h2 class="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-tight">e1RM Progression</h2>
+                <div class="relative h-64 md:h-[350px] w-full">
+                    <canvas id="e1rmChart"></canvas>
+                </div>
+            </div>
+
+            <div class="space-y-4 md:space-y-6" id="history-sessions-container">
+                <!-- Dynamically loaded date dropdown containers by app.js -->
+            </div>
+        </section>
+
+        <!-- ==================== SCREEN 4: SETTINGS ==================== -->
+        <section id="screen-settings" class="hidden space-y-4 md:space-y-6 max-w-2xl mx-auto">
+            <div class="mb-4 md:mb-8">
+                <h2 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white tracking-tight uppercase">Lifter Profile & Preferences</h2>
+            </div>
+
+            <form id="settings-form" onsubmit="saveSettings(event)" class="space-y-4 md:space-y-6">
+                <!-- Benchmarks block -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 lg:p-8 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 glass-card-blue">
+                    <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">Strength Benchmarks & Profile</h3>
+                    
+                    <div class="space-y-4 md:space-y-6">
+                        <!-- Squat Max -->
+                        <div class="group">
+                            <label for="set-squat" class="block text-[10px] md:text-xs font-bold text-red-500 uppercase tracking-widest mb-1.5 group-focus-within:text-red-400">Squat 1RM (Max)</label>
+                            <div class="relative">
+                                <input type="number" id="set-squat" value="315" oninput="updateProfileSetting('squatMax', this.value)" class="w-full glass-input rounded-lg py-2 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-red-600 outline-none">
+                                <span class="absolute right-3.5 top-2.5 text-gray-400 dark:text-gray-600 font-bold text-xs uppercase calc-unit-label">LBS</span>
+                            </div>
+                        </div>
+
+                        <!-- Bench Max -->
+                        <div class="group">
+                            <label for="set-bench" class="block text-[10px] md:text-xs font-bold text-blue-500 uppercase tracking-widest mb-1.5 group-focus-within:text-blue-400">Bench 1RM (Max)</label>
+                            <div class="relative">
+                                <input type="number" id="set-bench" value="225" oninput="updateProfileSetting('benchMax', this.value)" class="w-full glass-input rounded-lg py-2 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-blue-600 outline-none">
+                                <span class="absolute right-3.5 top-2.5 text-gray-400 dark:text-gray-600 font-bold text-xs uppercase calc-unit-label">LBS</span>
+                            </div>
+                        </div>
+
+                        <!-- Deadlift Max -->
+                        <div class="group">
+                            <label for="set-deadlift" class="block text-[10px] md:text-xs font-bold text-green-500 uppercase tracking-widest mb-1.5 group-focus-within:text-green-400">Deadlift 1RM (Max)</label>
+                            <div class="relative">
+                                <input type="number" id="set-deadlift" value="405" oninput="updateProfileSetting('deadliftMax', this.value)" class="w-full glass-input rounded-lg py-2 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-green-600 outline-none">
+                                <span class="absolute right-3.5 top-2.5 text-gray-400 dark:text-gray-600 font-bold text-xs uppercase calc-unit-label">LBS</span>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-gray-100 dark:border-gray-700/50 my-6"></div>
+
+                        <!-- Body Weight -->
+                        <div class="group">
+                            <label for="set-bodyweight" class="block text-[10px] md:text-xs font-bold text-indigo-500 uppercase tracking-widest mb-1.5 group-focus-within:text-indigo-400">Body Weight</label>
+                            <div class="relative">
+                                <input type="number" id="set-bodyweight" step="0.1" value="180" oninput="updateProfileSetting('bodyWeight', this.value)" class="w-full glass-input rounded-lg py-2 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-indigo-600 outline-none">
+                                <span class="absolute right-3.5 top-2.5 text-gray-400 dark:text-gray-600 font-bold text-xs uppercase calc-unit-label">LBS</span>
+                            </div>
+                        </div>
+
+                        <!-- Gender Choice -->
+                        <div class="group">
+                            <label for="set-gender" class="block text-[10px] md:text-xs font-bold text-purple-500 uppercase tracking-widest mb-1.5">Gender</label>
+                            <select id="set-gender" onchange="updateProfileSetting('gender', this.value)" class="w-full glass-input rounded-lg py-2 px-3 text-gray-900 dark:text-white font-bold text-xs md:text-sm focus:ring-2 focus:ring-purple-600 outline-none h-10 appearance-none">
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="non_binary">Non-Binary</option>
+                                <option value="other" selected>Other / Prefer Not to Say</option>
+                            </select>
+                        </div>
+
+                        <!-- Action save -->
+                        <div class="pt-4 md:pt-6">
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-3.5 rounded-xl transition shadow-xl shadow-blue-500/20 uppercase tracking-widest text-xs md:text-sm">
+                                Save Profile Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recalibrate warning card (Moved between Benchmarks & App preferences) -->
+                <div class="flex items-start gap-3 md:gap-4 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-xl">
+                    <div class="text-blue-500 dark:text-white mt-0.5 shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <p class="text-[10px] md:text-xs text-gray-500 dark:text-white leading-relaxed font-semibold">
+                        Updating these numbers will recalibrate your **Weekly Program** percentages on the dashboard. Ensure these values represent your current tested or estimated 1-rep maximums for accurate training intensity.
+                    </p>
+                </div>
+
+                <!-- Preferences card -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 lg:p-8 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 space-y-6 glass-card-purple">
+                    <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 pb-2 mb-4">App Preferences & Security</h3>
+                    
+                    <!-- Lbs / Kg toggle switcher -->
+                    <div class="glass-input p-4 rounded-xl border flex items-center justify-between gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-0.5">Weight Unit Preference</label>
+                            <span class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">Toggle weight display. Changing units converts all past logged workout weights!</span>
+                        </div>
+                        <div class="flex items-center bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shrink-0">
+                            <button type="button" id="pref-lbs-btn" onclick="toggleWeightUnitPref('lbs')" class="px-3.5 py-1.5 rounded-md text-xs font-black transition flex items-center gap-1 uppercase">LBS</button>
+                            <button type="button" id="pref-kg-btn" onclick="toggleWeightUnitPref('kg')" class="px-3.5 py-1.5 rounded-md text-xs font-black transition flex items-center gap-1 uppercase">KG</button>
+                        </div>
+                    </div>
+
+                    <!-- Rest timer switch -->
+                    <div class="glass-input p-4 rounded-xl border flex items-center justify-between gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-0.5">Automated Rest Timer</label>
+                            <span class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">Show floating timer countdown banner automatically after logging a set</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer select-none shrink-0">
+                            <input type="checkbox" id="pref-show-timer" class="sr-only peer" onchange="toggleRestTimerPref(this.checked)">
+                            <div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+
+                    <!-- Dashboard Layout Mode -->
+                    <div class="glass-input p-4 rounded-xl border flex items-center justify-between gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-0.5">Dashboard Layout Mode</label>
+                            <span class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">Enable Grid Mode on the Dashboard instead of Carousel Mode</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer select-none shrink-0">
+                            <input type="checkbox" id="pref-use-grid" class="sr-only peer" onchange="toggleGridModePref(this.checked)">
+                            <div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+
+                    <!-- Apple Health Sync Toggle -->
+                    <div class="glass-input p-4 rounded-xl border flex items-center justify-between gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-0.5">Apple Health Integration</label>
+                            <span class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">Sync logged training sessions and body weight directly to the Apple Health app</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer select-none shrink-0">
+                            <input type="checkbox" id="pref-apple-health" class="sr-only peer" onchange="toggleAppleHealthPref(this.checked)">
+                            <div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+
+
+                    <!-- 1RM Formula Preference Switcher -->
+                    <div class="glass-input p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-0.5">1RM Formula Preference</label>
+                            <span class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">Choose the standard formula for estimating your 1-Rep Maximums.</span>
+                        </div>
+                        <div class="relative shrink-0 w-full sm:w-56">
+                            <select id="set-formula" onchange="updateProfileSetting('formula', this.value)" class="w-full glass-input border rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-bold text-xs md:text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11 appearance-none">
+                                <option value="epley">Epley (Standard)</option>
+                                <option value="brzycki">Brzycki (Low Rep)</option>
+                                <option value="lander">Lander</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">
+                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Theme Switcher -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between glass-input p-4 rounded-xl border gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-0.5">Color Preference</label>
+                            <span class="text-[10px] md:text-xs text-gray-500">Toggle between light, dark, or system defaults</span>
+                        </div>
+                        <div class="flex bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shrink-0 flex-wrap gap-1">
+                            <button type="button" id="pref-theme-light" onclick="setAppTheme('light')" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-1.5 rounded-md text-xs font-black transition flex items-center gap-1.5">Light</button>
+                            <button type="button" id="pref-theme-dark" onclick="setAppTheme('dark')" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-1.5 rounded-md text-xs font-black transition flex items-center gap-1.5">Dark</button>
+                            <button type="button" id="pref-theme-night" onclick="setAppTheme('night')" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-1.5 rounded-md text-xs font-black transition flex items-center gap-1.5">Night</button>
+                            <button type="button" id="pref-theme-system" onclick="setAppTheme('system')" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-1.5 rounded-md text-xs font-black transition flex items-center gap-1.5">System</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Backup & Recovery Card -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 lg:p-8 shadow-sm dark:shadow-lg border border-gray-200 dark:border-gray-700 space-y-6 glass-card-blue">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-700 pb-4">
+                    <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest">Backup & Restore Center</h3>
+                    
+                    <!-- Format Switcher -->
+                    <div class="flex bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700 shrink-0">
+                        <button type="button" id="backup-format-json" onclick="setBackupFormat('json')" class="px-3 py-1.5 rounded-md text-[10px] font-black transition uppercase bg-blue-600 text-white shadow-sm">JSON</button>
+                        <button type="button" id="backup-format-csv" onclick="setBackupFormat('csv')" class="px-3 py-1.5 rounded-md text-[10px] font-black transition uppercase text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">CSV</button>
+                    </div>
+                </div>
+                
+                <!-- JSON Panel -->
+                <div id="backup-panel-json" class="space-y-4">
+                    <p class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-semibold">
+                        <strong>Full Application Backup</strong>: Export or import your entire PersonalLift profile including strength benchmarks, training history, and custom routines into a single <code>.json</code> file.
+                    </p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="exportBackupData()" class="bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 text-xs font-black py-3 rounded-xl transition border border-blue-500/20 uppercase tracking-wider">
+                            Export JSON
+                        </button>
+                        <label class="bg-green-600/10 hover:bg-green-600/20 text-green-600 text-xs font-black py-3 rounded-xl transition border border-green-500/20 uppercase tracking-wider text-center cursor-pointer flex items-center justify-center">
+                            Import JSON
+                            <input type="file" id="backup-import-file" accept=".json" class="hidden" onchange="importBackupData(event)">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- CSV Panel -->
+                <div id="backup-panel-csv" class="hidden space-y-4">
+                    <p class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-semibold">
+                        <strong>Spreadsheet Workout Logs</strong>: Export your logged exercise sets as a standard <code>.csv</code> file for use in Excel, Google Sheets, or general training spreadsheets.
+                    </p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="exportCSV()" class="bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 text-xs font-black py-3 rounded-xl transition border border-blue-500/20 uppercase tracking-wider">
+                            Export CSV
+                        </button>
+                        <label class="bg-green-600/10 hover:bg-green-600/20 text-green-600 text-xs font-black py-3 rounded-xl transition border border-green-500/20 uppercase tracking-wider text-center cursor-pointer flex items-center justify-center">
+                            Import CSV
+                            <input type="file" id="csv-import-file" accept=".csv" class="hidden" onchange="importCSV(event)">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Session / Danger Management -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm dark:shadow-lg border border-red-200 dark:border-red-900/30 glass-card-red">
+                <h3 class="text-xs font-bold text-red-500 uppercase tracking-widest mb-3 md:mb-4">DANGER ZONE</h3>
+                <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-3 md:p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div>
+                        <p class="text-xs md:text-sm font-bold text-gray-700 dark:text-gray-200">Delete All Data</p>
+                        <p class="text-[10px] md:text-xs text-gray-500">Permanently erase all sets, templates, and profile settings.</p>
+                    </div>
+                    <button onclick="clearAllAppStoreData()" class="bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-600 dark:text-red-200 text-xs font-bold py-2.5 px-4 rounded-lg transition border border-red-200 dark:border-red-800/60 uppercase">
+                        Clear Data
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==================== MODAL: LOAD ROUTINE TEMPLATE ==================== -->
+    <div id="modal-template-loader" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 max-w-md w-full p-4 md:p-6 shadow-2xl animate-slide-up">
+            <h3 class="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 pb-2 mb-4">Select Routine Template</h3>
+            
+            <div class="space-y-3 max-h-[300px] overflow-y-auto pr-1" id="template-loader-list">
+                <!-- Dynamically populated by app.js -->
+            </div>
+            
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700/50 mt-4">
+                <button type="button" onclick="closeTemplateLoader()" class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-xs font-bold py-2.5 px-4 rounded-lg transition">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: SAVE ROUTINE TEMPLATE ==================== -->
+    <div id="modal-template-saver" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 max-w-md w-full p-4 md:p-6 shadow-2xl animate-slide-up">
+            <h3 class="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 pb-2 mb-4">Save Workout as Routine</h3>
+            
+            <div class="space-y-4">
+                <div class="group">
+                    <label for="save-template-name" class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Routine Name</label>
+                    <input type="text" id="save-template-name" placeholder="e.g. Texas Method Volume Day" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg py-2.5 px-3 text-gray-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-blue-600 outline-none h-11">
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700/50 mt-6">
+                <button type="button" onclick="closeTemplateSaver()" class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-xs font-bold py-2.5 px-4 rounded-lg transition">
+                    Cancel
+                </button>
+                <button type="button" onclick="saveTemplateFromToday()" class="bg-green-600 hover:bg-green-500 text-white text-xs font-black py-2.5 px-5 rounded-lg transition shadow-md uppercase tracking-wider">
+                    Save Routine
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== FLOATING COMPONENT: NATIVE BOTTOM NAV (iOS Mode) ==================== -->
+    <nav class="md:hidden fixed bottom-0 left-0 z-40 w-full h-[90px] bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 flex justify-around items-center px-2 shadow-[0_-4px_15px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_15px_rgba(0,0,0,0.2)] pb-5">
+        
+        <button onclick="switchTab('dashboard')" id="mobile-btn-dashboard" class="glass-nav-btn inactive w-full transition-all duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            <span class="text-[10px] font-black tracking-wide">Home</span>
+        </button>
+
+        <button onclick="switchTab('stats')" id="mobile-btn-stats" class="glass-nav-btn inactive w-full transition-all duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span class="text-[10px] font-black tracking-wide">Stats</span>
+        </button>
+
+        <button onclick="switchTab('history')" id="mobile-btn-history" class="glass-nav-btn active w-full transition-all duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="text-[10px] font-black tracking-wide">History</span>
+        </button>
+
+        <button onclick="switchTab('settings')" id="mobile-btn-settings" class="glass-nav-btn inactive w-full transition-all duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span class="text-[10px] font-black tracking-wide">Settings</span>
+        </button>
+    </nav>
+
+
+
+    <!-- Core Offline Javascript Engine -->
+    <script src="app.js"></script>
+</body>
+</html>

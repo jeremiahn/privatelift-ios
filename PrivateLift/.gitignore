@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserstate
+*.xcworkspace/
+!*.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+
+# Node.js
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# Temporary icons/test images in root
+test.png
+test_1024.png
