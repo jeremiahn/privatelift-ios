@@ -198,29 +198,43 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
         let calories = setType == "warmup" ? 3.0 : 8.0
         let activeEnergy = HKQuantity(unit: .kilocalorie(), doubleValue: calories)
         
-        let workout = HKWorkout(
-            activityType: .functionalStrengthTraining,
-            start: workoutDate,
-            end: workoutDate.addingTimeInterval(3 * 60), // standard 3-minute block per set
-            duration: 3 * 60,
-            totalEnergyBurned: activeEnergy,
-            totalDistance: nil,
-            metadata: [
-                HKMetadataKeyWorkoutBrandName: "PersonalLift",
-                HKMetadataKeyIndoorWorkout: true,
-                "Exercise": exercise,
-                "Weight": "\(weight)",
-                "Reps": "\(reps)",
-                "SetType": setType,
-                "RPE": rpe != nil ? "\(rpe!)" : "N/A"
-            ]
-        )
+        let configuration = HKWorkoutConfiguration()
+        configuration.activityType = .functionalStrengthTraining
+        configuration.locationType = .indoor
         
-        healthStore.save(workout) { (success, error) in
-            if success {
+        let builder = HKWorkoutBuilder(healthStore: healthStore, configuration: configuration, device: .local())
+        
+        Task {
+            do {
+                try await builder.beginCollection(at: workoutDate)
+                
+                // Add active energy burned sample associated with workout
+                if let activeEnergyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) {
+                    let energySample = HKQuantitySample(
+                        type: activeEnergyType,
+                        quantity: activeEnergy,
+                        start: workoutDate,
+                        end: workoutDate.addingTimeInterval(3 * 60)
+                    )
+                    try await builder.addSamples([energySample])
+                }
+                
+                let metadata: [String: Any] = [
+                    HKMetadataKeyWorkoutBrandName: "PersonalLift",
+                    HKMetadataKeyIndoorWorkout: true,
+                    "Exercise": exercise,
+                    "Weight": "\(weight)",
+                    "Reps": "\(reps)",
+                    "SetType": setType,
+                    "RPE": rpe != nil ? "\(rpe!)" : "N/A"
+                ]
+                try await builder.addMetadata(metadata)
+                
+                try await builder.endCollection(at: workoutDate.addingTimeInterval(3 * 60))
+                _ = try await builder.finishWorkout()
                 print("Workout successfully saved to Apple Health!")
-            } else {
-                print("Error saving workout to Apple Health: \(String(describing: error))")
+            } catch {
+                print("Error saving workout to Apple Health: \(error.localizedDescription)")
             }
         }
     }

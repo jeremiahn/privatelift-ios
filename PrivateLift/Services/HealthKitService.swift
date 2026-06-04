@@ -45,14 +45,27 @@ class HealthKitService: ObservableObject {
         let calories = setType == "warmup" ? 3.0 : 8.0
         let activeEnergy = HKQuantity(unit: .kilocalorie(), doubleValue: calories)
         
-        let workout = HKWorkout(
-            activityType: .functionalStrengthTraining,
-            start: date,
-            end: date.addingTimeInterval(3 * 60), // standard 3-minute block per set
-            duration: 3 * 60,
-            totalEnergyBurned: activeEnergy,
-            totalDistance: nil,
-            metadata: [
+        let configuration = HKWorkoutConfiguration()
+        configuration.activityType = .functionalStrengthTraining
+        configuration.locationType = .indoor
+        
+        let builder = HKWorkoutBuilder(healthStore: healthStore, configuration: configuration, device: .local())
+        
+        do {
+            try await builder.beginCollection(at: date)
+            
+            // Add active energy burned sample associated with workout
+            if let activeEnergyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) {
+                let energySample = HKQuantitySample(
+                    type: activeEnergyType,
+                    quantity: activeEnergy,
+                    start: date,
+                    end: date.addingTimeInterval(3 * 60)
+                )
+                try await builder.addSamples([energySample])
+            }
+            
+            let metadata: [String: Any] = [
                 HKMetadataKeyWorkoutBrandName: "PersonalLift",
                 HKMetadataKeyIndoorWorkout: true,
                 "Exercise": exercise,
@@ -61,13 +74,13 @@ class HealthKitService: ObservableObject {
                 "SetType": setType,
                 "RPE": rpe != nil ? "\(rpe!)" : "N/A"
             ]
-        )
-        
-        do {
-            try await healthStore.save(workout)
+            try await builder.addMetadata(metadata)
+            
+            try await builder.endCollection(at: date.addingTimeInterval(3 * 60))
+            _ = try await builder.finishWorkout()
             return true
         } catch {
-            print("Failed to save workout to Apple Health: \(error.localizedDescription)")
+            print("Error saving workout to Apple Health: \(error.localizedDescription)")
             return false
         }
     }
