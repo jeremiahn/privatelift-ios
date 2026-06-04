@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect width="1024" height="1024" fill="#0f172a" />
+  <text x="512" y="520" 
+        font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif" 
+        font-size="580" 
+        font-weight="800" 
+        text-anchor="middle" 
+        dominant-baseline="central"
+        letter-spacing="-15">
+    <tspan fill="#ffffff">P</tspan><tspan fill="#3b82f6" dx="5">L</tspan>
+  </text>
+</svg>

@@ -1,18 +1,21 @@
+# macOS
+.DS_Store
+*.swp
+*~
+
 # Xcode
 build/
 DerivedData/
 *.xcuserstate
 *.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+!*.xcodeproj/project.xcworkspace/contents.xcworkspacedata
 *.pbxuser
 *.mode1v3
 *.mode2v3
 *.perspectivev3
 xcuserdata/
-
-# macOS
-.DS_Store
-*.swp
-*~
 
 # CocoaPods
 Pods/
@@ -20,3 +23,12 @@ Pods/
 # Swift Package Manager
 .build/
 .swiftpm/
+
+# Node.js
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# Temporary icons/test images in root
+test.png
+test_1024.png
