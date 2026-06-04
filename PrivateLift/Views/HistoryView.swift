@@ -4,6 +4,7 @@ import Charts
 
 struct HistoryView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
     @Query private var preferences: [UserPreferences]
     
     // Query all workout sessions, sorting descending (most recent first)
@@ -36,6 +37,25 @@ struct HistoryView: View {
     
     var brandColors: BrandColors {
         BrandColors(theme: themeStyle)
+    }
+    
+    var isDark: Bool {
+        switch themeStyle {
+        case .light:
+            return false
+        case .dark, .night:
+            return true
+        case .system:
+            return colorScheme == .dark
+        }
+    }
+    
+    var boxBackgroundColor: Color {
+        isDark ? Color.black.opacity(0.2) : Color.plGray100
+    }
+    
+    var notesBackgroundColor: Color {
+        isDark ? Color.black.opacity(0.3) : Color.plGray100
     }
     
     // MARK: - e1RM Chart Data Structures
@@ -407,7 +427,7 @@ struct HistoryView: View {
                             }
                             .padding(.vertical, 8)
                             .padding(.horizontal, 12)
-                            .background(Color.black.opacity(0.2))
+                            .background(boxBackgroundColor)
                             .cornerRadius(10)
                         }
                     }
@@ -423,7 +443,7 @@ struct HistoryView: View {
                             .font(.system(size: 13, weight: .bold))
                             .foregroundColor(brandColors.whiteText)
                             .padding(12)
-                            .background(Color.black.opacity(0.3))
+                            .background(notesBackgroundColor)
                             .cornerRadius(10)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
