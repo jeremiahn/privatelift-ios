@@ -538,7 +538,7 @@ struct DashboardView: View {
     @ViewBuilder
     private var programTargetsSection: some View {
         if activePrefs.useGridMode {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                 ForEach(exercises) { exercise in
                     TargetCard(
                         title: exercise.displayName,
@@ -576,7 +576,7 @@ struct DashboardView: View {
                             updateWeightInputForSelectedExercise()
                             calcWeight = calculateTargetWeight(for: exercise.name)
                         }
-                        .frame(width: 110)
+                        .frame(width: 125)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -856,8 +856,8 @@ struct TargetCard: View {
                         .foregroundColor(.plGray400)
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 12)
+            .padding(.horizontal, isSquare ? 8 : 12)
+            .padding(.vertical, isSquare ? 10 : 14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(maxHeight: isSquare ? .infinity : nil, alignment: .leading)
             .background(isSelected ? color.opacity(0.12) : whiteText.opacity(0.04))

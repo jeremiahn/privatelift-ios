@@ -53,7 +53,8 @@ const DEFAULT_SETTINGS = {
     weightUnit: "lbs",
     showRestTimer: true,
     theme: "system",
-    appleHealthEnabled: false
+    appleHealthEnabled: false,
+    useGridMode: false
 };
 
 let userSettings = { ...DEFAULT_SETTINGS };
@@ -206,11 +207,21 @@ function renderDashboard() {
     
     // Render Weight Cards
     const weightGrid = document.getElementById("weight-cards-container");
+    const useGrid = userSettings.useGridMode || false;
+    const itemClass = useGrid ? "w-full" : "w-[125px] shrink-0 snap-start";
+    const cardExtraClass = useGrid ? "aspect-square" : "";
+    
+    if (useGrid) {
+        weightGrid.className = "grid grid-cols-4 gap-3 w-full";
+    } else {
+        weightGrid.className = "flex flex-row overflow-x-auto gap-3 w-full no-scrollbar snap-x snap-mandatory pb-2";
+    }
+    
     weightGrid.innerHTML = `
         <!-- SQUAT CARD -->
-        <div class="flex flex-col items-start w-full">
+        <div class="flex flex-col items-start ${itemClass}">
             <span class="text-[9px] md:text-[11px] font-black uppercase tracking-widest mb-1.5 ml-1 text-red-500">SQUAT</span>
-            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border border-red-500/50 dark:border-red-500/40 border-l-[6px] border-l-red-500 glass-card-red flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition-all duration-300" onclick="fillCalc(${program.squat})">
+            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border border-red-500/50 dark:border-red-500/40 border-l-[6px] border-l-red-500 glass-card-red flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition-all duration-300 ${cardExtraClass}" onclick="fillCalc(${program.squat})">
                 <div class="flex items-baseline gap-0.5 sm:gap-1">
                     <span class="text-base sm:text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">${program.squat}</span>
                     <span class="text-[8px] sm:text-xs text-gray-500 font-bold uppercase ml-0.5 sm:ml-1">${userSettings.weightUnit.toUpperCase()}</span>
@@ -218,9 +229,9 @@ function renderDashboard() {
             </div>
         </div>
         <!-- BENCH CARD -->
-        <div class="flex flex-col items-start w-full">
+        <div class="flex flex-col items-start ${itemClass}">
             <span class="text-[9px] md:text-[11px] font-black uppercase tracking-widest mb-1.5 ml-1 text-blue-500">BENCH</span>
-            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border border-blue-500/50 dark:border-blue-500/40 border-l-[6px] border-l-blue-500 glass-card-blue flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition-all duration-300" onclick="fillCalc(${program.bench})">
+            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border border-blue-500/50 dark:border-blue-500/40 border-l-[6px] border-l-blue-500 glass-card-blue flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition-all duration-300 ${cardExtraClass}" onclick="fillCalc(${program.bench})">
                 <div class="flex items-baseline gap-0.5 sm:gap-1">
                     <span class="text-base sm:text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">${program.bench}</span>
                     <span class="text-[8px] sm:text-xs text-gray-500 font-bold uppercase ml-0.5 sm:ml-1">${userSettings.weightUnit.toUpperCase()}</span>
@@ -228,9 +239,9 @@ function renderDashboard() {
             </div>
         </div>
         <!-- DEADLIFT CARD -->
-        <div class="flex flex-col items-start w-full">
+        <div class="flex flex-col items-start ${itemClass}">
             <span class="text-[9px] md:text-[11px] font-black uppercase tracking-widest mb-1.5 ml-1 text-green-500">DEADLIFT</span>
-            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border border-green-500/50 dark:border-green-500/40 border-l-[6px] border-l-green-500 glass-card-green flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition-all duration-300" onclick="fillCalc(${program.deadlift})">
+            <div class="w-full bg-white dark:bg-gray-900 py-3 px-2 sm:px-3 md:p-5 rounded-xl border border-green-500/50 dark:border-green-500/40 border-l-[6px] border-l-green-500 glass-card-green flex flex-col items-start justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition-all duration-300 ${cardExtraClass}" onclick="fillCalc(${program.deadlift})">
                 <div class="flex items-baseline gap-0.5 sm:gap-1">
                     <span class="text-base sm:text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">${program.deadlift}</span>
                     <span class="text-[8px] sm:text-xs text-gray-500 font-bold uppercase ml-0.5 sm:ml-1">${userSettings.weightUnit.toUpperCase()}</span>
@@ -1277,6 +1288,7 @@ function renderSettings() {
     // Sync checkboxes
     document.getElementById("pref-show-timer").checked = userSettings.showRestTimer;
     document.getElementById("pref-apple-health").checked = userSettings.appleHealthEnabled || false;
+    document.getElementById("pref-use-grid").checked = userSettings.useGridMode || false;
     
     // Sync selectors
     syncThemeSettingsUI();
@@ -1332,6 +1344,12 @@ function syncUnitSettingsUI() {
 // Toggle Rest Timer preference
 function toggleRestTimerPref(checked) {
     userSettings.showRestTimer = checked;
+    saveLocalSettings();
+}
+
+// Toggle Grid Mode preference
+function toggleGridModePref(checked) {
+    userSettings.useGridMode = checked;
     saveLocalSettings();
 }
 
