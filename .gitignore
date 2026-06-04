@@ -32,3 +32,9 @@ package-lock.json
 # Temporary icons/test images in root
 test.png
 test_1024.png
+
+# Gradle & Kotlin Multiplatform
+.gradle/
+**/build/
+.kotlin/
+local.properties

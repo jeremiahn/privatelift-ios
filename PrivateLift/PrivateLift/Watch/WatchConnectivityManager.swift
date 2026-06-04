@@ -46,7 +46,8 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
     private func fetchTodaySummary() -> [String: Any] {
         guard let context = modelContext else { return [:] }
         // Simple summary: total sets and total weight lifted today.
-        let fetch = FetchDescriptor<WorkoutSet>(predicate: #Predicate { $0.session?.dateString == todayString() })
+        let today = todayString()
+        let fetch = FetchDescriptor<WorkoutSet>(predicate: #Predicate { $0.session?.dateString == today })
         let sets = (try? context.fetch(fetch)) ?? []
         let totalWeight = sets.reduce(0.0) { $0 + $1.weight }
         return ["setCount": sets.count, "totalWeight": totalWeight]
