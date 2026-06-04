@@ -538,23 +538,28 @@ struct DashboardView: View {
     @ViewBuilder
     private var programTargetsSection: some View {
         if activePrefs.useGridMode {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                ForEach(exercises) { exercise in
-                    TargetCard(
-                        title: exercise.displayName,
-                        weight: calculateTargetWeight(for: exercise.name),
-                        unit: activePrefs.weightUnit,
-                        color: themeStyle == .night ? .plGray300 : Color(hex: exercise.colorHex),
-                        whiteText: brandColors.whiteText,
-                        isSelected: selectedExercise == exercise.name,
-                        isSquare: true
-                    ) {
-                        HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
-                        selectedExercise = exercise.name
-                        updateWeightInputForSelectedExercise()
-                        calcWeight = calculateTargetWeight(for: exercise.name)
+            VStack(spacing: 12) {
+                ForEach(0..<chunkedExercises(by: 2).count, id: \.self) { index in
+                    let chunk = chunkedExercises(by: 2)[index]
+                    HStack(spacing: 12) {
+                        ForEach(chunk) { exercise in
+                            TargetCard(
+                                title: exercise.displayName,
+                                weight: calculateTargetWeight(for: exercise.name),
+                                unit: activePrefs.weightUnit,
+                                color: themeStyle == .night ? .plGray300 : Color(hex: exercise.colorHex),
+                                whiteText: brandColors.whiteText,
+                                isSelected: selectedExercise == exercise.name,
+                                isSquare: false
+                            ) {
+                                HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+                                selectedExercise = exercise.name
+                                updateWeightInputForSelectedExercise()
+                                calcWeight = calculateTargetWeight(for: exercise.name)
+                            }
+                            .frame(width: 125)
+                        }
                     }
-                    .aspectRatio(1.0, contentMode: .fill)
                 }
             }
             .padding(.horizontal, 16)
@@ -587,10 +592,14 @@ struct DashboardView: View {
     @ViewBuilder
     private var exerciseSelectionSection: some View {
         if activePrefs.useGridMode {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                ForEach(exercises) { exercise in
-                    exercisePill(title: exercise.displayName, tag: exercise.name, activeColor: Color(hex: exercise.colorHex), isSquare: true)
-                        .aspectRatio(1.0, contentMode: .fill)
+            VStack(spacing: 8) {
+                ForEach(0..<chunkedExercises(by: 3).count, id: \.self) { index in
+                    let chunk = chunkedExercises(by: 3)[index]
+                    HStack(spacing: 8) {
+                        ForEach(chunk) { exercise in
+                            exercisePill(title: exercise.displayName, tag: exercise.name, activeColor: Color(hex: exercise.colorHex), isSquare: false)
+                        }
+                    }
                 }
             }
         } else {
@@ -607,13 +616,16 @@ struct DashboardView: View {
     @ViewBuilder
     private var plateCalculatorAutofillSection: some View {
         if activePrefs.useGridMode {
-            HStack(spacing: 10) {
-                Spacer()
-                ForEach(exercises) { exercise in
-                    plateAutofillButton(exercise: exercise.displayName, value: calculateTargetWeight(for: exercise.name), isSquare: true)
-                        .frame(width: 65, height: 65)
+            VStack(spacing: 10) {
+                ForEach(0..<chunkedExercises(by: 3).count, id: \.self) { index in
+                    let chunk = chunkedExercises(by: 3)[index]
+                    HStack(spacing: 10) {
+                        ForEach(chunk) { exercise in
+                            plateAutofillButton(exercise: exercise.displayName, value: calculateTargetWeight(for: exercise.name), isSquare: false)
+                                .frame(width: 95, height: 48)
+                        }
+                    }
                 }
-                Spacer()
             }
         } else {
             ScrollView(.horizontal, showsIndicators: false) {
@@ -657,6 +669,22 @@ struct DashboardView: View {
         .accessibilityLabel("Autofill weight for \(exercise)")
         .accessibilityValue("\(Int(value)) \(activePrefs.weightUnit)")
         .accessibilityHint("Loads \(Int(value)) \(activePrefs.weightUnit) into the plate calculator")
+    }
+    
+    private func chunkedExercises(by size: Int) -> [[CustomExercise]] {
+        var chunks: [[CustomExercise]] = []
+        var currentChunk: [CustomExercise] = []
+        for exercise in exercises {
+            currentChunk.append(exercise)
+            if currentChunk.count == size {
+                chunks.append(currentChunk)
+                currentChunk = []
+            }
+        }
+        if !currentChunk.isEmpty {
+            chunks.append(currentChunk)
+        }
+        return chunks
     }
     
     private func updateWeightInputForSelectedExercise() {

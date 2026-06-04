@@ -208,11 +208,11 @@ function renderDashboard() {
     // Render Weight Cards
     const weightGrid = document.getElementById("weight-cards-container");
     const useGrid = userSettings.useGridMode || false;
-    const itemClass = useGrid ? "w-full" : "w-[125px] shrink-0 snap-start";
-    const cardExtraClass = useGrid ? "aspect-square" : "";
+    const itemClass = "w-[125px] shrink-0" + (useGrid ? "" : " snap-start");
+    const cardExtraClass = "";
     
     if (useGrid) {
-        weightGrid.className = "grid grid-cols-4 gap-3 w-full";
+        weightGrid.className = "flex flex-row flex-wrap justify-center gap-3 w-full";
     } else {
         weightGrid.className = "flex flex-row overflow-x-auto gap-3 w-full no-scrollbar snap-x snap-mandatory pb-2";
     }
