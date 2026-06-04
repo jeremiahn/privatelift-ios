@@ -64,7 +64,7 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     HStack(spacing: 2) {
-                        Text("PRIVATE")
+                        Text("PERSONAL")
                             .font(.system(size: 24, weight: .black))
                             .foregroundColor(.primary)
                         Text("LIFT")
@@ -130,12 +130,12 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("PrivateLift requires Health permissions to sync workouts. Tap 'Open Settings' -> select 'PrivateLift' under Data Access & Devices -> and enable write/read permissions.")
+                Text("PersonalLift requires Health permissions to sync workouts. Tap 'Open Settings' -> select 'PersonalLift' under Data Access & Devices -> and enable write/read permissions.")
             }
             .alert("Restart Required", isPresented: $showICloudAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Your iCloud backup configuration has been updated. Please fully close and relaunch PrivateLift to initialize the iCloud container.")
+                Text("Your iCloud backup configuration has been updated. Please fully close and relaunch PersonalLift to initialize the iCloud container.")
             }
         }
     }
@@ -276,7 +276,7 @@ struct SettingsView: View {
     private var backupRestoreSection: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             // Export JSON ShareLink
-            ShareLink(item: jsonBackupString, subject: Text("PrivateLift Backup"), message: Text("PrivateLift Backup JSON file")) {
+            ShareLink(item: jsonBackupString, subject: Text("PersonalLift Backup"), message: Text("PersonalLift Backup JSON file")) {
                 dbGridBox(title: "EXPORT DATABASE", format: "JSON", icon: "square.and.arrow.up", color: brandColors.blue)
             }
             .buttonStyle(PlainButtonStyle())
@@ -292,7 +292,7 @@ struct SettingsView: View {
             .buttonStyle(PlainButtonStyle())
             
             // Export CSV ShareLink
-            ShareLink(item: csvBackupString, subject: Text("Workout History CSV"), message: Text("PrivateLift workout logs exported in CSV format")) {
+            ShareLink(item: csvBackupString, subject: Text("Workout History CSV"), message: Text("PersonalLift workout logs exported in CSV format")) {
                 dbGridBox(title: "EXPORT WORKOUTS", format: "CSV", icon: "tablecells", color: brandColors.green)
             }
             .buttonStyle(PlainButtonStyle())

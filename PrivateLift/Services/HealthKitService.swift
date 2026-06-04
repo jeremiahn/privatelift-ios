@@ -53,7 +53,7 @@ class HealthKitService: ObservableObject {
             totalEnergyBurned: activeEnergy,
             totalDistance: nil,
             metadata: [
-                HKMetadataKeyWorkoutBrandName: "PrivateLift",
+                HKMetadataKeyWorkoutBrandName: "PersonalLift",
                 HKMetadataKeyIndoorWorkout: true,
                 "Exercise": exercise,
                 "Weight": "\(weight)",

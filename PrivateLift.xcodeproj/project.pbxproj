@@ -263,8 +263,9 @@
 				DEVELOPMENT_TEAM = D42P76Y3LR;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "PrivateLift requires permission to read workout logs and body weight to synchronize stats.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "PrivateLift requires permission to save workout records, active energy burned, and body mass directly to your Apple Health app.";
+				INFOPLIST_KEY_CFBundleDisplayName = "PersonalLift";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "PersonalLift requires permission to read workout logs and body weight to synchronize stats.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "PersonalLift requires permission to save workout records, active energy burned, and body mass directly to your Apple Health app.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -301,8 +302,9 @@
 				DEVELOPMENT_TEAM = D42P76Y3LR;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "PrivateLift requires permission to read workout logs and body weight to synchronize stats.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "PrivateLift requires permission to save workout records, active energy burned, and body mass directly to your Apple Health app.";
+				INFOPLIST_KEY_CFBundleDisplayName = "PersonalLift";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "PersonalLift requires permission to read workout logs and body weight to synchronize stats.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "PersonalLift requires permission to save workout records, active energy burned, and body mass directly to your Apple Health app.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

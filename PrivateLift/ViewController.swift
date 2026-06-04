@@ -206,7 +206,7 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
             totalEnergyBurned: activeEnergy,
             totalDistance: nil,
             metadata: [
-                HKMetadataKeyWorkoutBrandName: "PrivateLift",
+                HKMetadataKeyWorkoutBrandName: "PersonalLift",
                 HKMetadataKeyIndoorWorkout: true,
                 "Exercise": exercise,
                 "Weight": "\(weight)",
@@ -244,7 +244,7 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
     
     // 5. Handle JavaScript alert() and confirm() natively in iOS
     func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
-        let alertController = UIAlertController(title: "PrivateLift", message: message, preferredStyle: .alert)
+        let alertController = UIAlertController(title: "PersonalLift", message: message, preferredStyle: .alert)
         alertController.addAction(UIAlertAction(title: "OK", style: .default, handler: { _ in
             completionHandler()
         }))

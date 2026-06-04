@@ -145,7 +145,7 @@ struct OnboardingView: View {
             
             VStack(spacing: 8) {
                 HStack(spacing: 2) {
-                    Text("PRIVATE")
+                    Text("PERSONAL")
                         .font(.system(size: 28, weight: .black))
                         .foregroundColor(.white)
                     Text("LIFT")
@@ -154,9 +154,9 @@ struct OnboardingView: View {
                 }
                 .tracking(-0.5)
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Private Lift")
+                .accessibilityLabel("Personal Lift")
                 
-                Text("Your private, offline-first strength companion. Let's calibrate your starting profile to customize your target weight intensities.")
+                Text("Your personal, offline-first strength companion. Let's calibrate your starting profile to customize your target weight intensities.")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.plGray300)
                     .multilineTextAlignment(.center)

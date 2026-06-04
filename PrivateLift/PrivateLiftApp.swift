@@ -28,7 +28,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 }
 
 @main
-struct PrivateLiftApp: App {
+struct PersonalLiftApp: App {
     let container: ModelContainer
     
     init() {

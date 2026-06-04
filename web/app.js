@@ -1605,7 +1605,7 @@ function exportBackupData() {
     
     tx.oncomplete = function() {
         const jsonStr = JSON.stringify(backup, null, 2);
-        const filename = `PrivateLift_Backup_${getTodayString()}.json`;
+        const filename = `PersonalLift_Backup_${getTodayString()}.json`;
         
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.download) {
             window.webkit.messageHandlers.download.postMessage({
@@ -1889,7 +1889,7 @@ function exportCSV() {
                 csvContent += `${s.sessionDate},${escapeCSV(s.exercise)},${s.weight},${s.reps},${escapeCSV(s.set_type)},${rpeStr},${s.e1rm},${escapeCSV(notesVal)},${squatMax},${benchMax},${deadliftMax},${bodyWeight},${escapeCSV(gender)},${escapeCSV(formula)},${escapeCSV(weightUnit)},${showRestTimer},${escapeCSV(theme)}\n`;
             });
             
-            const filename = `PrivateLift_History_${getTodayString()}.csv`;
+            const filename = `PersonalLift_History_${getTodayString()}.csv`;
             
             if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.download) {
                 window.webkit.messageHandlers.download.postMessage({

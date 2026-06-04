@@ -490,7 +490,7 @@ struct DashboardView: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     HStack(spacing: 2) {
-                        Text("PRIVATE")
+                        Text("PERSONAL")
                             .font(.system(size: 24, weight: .black))
                             .foregroundColor(.primary)
                         Text("LIFT")
