@@ -6,16 +6,17 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class WorkoutSession(
     val dateString: String, // YYYY-MM-DD
-    val notes: String = "",
-    val sets: List<WorkoutSet> = emptyList()
-) {
-    val date: java.time.LocalDate
-        get() = java.time.LocalDate.parse(dateString)
-}
+    var notes: String = "",
+    var sets: List<WorkoutSet> = emptyList()
+)
 
 @Serializable
 data class WorkoutSet(
+    val exercise: String, // "SQUAT" | "BENCH" | "DEADLIFT"
+    val weight: Double,
     val reps: Int,
-    val weightKg: Double,
-    val exerciseName: String
+    val rpe: Double, // 1.0 - 10.0
+    val setType: String, // "warmup" | "working" | "failed" | "drop"
+    val timestamp: Long // Epoch milliseconds
 )
+
