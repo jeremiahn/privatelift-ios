@@ -3,11 +3,11 @@ import SwiftData
 
 @Model
 final class WorkoutSet {
-    var exercise: String // "SQUAT" | "BENCH" | "DEADLIFT"
-    var weight: Double
-    var reps: Int
-    var rpe: Double // 1.0 - 10.0
-    var setType: String // "warmup" | "working" | "drop"
+    var exercise: String = "" // "SQUAT" | "BENCH" | "DEADLIFT"
+    var weight: Double = 0.0
+    var reps: Int = 0
+    var rpe: Double = 0.0 // 1.0 - 10.0
+    var setType: String = "" // "warmup" | "working" | "drop"
     var timestamp: Date = Date()
     
     var session: WorkoutSession?

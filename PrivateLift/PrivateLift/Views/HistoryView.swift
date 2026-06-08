@@ -31,6 +31,28 @@ struct HistoryView: View {
         preferences.first ?? UserPreferences()
     }
     
+    var uniqueExercises: [CustomExercise] {
+        var seen = Set<String>()
+        return exercises.filter { exercise in
+            let normalized = exercise.name.uppercased().replacingOccurrences(of: " ", with: "")
+            let key: String
+            if normalized == "BENCH" || normalized == "BENCHPRESS" {
+                key = "BENCH"
+            } else if normalized == "SQUAT" {
+                key = "SQUAT"
+            } else if normalized == "DEADLIFT" {
+                key = "DEADLIFT"
+            } else {
+                key = normalized
+            }
+            if seen.contains(key) {
+                return false
+            }
+            seen.insert(key)
+            return true
+        }
+    }
+    
     var themeStyle: ThemeStyle {
         ThemeStyle(rawValue: activePrefs.theme) ?? .system
     }
@@ -66,14 +88,21 @@ struct HistoryView: View {
         let e1RM: Double
     }
     
+    // Cached formatter — DateFormatter is expensive to allocate
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
     var chartPoints: [ChartDataPoint] {
         let formula = activePrefs.formula
         var dailyMaxes: [String: [String: Double]] = [:] // YYYY-MM-DD -> [LIFT -> MAX_E1RM]
-        
+
         for set in allSets {
             guard let dateStr = set.session?.dateString else { continue }
             let e1rm = calculateE1RM(weight: set.weight, reps: set.reps, formula: formula)
-            
+
             var dayLifts = dailyMaxes[dateStr] ?? [:]
             let currentMax = dayLifts[set.exercise] ?? 0.0
             if e1rm > currentMax {
@@ -81,41 +110,117 @@ struct HistoryView: View {
                 dailyMaxes[dateStr] = dayLifts
             }
         }
-        
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
+
+        let formatter = HistoryView.dayFormatter
         if let tz = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
             formatter.timeZone = tz
         }
-        
+
+        // Pre-build name -> displayName map for O(1) lookup in the loop below
+        var displayNameMap: [String: String] = [:]
+        for ex in uniqueExercises {
+            displayNameMap[ex.name] = ex.displayName
+        }
+
         var points: [ChartDataPoint] = []
-        
-        // Sort dates chronologically
-        let sortedDates = dailyMaxes.keys.sorted()
-        
-        for dateStr in sortedDates {
+        for dateStr in dailyMaxes.keys.sorted() {
             guard let date = formatter.date(from: dateStr),
                   let lifts = dailyMaxes[dateStr] else { continue }
-            
             for (lift, val) in lifts {
-                let displayName = exercises.first(where: { $0.name == lift })?.displayName ?? lift.capitalized
+                let displayName = displayNameMap[lift] ?? lift.capitalized
                 points.append(ChartDataPoint(date: date, liftName: displayName, e1RM: val))
             }
         }
-        
         return points
+    }
+    
+    var chartColorScaleDomain: [String] {
+        var domain = ["Squat", "Bench Press", "Deadlift"]
+        for ex in uniqueExercises {
+            if !domain.contains(ex.displayName) {
+                domain.append(ex.displayName)
+            }
+        }
+        for point in chartPoints {
+            if !domain.contains(point.liftName) {
+                domain.append(point.liftName)
+            }
+        }
+        return domain
+    }
+    
+    var chartColorScaleRange: [Color] {
+        let domain = chartColorScaleDomain
+        var scale: [String: Color] = [
+            "Squat": brandColors.red,
+            "Bench Press": brandColors.blue,
+            "Deadlift": brandColors.green
+        ]
+        for ex in uniqueExercises {
+            scale[ex.displayName] = themeStyle == .night ? Color.plGray400 : Color(hex: ex.colorHex)
+        }
+        return domain.map { liftName in
+            scale[liftName] ?? (themeStyle == .night ? Color.plGray400 : brandColors.blue)
+        }
     }
     
     private func calculateE1RM(weight: Double, reps: Int, formula: String) -> Double {
         if reps <= 1 { return weight }
         switch formula {
         case "brzycki":
-            return weight / (1.0278 - (0.0278 * Double(reps)))
+            let denom = 1.0278 - (0.0278 * Double(reps))
+            return weight / max(0.01, denom)
         case "lander":
-            return (100.0 * weight) / (101.3 - (2.6712 * Double(reps)))
+            let denom = 101.3 - (2.6712 * Double(reps))
+            return (100.0 * weight) / max(0.01, denom)
         default: // epley
             return weight * (1.0 + Double(reps) / 30.0)
         }
+    }
+    
+    @ViewBuilder
+    private var progressionChartCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("ESTIMATED 1RM PROGRESSION")
+                .font(.system(size: 11, weight: .black))
+                .foregroundColor(brandColors.teal)
+                .tracking(2.0)
+            
+            if chartPoints.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.system(size: 32))
+                        .foregroundColor(.plGray700)
+                    Text("No progression data yet.")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.plGray500)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 200)
+            } else {
+                Chart(chartPoints) { point in
+                    LineMark(
+                        x: .value("Date", point.date),
+                        y: .value("e1RM", point.e1RM)
+                    )
+                    .foregroundStyle(by: .value("Lift", point.liftName))
+                    .interpolationMethod(.catmullRom)
+                    
+                    PointMark(
+                        x: .value("Date", point.date),
+                        y: .value("e1RM", point.e1RM)
+                    )
+                    .foregroundStyle(by: .value("Lift", point.liftName))
+                }
+                .chartForegroundStyleScale(domain: chartColorScaleDomain, range: chartColorScaleRange)
+                .frame(height: 220)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Estimated 1RM Progression Chart")
+                .accessibilityValue(chartPoints.isEmpty ? "No data available." : "Showing 1RM trends over time for your lifts.")
+            }
+        }
+        .padding(20)
+        .glassCard(style: themeStyle)
     }
     
     var body: some View {
@@ -124,51 +229,7 @@ struct HistoryView: View {
                 VStack(spacing: 20) {
                     
                     // e1RM Progression Swift Chart Card
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("ESTIMATED 1RM PROGRESSION")
-                            .font(.system(size: 11, weight: .black))
-                            .foregroundColor(brandColors.teal)
-                            .tracking(2.0)
-                        
-                        if chartPoints.isEmpty {
-                            VStack(spacing: 8) {
-                                Image(systemName: "chart.line.uptrend.xyaxis")
-                                    .font(.system(size: 32))
-                                    .foregroundColor(.plGray700)
-                                Text("No progression data yet.")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(.plGray500)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 200)
-                        } else {
-                            Chart(chartPoints) { point in
-                                LineMark(
-                                    x: .value("Date", point.date),
-                                    y: .value("e1RM", point.e1RM)
-                                )
-                                .foregroundStyle(by: .value("Lift", point.liftName))
-                                .interpolationMethod(.catmullRom)
-                                
-                                PointMark(
-                                    x: .value("Date", point.date),
-                                    y: .value("e1RM", point.e1RM)
-                                )
-                                .foregroundStyle(by: .value("Lift", point.liftName))
-                            }
-                            .chartForegroundStyleScale([
-                                "Squat": brandColors.red,
-                                "Bench Press": brandColors.blue,
-                                "Deadlift": brandColors.green
-                            ])
-                            .frame(height: 220)
-                            .accessibilityElement(children: .ignore)
-                            .accessibilityLabel("Estimated 1RM Progression Chart")
-                            .accessibilityValue(chartPoints.isEmpty ? "No data available." : "Showing 1RM trends over time for your lifts.")
-                        }
-                    }
-                    .padding(20)
-                    .glassCard(style: themeStyle)
+                    progressionChartCard
                     
                     if sessions.isEmpty {
                         VStack(spacing: 12) {
@@ -246,7 +307,7 @@ struct HistoryView: View {
     // MARK: - Individual Session Card UI
     private func sessionCard(session: WorkoutSession) -> some View {
         let isExpanded = expandedSessionDate == session.dateString
-        let totalVolume = session.sets.reduce(0.0) { $0 + ($1.weight * Double($1.reps)) }
+        let totalVolume = (session.sets ?? []).reduce(0.0) { $0 + ($1.weight * Double($1.reps)) }
         
         return VStack(alignment: .leading, spacing: 0) {
             // Header bar
@@ -274,7 +335,7 @@ struct HistoryView: View {
                             .foregroundColor(brandColors.whiteText)
                         
                         HStack(spacing: 8) {
-                            Text("\(session.sets.count) sets")
+                            Text("\((session.sets ?? []).count) sets")
                                 .font(.system(size: 11, weight: .black, design: .monospaced))
                                 .foregroundColor(brandColors.blue)
                             
@@ -293,9 +354,9 @@ struct HistoryView: View {
                     HStack(spacing: 12) {
                         // Exercise badges summary
                         HStack(spacing: 4) {
-                            let loggedExercises = Array(Set(session.sets.map { $0.exercise })).sorted()
+                            let loggedExercises = Array(Set((session.sets ?? []).map { $0.exercise })).sorted()
                             ForEach(loggedExercises, id: \.self) { exName in
-                                if let ex = exercises.first(where: { $0.name == exName }) {
+                                if let ex = uniqueExercises.first(where: { $0.name == exName }) {
                                     let firstChar = String(ex.displayName.prefix(1)).uppercased()
                                     let badgeColor = themeStyle == .night ? Color.plGray400 : Color(hex: ex.colorHex)
                                     exerciseBadge(label: firstChar, color: badgeColor)
@@ -316,7 +377,7 @@ struct HistoryView: View {
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(formatSessionDate(session.dateString)) workout session")
-            .accessibilityValue("\(session.sets.count) sets, total volume \(Int(totalVolume)) \(activePrefs.weightUnit). Exercises completed: \(Array(Set(session.sets.map { item in exercises.first(where: { $0.name == item.exercise })?.displayName ?? item.exercise })).joined(separator: ", "))")
+            .accessibilityValue("\((session.sets ?? []).count) sets, total volume \(Int(totalVolume)) \(activePrefs.weightUnit). Exercises completed: \(Array(Set((session.sets ?? []).map { item in uniqueExercises.first(where: { $0.name == item.exercise })?.displayName ?? item.exercise })).joined(separator: ", "))")
             .accessibilityHint(isExpanded ? "Double tap to collapse details" : "Double tap to expand details")
             
             // Expanded detail section
@@ -328,15 +389,15 @@ struct HistoryView: View {
                     
                     // Display set listings
                     VStack(spacing: 8) {
-                        ForEach(session.sets) { item in
-                            let rawColor = Color(hex: exercises.first(where: { $0.name == item.exercise })?.colorHex ?? "#8b5cf6")
+                        ForEach(session.sets ?? []) { item in
+                            let rawColor = Color(hex: uniqueExercises.first(where: { $0.name == item.exercise })?.colorHex ?? "#8b5cf6")
                             let itemColor = themeStyle == .night ? Color.plGray400 : rawColor
                             HStack {
                                 Text(item.exercise)
                                     .font(.system(size: 13, weight: .black))
                                     .foregroundColor(brandColors.whiteText)
                                     .frame(width: 80, alignment: .leading)
-                                    .accessibilityLabel(exercises.first(where: { $0.name == item.exercise })?.displayName ?? item.exercise)
+                                    .accessibilityLabel(uniqueExercises.first(where: { $0.name == item.exercise })?.displayName ?? item.exercise)
                                 
                                 Menu {
                                     Button("Warmup") {
@@ -518,7 +579,7 @@ struct HistoryView: View {
             modelContext.delete(set)
             
             // If session becomes empty, delete session too
-            if session.sets.count <= 1 { // SwiftData cache might not have updated count yet, check array directly
+            if (session.sets ?? []).count <= 1 { // SwiftData cache might not have updated count yet, check array directly
                 modelContext.delete(session)
                 expandedSessionDate = nil
             }

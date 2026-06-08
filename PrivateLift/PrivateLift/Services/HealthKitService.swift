@@ -40,31 +40,34 @@ class HealthKitService: ObservableObject {
 
     func saveWorkout(date: Date, exercise: String, weight: Double, reps: Int, setType: String, rpe: Double?) async -> Bool {
         guard HKHealthStore.isHealthDataAvailable() else { return false }
-        
-        // Calories estimation: Warmups burn ~3 kcal, working sets ~8 kcal
-        let calories = setType == "warmup" ? 3.0 : 8.0
-        let activeEnergy = HKQuantity(unit: .kilocalorie(), doubleValue: calories)
-        
+
+        // Calorie estimation: ~0.1 kcal per rep per 45kg (100 lbs) lifted, floored at 3 kcal
+        let weightKg = weight * 0.453592
+        let estimatedKcal = max(3.0, (weightKg / 45.0) * Double(reps) * 0.1)
+        let activeEnergy = HKQuantity(unit: .kilocalorie(), doubleValue: estimatedKcal)
+
+        // Use 90 seconds as a proxy duration for a single set (warmup gets 60 s)
+        let setDuration: TimeInterval = setType == "warmup" ? 60 : 90
+
         let configuration = HKWorkoutConfiguration()
         configuration.activityType = .functionalStrengthTraining
         configuration.locationType = .indoor
-        
+
         let builder = HKWorkoutBuilder(healthStore: healthStore, configuration: configuration, device: .local())
-        
+
         do {
             try await builder.beginCollection(at: date)
-            
-            // Add active energy burned sample associated with workout
+
             if let activeEnergyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) {
                 let energySample = HKQuantitySample(
                     type: activeEnergyType,
                     quantity: activeEnergy,
                     start: date,
-                    end: date.addingTimeInterval(3 * 60)
+                    end: date.addingTimeInterval(setDuration)
                 )
                 try await builder.addSamples([energySample])
             }
-            
+
             let metadata: [String: Any] = [
                 HKMetadataKeyWorkoutBrandName: "PersonalLift",
                 HKMetadataKeyIndoorWorkout: true,
@@ -72,11 +75,11 @@ class HealthKitService: ObservableObject {
                 "Weight": "\(weight)",
                 "Reps": "\(reps)",
                 "SetType": setType,
-                "RPE": rpe != nil ? "\(rpe!)" : "N/A"
+                "RPE": rpe.map { String(format: "%.1f", $0) } ?? "N/A"
             ]
             try await builder.addMetadata(metadata)
-            
-            try await builder.endCollection(at: date.addingTimeInterval(3 * 60))
+
+            try await builder.endCollection(at: date.addingTimeInterval(setDuration))
             _ = try await builder.finishWorkout()
             return true
         } catch {

@@ -40,7 +40,12 @@ struct PrivateLiftWidgetLiveActivity: Widget {
                 .activitySystemActionForegroundColor(Color.white)
             
         } dynamicIsland: { context in
-            DynamicIsland {
+            let safeInterval: ClosedRange<Date> = {
+                let now = Date.now
+                return now >= context.state.endTime ? now...now : now...context.state.endTime
+            }()
+            
+            return DynamicIsland {
                 // Expanded Leading Region (Icon & Title)
                 DynamicIslandExpandedRegion(.leading) {
                     HStack(spacing: 6) {
@@ -55,8 +60,9 @@ struct PrivateLiftWidgetLiveActivity: Widget {
                 
                 // Expanded Trailing Region (Countdown)
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text(context.state.endTime, style: .timer)
+                    Text(timerInterval: safeInterval, countsDown: true)
                         .font(.system(size: 20, weight: .black, design: .monospaced))
+                        .monospacedDigit()
                         .foregroundColor(.blue)
                         .padding(.trailing, 8)
                 }
@@ -86,8 +92,9 @@ struct PrivateLiftWidgetLiveActivity: Widget {
                 Image(systemName: "timer")
                     .foregroundColor(.blue)
             } compactTrailing: {
-                Text(context.state.endTime, style: .timer)
+                Text(timerInterval: safeInterval, countsDown: true)
                     .font(.system(size: 13, weight: .black, design: .monospaced))
+                    .monospacedDigit()
                     .foregroundColor(.blue)
                     .frame(width: 48)
             } minimal: {
@@ -103,6 +110,11 @@ struct PrivateLiftWidgetLiveActivity: Widget {
 struct LiveActivityLockScreenView: View {
     let context: ActivityViewContext<RestTimerAttributes>
     
+    var safeInterval: ClosedRange<Date> {
+        let now = Date.now
+        return now >= context.state.endTime ? now...now : now...context.state.endTime
+    }
+    
     var body: some View {
         HStack(spacing: 16) {
             // Left Column: Timer Icon and Label
@@ -117,8 +129,9 @@ struct LiveActivityLockScreenView: View {
                         .tracking(1.5)
                         .foregroundColor(.white.opacity(0.6))
                     
-                    Text(context.state.endTime, style: .timer)
+                    Text(timerInterval: safeInterval, countsDown: true)
                         .font(.system(size: 24, weight: .black, design: .monospaced))
+                        .monospacedDigit()
                         .foregroundColor(.white)
                 }
             }

@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 enum ThemeStyle: String, Codable, CaseIterable {
     case system = "system"
@@ -107,7 +108,7 @@ struct GlassCardModifier: ViewModifier {
     var style: ThemeStyle
     var accentColor: Color? = nil
     @Environment(\.colorScheme) var colorScheme
-    
+
     func body(content: Content) -> some View {
         content
             .background(cardBackgroundColor)
@@ -118,51 +119,37 @@ struct GlassCardModifier: ViewModifier {
                     .stroke(borderColor, lineWidth: 1.5)
             )
     }
-    
-    private var isDark: Bool {
+
+    // Single source of truth — derived once, used below
+    private var resolvedStyle: (isDark: Bool, isNight: Bool) {
         switch style {
-        case .light: return false
-        case .dark, .night: return true
-        case .system: return colorScheme == .dark
+        case .light:  return (false, false)
+        case .dark:   return (true,  false)
+        case .night:  return (true,  true)
+        case .system: return (colorScheme == .dark, false)
         }
     }
-    
-    private var isNight: Bool {
-        switch style {
-        case .night: return true
-        case .system, .light, .dark: return false
-        }
-    }
-    
+
     private var cardBackgroundColor: Color {
-        if isNight {
-            return Color(red: 0.05, green: 0.06, blue: 0.07) // #0d0e11
-        }
-        if isDark {
-            return Color.white.opacity(0.08)
-        }
+        let s = resolvedStyle
+        if s.isNight { return Color(red: 0.05, green: 0.06, blue: 0.07) }
+        if s.isDark  { return Color.white.opacity(0.08) }
         return Color.white.opacity(0.85)
     }
-    
+
     private var borderColor: Color {
-        if isNight {
-            return Color(red: 0.18, green: 0.19, blue: 0.21) // #2e3035
-        }
-        if isDark {
-            return Color.white.opacity(0.12)
-        }
+        let s = resolvedStyle
+        if s.isNight { return Color(red: 0.18, green: 0.19, blue: 0.21) }
+        if s.isDark  { return Color.white.opacity(0.12) }
         return Color.black.opacity(0.06)
     }
-    
+
     private var shadowColor: Color {
-        if isNight {
-            return Color.black.opacity(0.95)
-        }
-        return Color.black.opacity(0.04)
+        resolvedStyle.isNight ? Color.black.opacity(0.95) : Color.black.opacity(0.04)
     }
-    
-    private var shadowRadius: CGFloat { isNight ? 24 : 12 }
-    private var shadowY: CGFloat { isNight ? 12 : 6 }
+
+    private var shadowRadius: CGFloat { resolvedStyle.isNight ? 24 : 12 }
+    private var shadowY:      CGFloat { resolvedStyle.isNight ? 12 : 6 }
 }
 
 extension View {

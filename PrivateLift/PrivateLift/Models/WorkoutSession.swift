@@ -3,15 +3,16 @@ import SwiftData
 
 @Model
 final class WorkoutSession {
-    @Attribute(.unique) var dateString: String // Format: YYYY-MM-DD
+    var dateString: String = "" // Format: YYYY-MM-DD
     var notes: String = ""
     
     @Relationship(deleteRule: .cascade, inverse: \WorkoutSet.session)
-    var sets: [WorkoutSet] = []
+    var sets: [WorkoutSet]? = []
 
     init(dateString: String, notes: String = "") {
         self.dateString = dateString
         self.notes = notes
+        self.sets = []
     }
     
     var date: Date {

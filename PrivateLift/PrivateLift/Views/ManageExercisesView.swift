@@ -103,7 +103,7 @@ struct ManageExercisesView: View {
             }
         }
         .sheet(isPresented: $showingAddSheet) {
-            AddExerciseSheet(onSave: { newExercise in
+            AddExerciseSheet(exercises: exercises, onSave: { newExercise in
                 modelContext.insert(newExercise)
                 enforcePowerliftingUniqueness(for: newExercise)
                 
@@ -123,7 +123,7 @@ struct ManageExercisesView: View {
             }, activePrefs: activePrefs, brandColors: brandColors)
         }
         .sheet(item: $selectedExerciseToEdit) { exercise in
-            EditExerciseSheet(exercise: exercise, onSave: {
+            EditExerciseSheet(exercise: exercise, exercises: exercises, onSave: {
                 enforcePowerliftingUniqueness(for: exercise)
                 
                 // Sync powerlift oneRepMax back to activePrefs
@@ -184,6 +184,7 @@ struct ManageExercisesView: View {
 struct AddExerciseSheet: View {
     @Environment(\.dismiss) private var dismiss
     
+    var exercises: [CustomExercise]
     var onSave: (CustomExercise) -> Void
     var activePrefs: UserPreferences
     var brandColors: BrandColors
@@ -193,6 +194,7 @@ struct AddExerciseSheet: View {
     @State private var selectedColorHex = "#ef4444"
     @State private var isPowerlift = false
     @State private var powerliftType = "squat"
+    @State private var showDuplicateAlert = false
     
     private let colorChoices = [
         ("#ef4444", "Red"),
@@ -278,8 +280,35 @@ struct AddExerciseSheet: View {
                     Button("Save") {
                         let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
                         guard !name.isEmpty else { return }
-                        let maxWeight = Double(oneRepMaxString) ?? 0.0
                         
+                        // Check for duplicate exercise name or display name case-insensitively
+                        let normalizedNewName = name.uppercased().replacingOccurrences(of: " ", with: "")
+                        let isDuplicate = exercises.contains { ex in
+                            let normalizedExName = ex.name.uppercased().replacingOccurrences(of: " ", with: "")
+                            let normalizedExDisplay = ex.displayName.uppercased().replacingOccurrences(of: " ", with: "")
+                            
+                            // Map BENCHPRESS and BENCH to avoid duplicate display concepts
+                            let a = normalizedExName == "BENCH" || normalizedExName == "BENCHPRESS" || normalizedExDisplay == "BENCHPRESS" || normalizedExDisplay == "BENCH"
+                            let b = normalizedNewName == "BENCH" || normalizedNewName == "BENCHPRESS"
+                            if a && b { return true }
+                            
+                            let c = normalizedExName == "SQUAT" || normalizedExDisplay == "SQUAT"
+                            let d = normalizedNewName == "SQUAT"
+                            if c && d { return true }
+                            
+                            let e = normalizedExName == "DEADLIFT" || normalizedExDisplay == "DEADLIFT"
+                            let f = normalizedNewName == "DEADLIFT"
+                            if e && f { return true }
+                            
+                            return normalizedExName == normalizedNewName || normalizedExDisplay == normalizedNewName || ex.displayName.caseInsensitiveCompare(name) == .orderedSame
+                        }
+                        
+                        if isDuplicate {
+                            showDuplicateAlert = true
+                            return
+                        }
+                        
+                        let maxWeight = Double(oneRepMaxString) ?? 0.0
                         let newExercise = CustomExercise(
                             name: name.uppercased(),
                             displayName: name,
@@ -298,6 +327,11 @@ struct AddExerciseSheet: View {
                     .disabled(displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
+            .alert("Duplicate Exercise", isPresented: $showDuplicateAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("An exercise with this name already exists. Please choose a unique name.")
+            }
         }
     }
 }
@@ -307,6 +341,7 @@ struct EditExerciseSheet: View {
     @Environment(\.dismiss) private var dismiss
     
     var exercise: CustomExercise
+    var exercises: [CustomExercise]
     var onSave: () -> Void
     var activePrefs: UserPreferences
     var brandColors: BrandColors
@@ -316,6 +351,7 @@ struct EditExerciseSheet: View {
     @State private var selectedColorHex = "#ef4444"
     @State private var isPowerlift = false
     @State private var powerliftType = "squat"
+    @State private var showDuplicateAlert = false
     
     private let colorChoices = [
         ("#ef4444", "Red"),
@@ -328,8 +364,9 @@ struct EditExerciseSheet: View {
         ("#eab308", "Yellow")
     ]
     
-    init(exercise: CustomExercise, onSave: @escaping () -> Void, activePrefs: UserPreferences, brandColors: BrandColors) {
+    init(exercise: CustomExercise, exercises: [CustomExercise], onSave: @escaping () -> Void, activePrefs: UserPreferences, brandColors: BrandColors) {
         self.exercise = exercise
+        self.exercises = exercises
         self.onSave = onSave
         self.activePrefs = activePrefs
         self.brandColors = brandColors
@@ -414,6 +451,35 @@ struct EditExerciseSheet: View {
                     Button("Save") {
                         let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
                         guard !name.isEmpty else { return }
+                        
+                        // Check for duplicate exercise name or display name case-insensitively
+                        let normalizedNewName = name.uppercased().replacingOccurrences(of: " ", with: "")
+                        let isDuplicate = exercises.contains { ex in
+                            guard ex.id != exercise.id else { return false }
+                            let normalizedExName = ex.name.uppercased().replacingOccurrences(of: " ", with: "")
+                            let normalizedExDisplay = ex.displayName.uppercased().replacingOccurrences(of: " ", with: "")
+                            
+                            // Map BENCHPRESS and BENCH to avoid duplicate display concepts
+                            let a = normalizedExName == "BENCH" || normalizedExName == "BENCHPRESS" || normalizedExDisplay == "BENCHPRESS" || normalizedExDisplay == "BENCH"
+                            let b = normalizedNewName == "BENCH" || normalizedNewName == "BENCHPRESS"
+                            if a && b { return true }
+                            
+                            let c = normalizedExName == "SQUAT" || normalizedExDisplay == "SQUAT"
+                            let d = normalizedNewName == "SQUAT"
+                            if c && d { return true }
+                            
+                            let e = normalizedExName == "DEADLIFT" || normalizedExDisplay == "DEADLIFT"
+                            let f = normalizedNewName == "DEADLIFT"
+                            if e && f { return true }
+                            
+                            return normalizedExName == normalizedNewName || normalizedExDisplay == normalizedNewName || ex.displayName.caseInsensitiveCompare(name) == .orderedSame
+                        }
+                        
+                        if isDuplicate {
+                            showDuplicateAlert = true
+                            return
+                        }
+                        
                         let maxWeight = Double(oneRepMaxString) ?? 0.0
                         
                         exercise.displayName = name
@@ -430,6 +496,11 @@ struct EditExerciseSheet: View {
                     .tint(brandColors.blue)
                     .disabled(displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
+            }
+            .alert("Duplicate Exercise", isPresented: $showDuplicateAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("An exercise with this name already exists. Please choose a unique name.")
             }
         }
     }

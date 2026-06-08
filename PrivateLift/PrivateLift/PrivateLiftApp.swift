@@ -11,18 +11,18 @@ import UserNotifications
 
 class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationDelegate()
-    
+
     override init() {
         super.init()
         UNUserNotificationCenter.current().delegate = self
     }
-    
+
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        // Force banner alerts and sounds when the app is active in the foreground
+        // Show banner + sound even when the app is in the foreground
         completionHandler([.banner, .sound])
     }
 }
@@ -30,15 +30,12 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 @main
 struct PersonalLiftApp: App {
     let container: ModelContainer
-    
+
     init() {
-        // Initialize global notification delegate
+        // Set up notification delegate before anything else
         _ = NotificationDelegate.shared
-        
-        // Prompt for notification authorization on app launch
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
-        
-        // Dynamic SwiftData iCloud configuration at launch!
+
         let schema = Schema([
             UserPreferences.self,
             WorkoutSession.self,
@@ -47,33 +44,58 @@ struct PersonalLiftApp: App {
             RoutineExerciseTarget.self,
             CustomExercise.self
         ])
-        
+
+        // ── Single store URL ──────────────────────────────────────────────────────
+        // Both "local only" and "iCloud sync" modes point at the SAME SQLite file.
+        // Toggling iCloud simply tells CloudKit to start/stop syncing that file.
+        // No data is lost, no migration is required.
+        let appSupport = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        let storeURL = appSupport.appendingPathComponent("PrivateLift.store")
+
         let iCloudEnabled = UserDefaults.standard.bool(forKey: "iCloudSyncEnabled")
-        let config: ModelConfiguration
-        if iCloudEnabled {
-            config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .private("iCloud.Nelson-Computers.PrivateLift"))
-        } else {
-            config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .none)
-        }
-        
+        let cloudKitMode: ModelConfiguration.CloudKitDatabase = iCloudEnabled ? .automatic : .none
+        let config = ModelConfiguration(url: storeURL, cloudKitDatabase: cloudKitMode)
+
         do {
             self.container = try ModelContainer(for: schema, configurations: [config])
             print("ModelContainer initialized successfully. iCloud Sync: \(iCloudEnabled)")
+            // Clear any previous sync error now that we loaded cleanly
+            UserDefaults.standard.removeObject(forKey: "iCloudSyncError")
         } catch {
             if iCloudEnabled {
-                print("iCloud ModelContainer failed to initialize: \(error.localizedDescription). Falling back to local container...")
-                // Turn off iCloud sync toggle so next launch works locally
+                // iCloud init failed — record the error and fall back to local-only
+                // on the same file so data is never lost.
+                let nsError = error as NSError
+                let detail = "Error: \(nsError.localizedDescription) (Code \(nsError.code), Domain: \(nsError.domain))"
+                print("iCloud ModelContainer failed: \(detail). Falling back to local-only...")
+                UserDefaults.standard.set(detail, forKey: "iCloudSyncError")
                 UserDefaults.standard.set(false, forKey: "iCloudSyncEnabled")
-                
-                let fallbackConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .none)
+
+                let fallback = ModelConfiguration(url: storeURL, cloudKitDatabase: .none)
                 do {
-                    self.container = try ModelContainer(for: schema, configurations: [fallbackConfig])
-                    print("Local ModelContainer fallback initialized successfully.")
+                    self.container = try ModelContainer(for: schema, configurations: [fallback])
+                    print("Local-only ModelContainer fallback initialized successfully.")
                 } catch {
                     fatalError("Could not initialize fallback ModelContainer: \(error.localizedDescription)")
                 }
             } else {
                 fatalError("Could not initialize local ModelContainer: \(error.localizedDescription)")
+            }
+        }
+
+        // Configure Watch Connectivity
+        let context = self.container.mainContext
+        WatchConnectivityManager.shared.configure(context: context)
+
+        // Keep SwiftData preferences in sync with the UserDefaults iCloud flag
+        let fetchDescriptor = FetchDescriptor<UserPreferences>()
+        if let prefs = (try? context.fetch(fetchDescriptor))?.first {
+            if prefs.iCloudSyncEnabled != iCloudEnabled {
+                prefs.iCloudSyncEnabled = iCloudEnabled
+                try? context.save()
+                print("Synchronized DB iCloudSyncEnabled → \(iCloudEnabled)")
             }
         }
     }

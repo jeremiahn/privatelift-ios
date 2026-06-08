@@ -25,12 +25,14 @@ class RestTimerManager: ObservableObject {
     
     private var cancellable: AnyCancellable?
     private var timerEndTime: Date?
+    private var hapticsEnabled: Bool = true
     
     #if canImport(ActivityKit)
     private var activeActivity: Activity<RestTimerAttributes>?
     #endif
     
-    func startTimer(duration: TimeInterval = 180, allowNotifications: Bool = true) {
+    func startTimer(duration: TimeInterval = 180, allowNotifications: Bool = true, hapticsEnabled: Bool = true) {
+        self.hapticsEnabled = hapticsEnabled
         timerEndTime = Date().addingTimeInterval(duration)
         isActive = true
         timeRemaining = duration
@@ -86,34 +88,16 @@ class RestTimerManager: ObservableObject {
     }
     
     private func triggerNotification() {
-        HapticService.play(.success, enabled: true)
+        HapticService.play(.success, enabled: hapticsEnabled)
     }
     
     #if canImport(ActivityKit)
     private func startLiveActivity(endTime: Date) {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        
-        let attributes = RestTimerAttributes(timerName: "Rest Time")
-        let state = RestTimerAttributes.ContentState(endTime: endTime)
-        
-        do {
-            activeActivity = try Activity.request(
-                attributes: attributes,
-                content: .init(state: state, staleDate: nil)
-            )
-            print("Live Activity started successfully.")
-        } catch {
-            print("Failed to start Live Activity: \(error.localizedDescription)")
-        }
+        // Disabled for now
     }
     
     private func endLiveActivity() {
-        guard let activity = activeActivity else { return }
-        Task {
-            await activity.end(nil, dismissalPolicy: .immediate)
-            print("Live Activity ended successfully.")
-        }
-        activeActivity = nil
+        // Disabled for now
     }
     #endif
 }

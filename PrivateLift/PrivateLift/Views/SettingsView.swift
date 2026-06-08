@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import WatchConnectivity
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
@@ -141,7 +142,7 @@ struct SettingsView: View {
             .alert("Restart Required", isPresented: $showICloudAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Your iCloud backup configuration has been updated. Please fully close and relaunch PersonalLift to initialize the iCloud container.")
+                Text("Your iCloud sync setting has been saved. Please fully close and relaunch PersonalLift to apply the change. Your data will not be affected.")
             }
         }
     }
@@ -210,14 +211,26 @@ struct SettingsView: View {
                     }
                 }
             
-            Toggle("iCloud Backup Sync", isOn: Bindable(activePrefs).iCloudSyncEnabled)
-                .fontWeight(.bold)
-                .tint(.plBlue)
-                .onChange(of: activePrefs.iCloudSyncEnabled) { oldValue, newValue in
-                    HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
-                    UserDefaults.standard.set(newValue, forKey: "iCloudSyncEnabled")
-                    showICloudAlert = true
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle("iCloud Backup Sync", isOn: Bindable(activePrefs).iCloudSyncEnabled)
+                    .fontWeight(.bold)
+                    .tint(.plBlue)
+                    .onChange(of: activePrefs.iCloudSyncEnabled) { oldValue, newValue in
+                        HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+                        UserDefaults.standard.set(newValue, forKey: "iCloudSyncEnabled")
+                        if newValue {
+                            UserDefaults.standard.removeObject(forKey: "iCloudSyncError")
+                        }
+                        showICloudAlert = true
+                    }
+                
+                if let lastError = UserDefaults.standard.string(forKey: "iCloudSyncError") {
+                    Text("Last Sync Attempt Failed:\n\(lastError)")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding(.top, 2)
                 }
+            }
             
             Toggle("Vibrational Haptics", isOn: Bindable(activePrefs).hapticsEnabled)
                 .fontWeight(.bold)
@@ -231,6 +244,23 @@ struct SettingsView: View {
             Toggle("Apple Watch Support", isOn: Bindable(activePrefs).showWatchSupport)
                 .fontWeight(.bold)
                 .tint(.plBlue)
+            
+            if activePrefs.showWatchSupport {
+                if WCSession.isSupported() {
+                    let session = WCSession.default
+                    if !session.isWatchAppInstalled {
+                        Text("Watch App is not installed. Open the Watch app on your iPhone to install PersonalLift on your Apple Watch.")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.orange)
+                            .padding(.top, -4)
+                    } else {
+                        Text("Watch App is connected and installed.")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.green)
+                            .padding(.top, -4)
+                    }
+                }
+            }
             
             if activePrefs.showRestTimer {
                 Picker("Default Rest Duration", selection: Bindable(activePrefs).defaultRestDuration) {
@@ -391,7 +421,7 @@ struct SettingsView: View {
         var exportSessions: [BackupSession] = []
         for session in allSessions {
             var setsList: [BackupSet] = []
-            for s in session.sets {
+            for s in session.sets ?? [] {
                 setsList.append(BackupSet(exercise: s.exercise, weight: s.weight, reps: s.reps, rpe: s.rpe, setType: s.setType))
             }
             exportSessions.append(BackupSession(date: session.dateString, notes: session.notes, sets: setsList))
@@ -504,7 +534,7 @@ struct SettingsView: View {
                 
                 for setData in sessionData.sets {
                     // Check if identical set exists to prevent duplication on double-imports
-                    let isDuplicate = session.sets.contains {
+                    let isDuplicate = (session.sets ?? []).contains {
                         $0.exercise == setData.exercise &&
                         $0.weight == setData.weight &&
                         $0.reps == setData.reps &&
@@ -583,7 +613,7 @@ struct SettingsView: View {
                 }
                 
                 // Check duplicate
-                let isDuplicate = session.sets.contains {
+                let isDuplicate = (session.sets ?? []).contains {
                     $0.exercise == exercise &&
                     $0.weight == weight &&
                     $0.reps == reps &&

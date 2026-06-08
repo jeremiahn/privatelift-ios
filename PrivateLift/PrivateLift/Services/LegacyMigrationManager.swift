@@ -193,15 +193,20 @@ class LegacyMigrationManager: NSObject, WKNavigationDelegate, WKScriptMessageHan
             
             // 2. Ingest Sessions & Sets
             for sessionData in payload.sessions {
-                // Check if session already exists in SwiftData to prevent duplication
                 let sDate = sessionData.date
                 var sessionFetch = FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.dateString == sDate })
                 sessionFetch.fetchLimit = 1
-                
-                let session = try modelContext.fetch(sessionFetch).first ?? WorkoutSession(dateString: sDate, notes: sessionData.notes ?? "")
-                session.notes = sessionData.notes ?? ""
-                modelContext.insert(session)
-                
+
+                let existingSession = try modelContext.fetch(sessionFetch).first
+                let session: WorkoutSession
+                if let existing = existingSession {
+                    session = existing
+                    session.notes = sessionData.notes ?? ""
+                } else {
+                    session = WorkoutSession(dateString: sDate, notes: sessionData.notes ?? "")
+                    modelContext.insert(session)
+                }
+
                 for setData in sessionData.sets {
                     let newSet = WorkoutSet(
                         exercise: setData.exercise,

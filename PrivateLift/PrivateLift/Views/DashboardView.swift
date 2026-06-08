@@ -37,13 +37,40 @@ struct DashboardView: View {
         preferences.first ?? UserPreferences()
     }
     
-    var todayString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        if let timeZone = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
-            formatter.timeZone = timeZone
+    var uniqueExercises: [CustomExercise] {
+        var seen = Set<String>()
+        return exercises.filter { exercise in
+            let normalized = exercise.name.uppercased().replacingOccurrences(of: " ", with: "")
+            let key: String
+            if normalized == "BENCH" || normalized == "BENCHPRESS" {
+                key = "BENCH"
+            } else if normalized == "SQUAT" {
+                key = "SQUAT"
+            } else if normalized == "DEADLIFT" {
+                key = "DEADLIFT"
+            } else {
+                key = normalized
+            }
+            if seen.contains(key) {
+                return false
+            }
+            seen.insert(key)
+            return true
         }
-        return formatter.string(from: Date())
+    }
+    
+    // Cached formatter — DateFormatter is expensive to allocate
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    var todayString: String {
+        if let timeZone = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
+            DashboardView.dayFormatter.timeZone = timeZone
+        }
+        return DashboardView.dayFormatter.string(from: Date())
     }
     
     var todaySets: [WorkoutSet] {
@@ -357,11 +384,12 @@ struct DashboardView: View {
                             
                             VStack(spacing: 12) {
                                 ForEach(todaySets) { loggedSet in
-                                    let rawColor = Color(hex: exercises.first(where: { $0.name == loggedSet.exercise })?.colorHex ?? "#8b5cf6")
+                                    let matchedExercise = exercises.first(where: { $0.name == loggedSet.exercise })
+                                    let rawColor = Color(hex: matchedExercise?.colorHex ?? "#8b5cf6")
                                     let exerciseColor = themeStyle == .night ? Color.plGray300 : rawColor
                                     HStack {
                                         VStack(alignment: .leading, spacing: 4) {
-                                            Text(exercises.first(where: { $0.name == loggedSet.exercise })?.displayName ?? loggedSet.exercise)
+                                            Text(matchedExercise?.displayName ?? loggedSet.exercise)
                                                 .font(.system(size: 14, weight: .black))
                                                 .foregroundColor(brandColors.whiteText)
                                             Menu {
@@ -511,15 +539,22 @@ struct DashboardView: View {
             .onAppear {
                 // Initialize default intensity
                 intensity = Double(activePrefs.lastIntensity)
-                if let firstExercise = exercises.first, !exercises.contains(where: { $0.name == selectedExercise }) {
+                if let firstExercise = uniqueExercises.first, !uniqueExercises.contains(where: { $0.name == selectedExercise }) {
                     selectedExercise = firstExercise.name
                 }
                 updateWeightInputForSelectedExercise()
             }
-            .onChange(of: exercises) { oldValue, newValue in
+            .onChange(of: uniqueExercises) { oldValue, newValue in
                 if let firstExercise = newValue.first, !newValue.contains(where: { $0.name == selectedExercise }) {
                     selectedExercise = firstExercise.name
                     updateWeightInputForSelectedExercise()
+                }
+            }
+            .onChange(of: weightInput) { oldValue, newValue in
+                if let parsed = Double(newValue) {
+                    calcWeight = parsed
+                } else if newValue.isEmpty {
+                    calcWeight = 0.0
                 }
             }
             .alert("Confirm Set Deletion", isPresented: $showDeleteConfirmation) {
@@ -539,8 +574,9 @@ struct DashboardView: View {
     private var programTargetsSection: some View {
         if activePrefs.useGridMode {
             VStack(spacing: 12) {
-                ForEach(0..<chunkedExercises(by: 2).count, id: \.self) { index in
-                    let chunk = chunkedExercises(by: 2)[index]
+                let chunks = chunkedExercises(by: 2)
+                ForEach(0..<chunks.count, id: \.self) { index in
+                    let chunk = chunks[index]
                     HStack(spacing: 12) {
                         ForEach(chunk) { exercise in
                             TargetCard(
@@ -566,7 +602,7 @@ struct DashboardView: View {
         } else {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(exercises) { exercise in
+                    ForEach(uniqueExercises) { exercise in
                         TargetCard(
                             title: exercise.displayName,
                             weight: calculateTargetWeight(for: exercise.name),
@@ -593,8 +629,9 @@ struct DashboardView: View {
     private var exerciseSelectionSection: some View {
         if activePrefs.useGridMode {
             VStack(spacing: 8) {
-                ForEach(0..<chunkedExercises(by: 3).count, id: \.self) { index in
-                    let chunk = chunkedExercises(by: 3)[index]
+                let chunks = chunkedExercises(by: 3)
+                ForEach(0..<chunks.count, id: \.self) { index in
+                    let chunk = chunks[index]
                     HStack(spacing: 8) {
                         ForEach(chunk) { exercise in
                             exercisePill(title: exercise.displayName, tag: exercise.name, activeColor: Color(hex: exercise.colorHex), isSquare: false)
@@ -605,7 +642,7 @@ struct DashboardView: View {
         } else {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(exercises) { exercise in
+                    ForEach(uniqueExercises) { exercise in
                         exercisePill(title: exercise.displayName, tag: exercise.name, activeColor: Color(hex: exercise.colorHex), isSquare: false)
                     }
                 }
@@ -617,8 +654,9 @@ struct DashboardView: View {
     private var plateCalculatorAutofillSection: some View {
         if activePrefs.useGridMode {
             VStack(spacing: 10) {
-                ForEach(0..<chunkedExercises(by: 3).count, id: \.self) { index in
-                    let chunk = chunkedExercises(by: 3)[index]
+                let chunks = chunkedExercises(by: 3)
+                ForEach(0..<chunks.count, id: \.self) { index in
+                    let chunk = chunks[index]
                     HStack(spacing: 10) {
                         ForEach(chunk) { exercise in
                             plateAutofillButton(exercise: exercise.displayName, value: calculateTargetWeight(for: exercise.name), isSquare: false)
@@ -630,7 +668,7 @@ struct DashboardView: View {
         } else {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    ForEach(exercises) { exercise in
+                    ForEach(uniqueExercises) { exercise in
                         plateAutofillButton(exercise: exercise.displayName, value: calculateTargetWeight(for: exercise.name), isSquare: false)
                             .frame(minWidth: 95, maxWidth: .infinity, minHeight: 48, maxHeight: .infinity)
                     }
@@ -674,7 +712,7 @@ struct DashboardView: View {
     private func chunkedExercises(by size: Int) -> [[CustomExercise]] {
         var chunks: [[CustomExercise]] = []
         var currentChunk: [CustomExercise] = []
-        for exercise in exercises {
+        for exercise in uniqueExercises {
             currentChunk.append(exercise)
             if currentChunk.count == size {
                 chunks.append(currentChunk)
@@ -745,7 +783,8 @@ struct DashboardView: View {
             if activePrefs.showRestTimer {
                 timerManager.startTimer(
                     duration: activePrefs.defaultRestDuration,
-                    allowNotifications: activePrefs.pushNotificationsEnabled
+                    allowNotifications: activePrefs.pushNotificationsEnabled,
+                    hapticsEnabled: activePrefs.hapticsEnabled
                 )
             }
         } catch {
@@ -905,6 +944,11 @@ struct BarbellPlateGraphic: View {
     var isLbs: Bool
     var isNight: Bool
     
+    struct IdentifiablePlate: Identifiable {
+        let id: Int
+        let weight: Double
+    }
+    
     var plates: [Double] {
         let bar = isLbs ? 45.0 : 20.0
         guard weight > bar else { return [] }
@@ -925,6 +969,14 @@ struct BarbellPlateGraphic: View {
         }
         
         return resolvedPlates
+    }
+    
+    private var leftPlates: [IdentifiablePlate] {
+        plates.reversed().enumerated().map { IdentifiablePlate(id: $0.offset, weight: $0.element) }
+    }
+    
+    private var rightPlates: [IdentifiablePlate] {
+        plates.enumerated().map { IdentifiablePlate(id: $0.offset, weight: $0.element) }
     }
     
     private var barbellAccessibilityValue: String {
@@ -1066,7 +1118,8 @@ struct BarbellPlateGraphic: View {
             
             // Left plates stacked (Lightest on outside, Heaviest on inside)
             HStack(spacing: 2) {
-                ForEach(plates.reversed(), id: \.self) { p in
+                ForEach(leftPlates) { plate in
+                    let p = plate.weight
                     let formattedLabel = p == Double(Int(p)) ? "\(Int(p))" : "\(p)"
                     let unitStr = isLbs ? "lb" : "kg"
                     let fullLabel = "\(formattedLabel)\(unitStr)"
@@ -1105,7 +1158,8 @@ struct BarbellPlateGraphic: View {
             
             // Right plates stacked (Heaviest on inside, Lightest on outside)
             HStack(spacing: 2) {
-                ForEach(plates, id: \.self) { p in
+                ForEach(rightPlates) { plate in
+                    let p = plate.weight
                     let formattedLabel = p == Double(Int(p)) ? "\(Int(p))" : "\(p)"
                     let unitStr = isLbs ? "lb" : "kg"
                     let fullLabel = "\(formattedLabel)\(unitStr)"

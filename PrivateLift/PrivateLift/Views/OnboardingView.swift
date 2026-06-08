@@ -1,5 +1,7 @@
 import SwiftUI
 import SwiftData
+import HealthKit
+import WatchConnectivity
 
 struct OnboardingView: View {
     @Binding var isPresented: Bool
@@ -18,6 +20,11 @@ struct OnboardingView: View {
     @State private var gender: String = "male"
     @State private var weightUnit: String = "lbs"
     @State private var trackWeightAndGender: Bool = true
+    @State private var enableICloudSync: Bool = false
+    @State private var enableAppleWatch: Bool = false
+    @State private var enableAppleHealth: Bool = false
+    @State private var healthAuthFailed: Bool = false
+    @StateObject private var healthKitService = HealthKitService()
     @FocusState private var isInputFocused: Bool
     
     private let totalSteps = 6
@@ -119,7 +126,7 @@ struct OnboardingView: View {
                     liftMaxStep(title: "Bench 1RM Max", description: "Your estimated single rep maximum for Bench Press.", value: $benchMax, range: 45...600, step: 5, accentColor: .plBlue, stepLabel: "Step 2 of 5").tag(2)
                     liftMaxStep(title: "Deadlift 1RM Max", description: "Your estimated single rep maximum for Deadlifts.", value: $deadliftMax, range: 45...1000, step: 5, accentColor: .plGreen, stepLabel: "Step 3 of 5").tag(3)
                     bodyWeightGenderStep.tag(4)
-                    settingsExplanationStep.tag(5)
+                    integrationsStep.tag(5)
                     completionStep.tag(6)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
@@ -436,8 +443,8 @@ struct OnboardingView: View {
         .accessibilityAddTraits(gender == tag ? [.isButton, .isSelected] : [.isButton])
     }
     
-    // MARK: - Settings Explanation Step
-    private var settingsExplanationStep: some View {
+    // MARK: - Integrations & Sync Step
+    private var integrationsStep: some View {
         VStack(alignment: .leading, spacing: 20) {
             Spacer()
             
@@ -447,81 +454,71 @@ struct OnboardingView: View {
                     .foregroundColor(.plBlue)
                     .tracking(1.5)
                 
-                Text("App Preferences & Settings")
+                Text("Integrations & Sync")
                     .font(.system(size: 24, weight: .black))
                     .foregroundColor(textColor)
                 
-                Text("Customize your strength experience at any time.")
+                Text("Enable optional integrations. You can always change these later in Settings.")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(subtextColor)
             }
             .padding(.horizontal, 24)
             
-            VStack(spacing: 16) {
-                HStack(spacing: 16) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.plBlue)
-                        .frame(width: 40)
-                        .accessibilityHidden(true)
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("PREFERENCES & THEMES")
-                            .font(.system(size: 10, weight: .black))
-                            .foregroundColor(subtextColor)
-                            .tracking(1.0)
-                        Text("Select weight units, themes (including OLED Night mode), and lift formulas.")
-                            .font(.system(size: 12))
-                            .foregroundColor(textColor)
-                    }
-                }
-                .accessibilityElement(children: .combine)
+            VStack(spacing: 0) {
+                // iCloud Sync
+                integrationToggleRow(
+                    icon: "icloud.fill",
+                    iconColor: .plBlue,
+                    title: "iCloud Backup Sync",
+                    subtitle: "Sync your workout data across all your Apple devices via iCloud. A restart is required after changing this.",
+                    isOn: $enableICloudSync
+                )
                 
                 Divider()
                     .background(isLightMode ? Color.black.opacity(0.08) : Color.white.opacity(0.1))
+                    .padding(.leading, 56)
                 
-                HStack(spacing: 16) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 24))
-                        .foregroundColor(.plGreen)
-                        .frame(width: 40)
-                        .accessibilityHidden(true)
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("CALENDAR & WEEKSTART")
-                            .font(.system(size: 10, weight: .black))
-                            .foregroundColor(subtextColor)
-                            .tracking(1.0)
-                        Text("Choose the day of the week your strength workouts start on.")
-                            .font(.system(size: 12))
-                            .foregroundColor(textColor)
-                    }
-                }
-                .accessibilityElement(children: .combine)
+                // Apple Watch
+                integrationToggleRow(
+                    icon: "applewatch",
+                    iconColor: .plGreen,
+                    title: "Apple Watch App",
+                    subtitle: "Enable the Apple Watch companion for logging sets from your wrist during workouts.",
+                    isOn: $enableAppleWatch
+                )
                 
                 Divider()
                     .background(isLightMode ? Color.black.opacity(0.08) : Color.white.opacity(0.1))
+                    .padding(.leading, 56)
                 
-                HStack(spacing: 16) {
-                    Image(systemName: "icloud.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.plPurple)
-                        .frame(width: 40)
-                        .accessibilityHidden(true)
+                // Apple Health
+                VStack(spacing: 0) {
+                    integrationToggleRow(
+                        icon: "heart.fill",
+                        iconColor: .plRed,
+                        title: "Apple Health Sync",
+                        subtitle: "Automatically save each logged set as a strength workout to the Apple Health app.",
+                        isOn: $enableAppleHealth
+                    )
                     
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("SYNC & BACKUPS")
-                            .font(.system(size: 10, weight: .black))
-                            .foregroundColor(subtextColor)
-                            .tracking(1.0)
-                        Text("Toggle Apple Health workout sync, iCloud backup sync, and manual database export/import.")
-                            .font(.system(size: 12))
-                            .foregroundColor(textColor)
+                    if healthAuthFailed {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(.orange)
+                            Text("Health permission was not granted. You can enable it in iOS Settings → Health → PersonalLift.")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(.orange)
+                                .lineSpacing(2)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 16)
+                        .padding(.leading, 36)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                 }
-                .accessibilityElement(children: .combine)
             }
-            .padding(24)
+            .padding(.vertical, 8)
             .background(cardBgColor)
             .cornerRadius(24)
             .overlay(
@@ -530,8 +527,64 @@ struct OnboardingView: View {
             )
             .padding(.horizontal, 24)
             
+            // Footer hint
+            HStack(spacing: 6) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(subtextColor)
+                Text("All of these can be changed anytime in the Settings tab.")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(subtextColor)
+            }
+            .padding(.horizontal, 28)
+            
             Spacer()
         }
+    }
+    
+    private func integrationToggleRow(
+        icon: String,
+        iconColor: Color,
+        title: String,
+        subtitle: String,
+        isOn: Binding<Bool>
+    ) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(iconColor)
+                .frame(width: 36, height: 36)
+                .background(iconColor.opacity(isLightMode ? 0.1 : 0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .accessibilityHidden(true)
+            
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(textColor)
+                
+                Text(subtitle)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(subtextColor)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            
+            Spacer()
+            
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+                .tint(iconColor)
+                .onChange(of: isOn.wrappedValue) { oldValue, newValue in
+                    HapticService.play(.medium)
+                }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
+        .accessibilityValue(isOn.wrappedValue ? "Enabled" : "Disabled")
+        .accessibilityAddTraits(.isButton)
     }
     
     // MARK: - Calibration Completion Step
@@ -590,6 +643,14 @@ struct OnboardingView: View {
             prefs.isOnboarded = true
             prefs.theme = isLightMode ? "light" : "dark" // Save theme preference selected during setup
             
+            // Persist integration preferences from onboarding
+            prefs.iCloudSyncEnabled = enableICloudSync
+            prefs.showWatchSupport = enableAppleWatch
+            prefs.appleHealthEnabled = enableAppleHealth
+            
+            // Sync iCloud flag to UserDefaults (required for ModelContainer at next launch)
+            UserDefaults.standard.set(enableICloudSync, forKey: "iCloudSyncEnabled")
+            
             if existingPrefs.isEmpty {
                 modelContext.insert(prefs)
             }
@@ -611,6 +672,20 @@ struct OnboardingView: View {
             }
             
             try modelContext.save()
+            
+            // Request Apple Health authorization if user opted in
+            if enableAppleHealth {
+                Task {
+                    let authorized = await healthKitService.requestAuthorization()
+                    if !authorized {
+                        await MainActor.run {
+                            prefs.appleHealthEnabled = false
+                            try? modelContext.save()
+                        }
+                        print("Apple Health authorization was not granted during onboarding.")
+                    }
+                }
+            }
             
             HapticService.play(.success)
             isPresented = false

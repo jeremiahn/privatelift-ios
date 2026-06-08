@@ -14,6 +14,28 @@ struct StatsView: View {
         preferences.first ?? UserPreferences()
     }
     
+    var uniqueExercises: [CustomExercise] {
+        var seen = Set<String>()
+        return exercises.filter { exercise in
+            let normalized = exercise.name.uppercased().replacingOccurrences(of: " ", with: "")
+            let key: String
+            if normalized == "BENCH" || normalized == "BENCHPRESS" {
+                key = "BENCH"
+            } else if normalized == "SQUAT" {
+                key = "SQUAT"
+            } else if normalized == "DEADLIFT" {
+                key = "DEADLIFT"
+            } else {
+                key = normalized
+            }
+            if seen.contains(key) {
+                return false
+            }
+            seen.insert(key)
+            return true
+        }
+    }
+    
     var themeStyle: ThemeStyle {
         ThemeStyle(rawValue: activePrefs.theme) ?? .system
     }
@@ -31,26 +53,36 @@ struct StatsView: View {
         return cal
     }
 
+    // Cached formatter — DateFormatter is expensive to allocate
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
     var currentWeekSets: [WorkoutSet] {
         let cal = userCalendar
         let now = Date()
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
+        let formatter = StatsView.dayFormatter
         if let tz = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
             formatter.timeZone = tz
         }
-
+        guard let interval = cal.dateInterval(of: .weekOfYear, for: now) else { return [] }
         return allSets.filter { set in
             guard let dateStr = set.session?.dateString,
-                  let setDate = formatter.date(from: dateStr) else {
-                return false
-            }
-            if let interval = cal.dateInterval(of: .weekOfYear, for: now) {
-                return setDate >= interval.start && setDate < interval.end
-            }
-            return false
+                  let setDate = formatter.date(from: dateStr) else { return false }
+            return setDate >= interval.start && setDate < interval.end
         }
+    }
+
+    /// Pre-groups this week's sets by exercise name for O(1) ForEach lookups.
+    private var currentWeekSetsByExercise: [String: [WorkoutSet]] {
+        Dictionary(grouping: currentWeekSets, by: \.exercise)
+    }
+
+    /// Pre-groups all sets by exercise name for PR computations.
+    private var allSetsByExercise: [String: [WorkoutSet]] {
+        Dictionary(grouping: allSets, by: \.exercise)
     }
     
     // MARK: - Aggregated Metrics
@@ -65,26 +97,26 @@ struct StatsView: View {
     var squatPR: Double {
         let squatEx = exercises.first(where: { $0.isPowerlift && $0.powerliftType == "squat" })
         let name = squatEx?.name ?? "SQUAT"
-        let loggedMax = allSets.filter { $0.exercise == name }.map { $0.weight }.max() ?? 0.0
+        let loggedMax = (allSetsByExercise[name] ?? []).map { $0.weight }.max() ?? 0.0
         return max(loggedMax, squatEx?.oneRepMax ?? activePrefs.squatMax)
     }
-    
+
     var benchPR: Double {
         let benchEx = exercises.first(where: { $0.isPowerlift && $0.powerliftType == "bench" })
         let name = benchEx?.name ?? "BENCH"
-        let loggedMax = allSets.filter { $0.exercise == name }.map { $0.weight }.max() ?? 0.0
+        let loggedMax = (allSetsByExercise[name] ?? []).map { $0.weight }.max() ?? 0.0
         return max(loggedMax, benchEx?.oneRepMax ?? activePrefs.benchMax)
     }
-    
+
     var deadliftPR: Double {
         let deadliftEx = exercises.first(where: { $0.isPowerlift && $0.powerliftType == "deadlift" })
         let name = deadliftEx?.name ?? "DEADLIFT"
-        let loggedMax = allSets.filter { $0.exercise == name }.map { $0.weight }.max() ?? 0.0
+        let loggedMax = (allSetsByExercise[name] ?? []).map { $0.weight }.max() ?? 0.0
         return max(loggedMax, deadliftEx?.oneRepMax ?? activePrefs.deadliftMax)
     }
     
     var maxExerciseVolume: Int {
-        let volumes = exercises.map { ex in allSets.filter { $0.exercise == ex.name }.count }
+        let volumes = uniqueExercises.map { ex in (allSetsByExercise[ex.name] ?? []).count }
         return Swift.max(1, volumes.max() ?? 1)
     }
     
@@ -201,8 +233,9 @@ struct StatsView: View {
                         
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
-                                ForEach(exercises) { exercise in
-                                    let loggedMax = allSets.filter { $0.exercise == exercise.name }.map { $0.weight }.max() ?? 0.0
+                                let byExercise = allSetsByExercise
+                                ForEach(uniqueExercises) { exercise in
+                                    let loggedMax = (byExercise[exercise.name] ?? []).map { $0.weight }.max() ?? 0.0
                                     let prVal = max(loggedMax, exercise.oneRepMax)
                                     let metricColor = themeStyle == .night ? Color.plGray300 : Color(hex: exercise.colorHex)
                                     prMetric(title: exercise.displayName.uppercased(), value: prVal, unit: activePrefs.weightUnit, color: metricColor)
@@ -222,8 +255,9 @@ struct StatsView: View {
                             .tracking(2.0)
                         
                         VStack(spacing: 12) {
-                            ForEach(exercises) { exercise in
-                                let sets = currentWeekSets.filter { $0.exercise == exercise.name }
+                            let weekByExercise = currentWeekSetsByExercise
+                            ForEach(uniqueExercises) { exercise in
+                                let sets = weekByExercise[exercise.name] ?? []
                                 let count = sets.count
                                 let reps = sets.reduce(0) { $0 + $1.reps }
                                 let weight = sets.reduce(0.0) { $0 + ($1.weight * Double($1.reps)) }
@@ -324,7 +358,9 @@ struct StatsView: View {
     }
     
     private func volumeBar(title: String, count: Int, reps: Int, weight: Double, color: Color) -> some View {
-        let pct = Double(count) / Double(maxExerciseVolume)
+        let maxVol = maxExerciseVolume
+        let pct = maxVol > 0 ? Double(count) / Double(maxVol) : 0.0
+        let safePct = pct.isFinite && !pct.isNaN ? max(0.0, min(1.0, pct)) : 0.0
         
         return VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -345,7 +381,7 @@ struct StatsView: View {
                     
                     RoundedRectangle(cornerRadius: 4)
                         .fill(color)
-                        .frame(width: geo.size.width * CGFloat(pct), height: 8)
+                        .frame(width: max(0, geo.size.width * CGFloat(safePct)), height: 8)
                         .shadow(color: color.opacity(0.3), radius: 4, y: 0)
                 }
             }
