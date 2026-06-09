@@ -159,14 +159,25 @@ struct WatchLogSetView: View {
             Divider().overlay(Color.gray.opacity(0.3))
 
             // Set type
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text("SET TYPE")
                     .font(.system(size: 9, weight: .heavy))
                     .foregroundStyle(.secondary)
                     .tracking(1)
-                Picker("Set Type", selection: $setType) {
+                HStack(spacing: 4) {
                     ForEach(setTypes, id: \.self) { type in
-                        Text(type.capitalized).tag(type)
+                        Button {
+                            setType = type
+                        } label: {
+                            Text(type.capitalized)
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(setType == type ? .white : .secondary)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 32)
+                                .background(setType == type ? Color.blue : Color.white.opacity(0.12))
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }

@@ -377,10 +377,25 @@ struct DashboardView: View {
                     // 5. Today's Logs List
                     if !todaySets.isEmpty {
                         VStack(alignment: .leading, spacing: 16) {
-                            Text("TODAY'S WORKOUT LOG")
-                                .font(.system(size: 11, weight: .black))
-                                .foregroundColor(brandColors.green)
-                                .tracking(2.0)
+                            HStack {
+                                Text("TODAY'S WORKOUT LOG")
+                                    .font(.system(size: 11, weight: .black))
+                                    .foregroundColor(brandColors.green)
+                                    .tracking(2.0)
+                                
+                                Spacer()
+                                
+                                if activePrefs.appleHealthEnabled {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "heart.fill")
+                                            .font(.system(size: 8))
+                                            .foregroundColor(.plRed)
+                                        Text("Apple Health")
+                                            .font(.system(size: 9, weight: .bold))
+                                            .foregroundColor(.plGray400)
+                                    }
+                                }
+                            }
                             
                             VStack(spacing: 12) {
                                 ForEach(todaySets) { loggedSet in

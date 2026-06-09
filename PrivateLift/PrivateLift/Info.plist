@@ -65,7 +65,7 @@
 
 	<!-- HealthKit usage descriptions -->
 	<key>NSHealthShareUsageDescription</key>
-	<string>PersonalLift requires permission to read workout logs and body weight to synchronize stats.</string>
+	<string>PersonalLift does not read data from Apple Health. It only writes workout records and related metrics.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>PersonalLift requires permission to save workout records, active energy burned, and body mass directly to your Apple Health app.</string>
 

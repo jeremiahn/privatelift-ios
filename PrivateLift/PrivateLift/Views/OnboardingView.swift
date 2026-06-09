@@ -497,7 +497,7 @@ struct OnboardingView: View {
                         icon: "heart.fill",
                         iconColor: .plRed,
                         title: "Apple Health Sync",
-                        subtitle: "Automatically save each logged set as a strength workout to the Apple Health app.",
+                        subtitle: "Saves each logged set to Apple Health as a Strength Training workout, including active energy burned and body mass data.",
                         isOn: $enableAppleHealth
                     )
                     

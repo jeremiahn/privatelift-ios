@@ -1,6 +1,7 @@
 // WatchDashboardView.swift
 import SwiftUI
 import WatchConnectivity
+import Combine
 
 /// Displays today's workout summary, fetched from the companion iPhone app.
 struct WatchDashboardView: View {

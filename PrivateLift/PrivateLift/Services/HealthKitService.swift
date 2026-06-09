@@ -20,9 +20,7 @@ class HealthKitService: ObservableObject {
             energyBurnedType
         ]
         
-        let readTypes: Set<HKObjectType> = [
-            bodyMassType
-        ]
+        let readTypes: Set<HKObjectType> = []
         
         do {
             try await healthStore.requestAuthorization(toShare: writeTypes, read: readTypes)

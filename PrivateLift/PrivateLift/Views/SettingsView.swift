@@ -28,6 +28,9 @@ struct SettingsView: View {
     @State private var importErrorMessage = ""
     @FocusState private var isFieldFocused: Bool
     
+    @State private var showDiagnosticsAlert = false
+    @State private var diagnosticMessage = ""
+    
     var activePrefs: UserPreferences {
         preferences.first ?? UserPreferences()
     }
@@ -60,6 +63,10 @@ struct SettingsView: View {
                     backupRestoreSection
                 }
                 dangerZoneSection
+                
+                #if DEBUG
+                developerDiagnosticsSection
+                #endif
             }
             .onChange(of: activePrefs.bodyWeight) { oldValue, newValue in
                 try? modelContext.save()
@@ -144,6 +151,11 @@ struct SettingsView: View {
             } message: {
                 Text("Your iCloud sync setting has been saved. Please fully close and relaunch PersonalLift to apply the change. Your data will not be affected.")
             }
+            .alert("Diagnostics Result", isPresented: $showDiagnosticsAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(diagnosticMessage)
+            }
         }
     }
     
@@ -194,22 +206,52 @@ struct SettingsView: View {
                 convertDatabaseUnits(targetUnit: newValue)
             }
             
-            Toggle("Apple Health Sync", isOn: Bindable(activePrefs).appleHealthEnabled)
-                .fontWeight(.bold)
-                .tint(.plBlue)
-                .onChange(of: activePrefs.appleHealthEnabled) { oldValue, newValue in
-                    if newValue {
-                        Task {
-                            let success = await healthService.requestAuthorization()
-                            if !success {
-                                await MainActor.run {
-                                    activePrefs.appleHealthEnabled = false
-                                    showHealthSettingsAlert = true
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle("Apple Health Sync", isOn: Bindable(activePrefs).appleHealthEnabled)
+                    .fontWeight(.bold)
+                    .tint(.plBlue)
+                    .onChange(of: activePrefs.appleHealthEnabled) { oldValue, newValue in
+                        if newValue {
+                            Task {
+                                let success = await healthService.requestAuthorization()
+                                if !success {
+                                    await MainActor.run {
+                                        activePrefs.appleHealthEnabled = false
+                                        showHealthSettingsAlert = true
+                                    }
                                 }
                             }
                         }
                     }
+                
+                if activePrefs.appleHealthEnabled {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label {
+                            Text("Data written to Apple Health:")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(.plGray400)
+                        } icon: {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 9))
+                                .foregroundColor(.plRed)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("• Strength Training Workouts")
+                            Text("• Active Energy Burned (estimated calories)")
+                            Text("• Body Mass (if logged)")
+                        }
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.plGray400)
+                        .padding(.leading, 16)
+                    }
+                    .padding(.top, 2)
+                } else {
+                    Text("When enabled, each logged set is saved as a Strength Training workout to Apple Health, including estimated active energy burned.")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.plGray400)
+                        .padding(.top, 2)
                 }
+            }
             
             VStack(alignment: .leading, spacing: 4) {
                 Toggle("iCloud Backup Sync", isOn: Bindable(activePrefs).iCloudSyncEnabled)
@@ -386,6 +428,56 @@ struct SettingsView: View {
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
         }
+    }
+    
+    private var developerDiagnosticsSection: some View {
+        Section(header: Text("DEVELOPER DIAGNOSTICS").font(.system(size: 10, weight: .black))) {
+            Button(action: {
+                HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+                runDiagnostics()
+            }) {
+                HStack {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(brandColors.blue)
+                    Text("RUN DIAGNOSTIC TESTS")
+                        .font(.system(size: 12, weight: .black))
+                        .tracking(1.0)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .black))
+                        .foregroundColor(brandColors.blue.opacity(0.6))
+                }
+                .foregroundColor(themeStyle == .light ? .plGray950 : .white)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .background(brandColors.blue.opacity(0.15))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(brandColors.blue.opacity(0.5), lineWidth: 1.5)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+        }
+    }
+    
+    // MARK: - In-App Unit Diagnostics Runner
+    private func runDiagnostics() {
+        let results = DiagnosticsTests.shared.runAllTests()
+        let total = results.count
+        let passed = results.filter { $0.passed }.count
+        
+        print("--- DIAGNOSTICS LOG ---")
+        for res in results {
+            print("[\(res.passed ? "PASS" : "FAIL")] \(res.name): \(res.message)")
+        }
+        print("-----------------------")
+        
+        diagnosticMessage = "\(passed) of \(total) tests passed successfully.\n\n" + results.map { "\($0.passed ? "✅" : "❌")} \($0.name)" }.joined(separator: "\n")
+        showDiagnosticsAlert = true
     }
     
     // MARK: - Unit Switch Converter
