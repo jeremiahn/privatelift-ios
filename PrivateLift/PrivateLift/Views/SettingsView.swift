@@ -30,6 +30,8 @@ struct SettingsView: View {
     
     @State private var showDiagnosticsAlert = false
     @State private var diagnosticMessage = ""
+    @State private var developerTapCount = 0
+    @State private var showDeveloperDiagnostics = false
     
     var activePrefs: UserPreferences {
         preferences.first ?? UserPreferences()
@@ -65,8 +67,29 @@ struct SettingsView: View {
                 dangerZoneSection
                 
                 #if DEBUG
-                developerDiagnosticsSection
+                if showDeveloperDiagnostics {
+                    developerDiagnosticsSection
+                }
                 #endif
+                
+                Section {
+                    HStack {
+                        Spacer()
+                        Text("Version 1.0 (Build 1)")
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .foregroundColor(.secondary)
+                            .onTapGesture {
+                                developerTapCount += 1
+                                if developerTapCount >= 7 {
+                                    showDeveloperDiagnostics.toggle()
+                                    developerTapCount = 0
+                                    HapticService.play(.success, enabled: activePrefs.hapticsEnabled)
+                                }
+                            }
+                        Spacer()
+                    }
+                    .listRowBackground(Color.clear)
+                }
             }
             .onChange(of: activePrefs.bodyWeight) { oldValue, newValue in
                 try? modelContext.save()
