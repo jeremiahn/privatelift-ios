@@ -28,10 +28,7 @@ struct SettingsView: View {
     @State private var importErrorMessage = ""
     @FocusState private var isFieldFocused: Bool
     
-    @State private var showDiagnosticsAlert = false
-    @State private var diagnosticMessage = ""
-    @State private var developerTapCount = 0
-    @State private var showDeveloperDiagnostics = false
+
     
     var activePrefs: UserPreferences {
         preferences.first ?? UserPreferences()
@@ -66,30 +63,7 @@ struct SettingsView: View {
                 }
                 dangerZoneSection
                 
-                #if DEBUG
-                if showDeveloperDiagnostics {
-                    developerDiagnosticsSection
-                }
-                #endif
-                
-                Section {
-                    HStack {
-                        Spacer()
-                        Text("Version 1.0 (Build 1)")
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
-                            .foregroundColor(.secondary)
-                            .onTapGesture {
-                                developerTapCount += 1
-                                if developerTapCount >= 7 {
-                                    showDeveloperDiagnostics.toggle()
-                                    developerTapCount = 0
-                                    HapticService.play(.success, enabled: activePrefs.hapticsEnabled)
-                                }
-                            }
-                        Spacer()
-                    }
-                    .listRowBackground(Color.clear)
-                }
+
             }
             .onChange(of: activePrefs.bodyWeight) { oldValue, newValue in
                 try? modelContext.save()
@@ -174,11 +148,7 @@ struct SettingsView: View {
             } message: {
                 Text("Your iCloud sync setting has been saved. Please fully close and relaunch PersonalLift to apply the change. Your data will not be affected.")
             }
-            .alert("Diagnostics Result", isPresented: $showDiagnosticsAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(diagnosticMessage)
-            }
+
         }
     }
     
@@ -309,6 +279,11 @@ struct SettingsView: View {
             Toggle("Apple Watch Support", isOn: Bindable(activePrefs).showWatchSupport)
                 .fontWeight(.bold)
                 .tint(.plBlue)
+                .onChange(of: activePrefs.showWatchSupport) { oldValue, newValue in
+                    if newValue {
+                        WatchConnectivityManager.shared.sendUserDataToWatch()
+                    }
+                }
             
             if activePrefs.showWatchSupport {
                 if WCSession.isSupported() {
@@ -453,55 +428,7 @@ struct SettingsView: View {
         }
     }
     
-    private var developerDiagnosticsSection: some View {
-        Section(header: Text("DEVELOPER DIAGNOSTICS").font(.system(size: 10, weight: .black))) {
-            Button(action: {
-                HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
-                runDiagnostics()
-            }) {
-                HStack {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(brandColors.blue)
-                    Text("RUN DIAGNOSTIC TESTS")
-                        .font(.system(size: 12, weight: .black))
-                        .tracking(1.0)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .black))
-                        .foregroundColor(brandColors.blue.opacity(0.6))
-                }
-                .foregroundColor(themeStyle == .light ? .plGray950 : .white)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 16)
-                .background(brandColors.blue.opacity(0.15))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(brandColors.blue.opacity(0.5), lineWidth: 1.5)
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-        }
-    }
-    
-    // MARK: - In-App Unit Diagnostics Runner
-    private func runDiagnostics() {
-        let results = DiagnosticsTests.shared.runAllTests()
-        let total = results.count
-        let passed = results.filter { $0.passed }.count
-        
-        print("--- DIAGNOSTICS LOG ---")
-        for res in results {
-            print("[\(res.passed ? "PASS" : "FAIL")] \(res.name): \(res.message)")
-        }
-        print("-----------------------")
-        
-        diagnosticMessage = "\(passed) of \(total) tests passed successfully.\n\n" + results.map { "\($0.passed ? "✅" : "❌")} \($0.name)" }.joined(separator: "\n")
-        showDiagnosticsAlert = true
-    }
+
     
     // MARK: - Unit Switch Converter
     private func convertDatabaseUnits(targetUnit: String) {

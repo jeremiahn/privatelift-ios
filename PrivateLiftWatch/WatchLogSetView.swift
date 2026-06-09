@@ -1,32 +1,21 @@
 // WatchLogSetView.swift
 import SwiftUI
-import WatchConnectivity
 
 /// A compact set-logging form for the Apple Watch.
-/// Sends the logged set to the iPhone via WatchConnectivity for persistence.
 struct WatchLogSetView: View {
-    @State private var exercises: [[String: String]] = []
+    @ObservedObject private var connectivity = WatchConnectivityManager.shared
     @State private var selectedExercise = ""
     @State private var weight: Double = 135
     @State private var reps: Int = 5
     @State private var setType = "working"
-    @State private var saving = false
     @State private var saved = false
-    @State private var loadingExercises = true
 
     private let setTypes = ["warmup", "working", "failed"]
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                if loadingExercises {
-                    ProgressView()
-                        .progressViewStyle(.circular)
-                        .tint(.blue)
-                    Text("Loading exercises…")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                } else if saved {
+                if saved {
                     savedConfirmation
                 } else {
                     logForm
@@ -35,10 +24,16 @@ struct WatchLogSetView: View {
             .padding(.horizontal, 4)
         }
         .navigationTitle("Log Set")
-        .onAppear { fetchExercises() }
+        .onAppear {
+            initializeSelection()
+        }
     }
 
-    // MARK: - Saved Confirmation
+    private func initializeSelection() {
+        if selectedExercise.isEmpty, let first = connectivity.exercises.first {
+            selectedExercise = first["name"] ?? ""
+        }
+    }
 
     private var savedConfirmation: some View {
         VStack(spacing: 10) {
@@ -65,8 +60,6 @@ struct WatchLogSetView: View {
         }
     }
 
-    // MARK: - Log Form
-
     private var logForm: some View {
         VStack(spacing: 10) {
             // Exercise picker
@@ -75,13 +68,20 @@ struct WatchLogSetView: View {
                     .font(.system(size: 9, weight: .heavy))
                     .foregroundStyle(.secondary)
                     .tracking(1)
-                Picker("Exercise", selection: $selectedExercise) {
-                    ForEach(exercises, id: \.self) { ex in
-                        Text(ex["displayName"] ?? ex["name"] ?? "")
-                            .tag(ex["name"] ?? "")
+                
+                if connectivity.exercises.isEmpty {
+                    Text("No exercises found. Please launch the iPhone app to sync.")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                } else {
+                    Picker("Exercise", selection: $selectedExercise) {
+                        ForEach(connectivity.exercises, id: \.self) { ex in
+                            Text(ex["displayName"] ?? ex["name"] ?? "")
+                                .tag(ex["name"] ?? "")
+                        }
                     }
+                    .pickerStyle(.navigationLink)
                 }
-                .pickerStyle(.navigationLink)
             }
 
             Divider().overlay(Color.gray.opacity(0.3))
@@ -185,14 +185,8 @@ struct WatchLogSetView: View {
             // Save button
             Button(action: logSet) {
                 HStack(spacing: 4) {
-                    if saving {
-                        ProgressView()
-                            .progressViewStyle(.circular)
-                            .scaleEffect(0.7)
-                    } else {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.caption)
-                    }
+                    Image(systemName: "plus.circle.fill")
+                        .font(.caption)
                     Text("Log Set")
                         .font(.system(size: 13, weight: .heavy))
                 }
@@ -201,84 +195,19 @@ struct WatchLogSetView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(.blue)
-            .disabled(saving || selectedExercise.isEmpty)
+            .disabled(selectedExercise.isEmpty)
             .padding(.top, 4)
         }
     }
 
-    // MARK: - Helpers
-
     private func displayNameFor(_ name: String) -> String {
-        exercises.first(where: { $0["name"] == name })?["displayName"] ?? name
-    }
-
-    // MARK: - Networking
-
-    private func fetchExercises() {
-        guard WCSession.isSupported() else {
-            loadingExercises = false
-            return
-        }
-        let session = WCSession.default
-        guard session.activationState == .activated, session.isReachable else {
-            loadingExercises = false
-            return
-        }
-
-        session.sendMessage(["request": "exercises"], replyHandler: { reply in
-            DispatchQueue.main.async {
-                if let list = reply["exercises"] as? [[String: Any]] {
-                    self.exercises = list.map { dict in
-                        [
-                            "name": dict["name"] as? String ?? "",
-                            "displayName": dict["displayName"] as? String ?? "",
-                            "colorHex": dict["colorHex"] as? String ?? ""
-                        ]
-                    }
-                    if self.selectedExercise.isEmpty, let first = self.exercises.first {
-                        self.selectedExercise = first["name"] ?? ""
-                    }
-                }
-                self.loadingExercises = false
-            }
-        }, errorHandler: { _ in
-            DispatchQueue.main.async {
-                self.loadingExercises = false
-            }
-        })
+        connectivity.exercises.first(where: { $0["name"] == name })?["displayName"] ?? name
     }
 
     private func logSet() {
         guard !selectedExercise.isEmpty else { return }
-        saving = true
-
-        let session = WCSession.default
-        guard session.activationState == .activated, session.isReachable else {
-            saving = false
-            return
-        }
-
-        let payload: [String: Any] = [
-            "request": "logSet",
-            "exercise": selectedExercise,
-            "weight": weight,
-            "reps": reps,
-            "rpe": 8.0,          // sensible default for Watch — no slider to save space
-            "setType": setType
-        ]
-
-        session.sendMessage(payload, replyHandler: { reply in
-            DispatchQueue.main.async {
-                self.saving = false
-                if reply["success"] as? Bool == true {
-                    self.saved = true
-                }
-            }
-        }, errorHandler: { _ in
-            DispatchQueue.main.async {
-                self.saving = false
-            }
-        })
+        connectivity.logSet(exercise: selectedExercise, weight: weight, reps: reps, setType: setType)
+        saved = true
     }
 }
 

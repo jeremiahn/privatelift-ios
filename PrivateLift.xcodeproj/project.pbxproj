@@ -153,10 +153,12 @@
 				277DFDEB2FCC95C900D40D44 /* Sources */,
 				277DFDEC2FCC95C900D40D44 /* Frameworks */,
 				277DFDED2FCC95C900D40D44 /* Resources */,
+				5F99202321594615BDA3D96E /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C21633C9D7EA4A9F60FE5826 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				277DFDF12FCC95C900D40D44 /* PrivateLift/PrivateLift */,
@@ -291,7 +293,7 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "PersonalLift requires permission to save workout records, active energy burned, and body mass directly to your Apple Health app.";
 				INFOPLIST_KEY_WKApplication = YES;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "Nelson-Computers.PrivateLift";
-				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Nelson-Computers.PrivateLift.watchkitapp";
 				PRODUCT_NAME = PersonalLiftWatch;
@@ -300,7 +302,7 @@
 				SUPPORTED_PLATFORMS = "watchos watchsimulator";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 			};
 			name = Debug;
 		};
@@ -500,7 +502,7 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "PersonalLift requires permission to save workout records, active energy burned, and body mass directly to your Apple Health app.";
 				INFOPLIST_KEY_WKApplication = YES;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "Nelson-Computers.PrivateLift";
-				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Nelson-Computers.PrivateLift.watchkitapp";
 				PRODUCT_NAME = PersonalLiftWatch;
@@ -510,7 +512,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				VALIDATE_PRODUCT = YES;
-				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 			};
 			name = Release;
 		};

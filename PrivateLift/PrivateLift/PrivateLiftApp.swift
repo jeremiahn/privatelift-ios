@@ -85,11 +85,12 @@ struct PersonalLiftApp: App {
             }
         }
 
-        // Configure Watch Connectivity
-        let context = self.container.mainContext
-        WatchConnectivityManager.shared.configure(context: context)
-
         // Keep SwiftData preferences in sync with the UserDefaults iCloud flag
+        let context = self.container.mainContext
+        
+        // Configure Watch Connectivity
+        WatchConnectivityManager.shared.configure(context: context)
+        
         let fetchDescriptor = FetchDescriptor<UserPreferences>()
         if let prefs = (try? context.fetch(fetchDescriptor))?.first {
             if prefs.iCloudSyncEnabled != iCloudEnabled {

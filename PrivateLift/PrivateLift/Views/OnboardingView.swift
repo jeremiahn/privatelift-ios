@@ -677,18 +677,20 @@ struct OnboardingView: View {
             if enableAppleHealth {
                 Task {
                     let authorized = await healthKitService.requestAuthorization()
-                    if !authorized {
-                        await MainActor.run {
+                    await MainActor.run {
+                        if !authorized {
                             prefs.appleHealthEnabled = false
                             try? modelContext.save()
+                            print("Apple Health authorization was not granted during onboarding.")
                         }
-                        print("Apple Health authorization was not granted during onboarding.")
+                        HapticService.play(.success)
+                        isPresented = false
                     }
                 }
+            } else {
+                HapticService.play(.success)
+                isPresented = false
             }
-            
-            HapticService.play(.success)
-            isPresented = false
         } catch {
             print("Failed to save onboarding benchmarks: \(error)")
         }
