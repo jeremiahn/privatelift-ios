@@ -24,10 +24,14 @@ struct OnboardingView: View {
     @State private var enableAppleWatch: Bool = false
     @State private var enableAppleHealth: Bool = false
     @State private var healthAuthFailed: Bool = false
+    @State private var showRestTimer: Bool = true
+    @State private var defaultRestDuration: Double = 180.0
+    @State private var useGridMode: Bool = false
+    @State private var formula: String = "epley"
     @StateObject private var healthKitService = HealthKitService()
     @FocusState private var isInputFocused: Bool
     
-    private let totalSteps = 6
+    private let totalSteps = 7
     
     // Dynamic Theme Colors
     private var bgColor: Color {
@@ -117,24 +121,25 @@ struct OnboardingView: View {
                 .padding(.top, 24)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Onboarding progress")
-                .accessibilityValue("Step \(currentStep + 1) of 7")
+                .accessibilityValue("Step \(currentStep + 1) of \(totalSteps + 1)")
                 
                 // Content Cards
                 TabView(selection: $currentStep) {
                     welcomeStep.tag(0)
-                    liftMaxStep(title: "Squat 1RM Max", description: "Your estimated single rep maximum for Squats.", value: $squatMax, range: 45...800, step: 5, accentColor: .plRed, stepLabel: "Step 1 of 5").tag(1)
-                    liftMaxStep(title: "Bench 1RM Max", description: "Your estimated single rep maximum for Bench Press.", value: $benchMax, range: 45...600, step: 5, accentColor: .plBlue, stepLabel: "Step 2 of 5").tag(2)
-                    liftMaxStep(title: "Deadlift 1RM Max", description: "Your estimated single rep maximum for Deadlifts.", value: $deadliftMax, range: 45...1000, step: 5, accentColor: .plGreen, stepLabel: "Step 3 of 5").tag(3)
+                    liftMaxStep(title: "Squat 1RM Max", description: "Your estimated single rep maximum for Squats.", value: $squatMax, range: 45...800, step: 5, accentColor: .plRed, stepLabel: "Step 1 of 6").tag(1)
+                    liftMaxStep(title: "Bench 1RM Max", description: "Your estimated single rep maximum for Bench Press.", value: $benchMax, range: 45...600, step: 5, accentColor: .plBlue, stepLabel: "Step 2 of 6").tag(2)
+                    liftMaxStep(title: "Deadlift 1RM Max", description: "Your estimated single rep maximum for Deadlifts.", value: $deadliftMax, range: 45...1000, step: 5, accentColor: .plGreen, stepLabel: "Step 3 of 6").tag(3)
                     bodyWeightGenderStep.tag(4)
                     integrationsStep.tag(5)
-                    completionStep.tag(6)
+                    preferencesStep.tag(6)
+                    completionStep.tag(7)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut, value: currentStep)
                 
                 // Navigation buttons
                 HStack(spacing: 16) {
-                    if currentStep > 0 && currentStep < 6 {
+                    if currentStep > 0 && currentStep < 7 {
                         Button(action: {
                             HapticService.play(.medium)
                             withAnimation { currentStep -= 1 }
@@ -157,24 +162,24 @@ struct OnboardingView: View {
                     
                     Button(action: {
                         HapticService.play(.medium)
-                        if currentStep < 6 {
+                        if currentStep < 7 {
                             withAnimation { currentStep += 1 }
                         } else {
                             completeOnboarding()
                         }
                     }) {
-                        Text(currentStep == 0 ? "GET STARTED" : (currentStep == 6 ? "START LIFTING" : "NEXT"))
+                        Text(currentStep == 0 ? "GET STARTED" : (currentStep == 7 ? "START LIFTING" : "NEXT"))
                             .font(.system(size: 11, weight: .black))
                             .tracking(1.5)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
-                            .background(currentStep == 6 ? Color.plGreen : Color.plBlue)
+                            .background(currentStep == 7 ? Color.plGreen : Color.plBlue)
                             .cornerRadius(16)
-                            .shadow(color: (currentStep == 6 ? Color.plGreen : Color.plBlue).opacity(0.3), radius: 10, y: 5)
+                            .shadow(color: (currentStep == 7 ? Color.plGreen : Color.plBlue).opacity(0.3), radius: 10, y: 5)
                     }
-                    .accessibilityLabel(currentStep == 0 ? "Get Started" : (currentStep == 6 ? "Start Lifting" : "Next"))
-                    .accessibilityHint(currentStep == 6 ? "Completes calibration onboarding and enters the main application" : "Advance to the next onboarding step")
+                    .accessibilityLabel(currentStep == 0 ? "Get Started" : (currentStep == 7 ? "Start Lifting" : "Next"))
+                    .accessibilityHint(currentStep == 7 ? "Completes calibration onboarding and enters the main application" : "Advance to the next onboarding step")
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
@@ -315,7 +320,7 @@ struct OnboardingView: View {
             Spacer()
             
             VStack(alignment: .leading, spacing: 4) {
-                Text("STEP 4 OF 5")
+                Text("STEP 4 OF 6")
                     .font(.system(size: 10, weight: .black))
                     .foregroundColor(.plPurple)
                     .tracking(1.5)
@@ -449,7 +454,7 @@ struct OnboardingView: View {
             Spacer()
             
             VStack(alignment: .leading, spacing: 4) {
-                Text("STEP 5 OF 5")
+                Text("STEP 5 OF 6")
                     .font(.system(size: 10, weight: .black))
                     .foregroundColor(.plBlue)
                     .tracking(1.5)
@@ -587,6 +592,175 @@ struct OnboardingView: View {
         .accessibilityAddTraits(.isButton)
     }
     
+    // MARK: - Preferences & Customization Step
+    private var preferencesStep: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Spacer()
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("STEP 6 OF 6")
+                    .font(.system(size: 10, weight: .black))
+                    .foregroundColor(.plPurple)
+                    .tracking(1.5)
+                
+                Text("Preferences")
+                    .font(.system(size: 24, weight: .black))
+                    .foregroundColor(textColor)
+                
+                Text("Customize your rest intervals, dashboard layouts, and calculations.")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(subtextColor)
+            }
+            .padding(.horizontal, 24)
+            
+            VStack(spacing: 0) {
+                // Show Rest Timer
+                integrationToggleRow(
+                    icon: "timer",
+                    iconColor: .plBlue,
+                    title: "Show Rest Timer",
+                    subtitle: "Display a rest timer countdown after completing a workout set.",
+                    isOn: $showRestTimer
+                )
+                
+                if showRestTimer {
+                    Divider()
+                        .background(isLightMode ? Color.black.opacity(0.08) : Color.white.opacity(0.1))
+                        .padding(.leading, 56)
+                    
+                    // Default Rest Duration
+                    HStack(spacing: 14) {
+                        Image(systemName: "hourglass")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.plTeal)
+                            .frame(width: 36, height: 36)
+                            .background(Color.plTeal.opacity(isLightMode ? 0.1 : 0.15))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .accessibilityHidden(true)
+                        
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Default Rest Duration")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(textColor)
+                            
+                            Text("Choose the length of your default rest periods.")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(subtextColor)
+                        }
+                        
+                        Spacer()
+                        
+                        Picker("", selection: $defaultRestDuration) {
+                            Text("1 Min").tag(60.0)
+                            Text("1:30").tag(90.0)
+                            Text("2 Min").tag(120.0)
+                            Text("3 Min").tag(180.0)
+                            Text("5 Min").tag(300.0)
+                        }
+                        .pickerStyle(.menu)
+                        .tint(.plTeal)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                }
+                
+                Divider()
+                    .background(isLightMode ? Color.black.opacity(0.08) : Color.white.opacity(0.1))
+                    .padding(.leading, 56)
+                
+                // Dashboard Layout (Carousel vs Grid)
+                HStack(spacing: 14) {
+                    Image(systemName: "square.grid.2x2.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.plPurple)
+                        .frame(width: 36, height: 36)
+                        .background(Color.plPurple.opacity(isLightMode ? 0.1 : 0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .accessibilityHidden(true)
+                    
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Dashboard Layout")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(textColor)
+                        
+                        Text("Choose how your exercises are presented on the main tab.")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(subtextColor)
+                    }
+                    
+                    Spacer()
+                    
+                    Picker("", selection: $useGridMode) {
+                        Text("Carousel").tag(false)
+                        Text("Grid").tag(true)
+                    }
+                    .pickerStyle(.menu)
+                    .tint(.plPurple)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                
+                Divider()
+                    .background(isLightMode ? Color.black.opacity(0.08) : Color.white.opacity(0.1))
+                    .padding(.leading, 56)
+                
+                // 1RM Formula (Epley vs Brzycki vs Lander)
+                HStack(spacing: 14) {
+                    Image(systemName: "function")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.plRed)
+                        .frame(width: 36, height: 36)
+                        .background(Color.plRed.opacity(isLightMode ? 0.1 : 0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .accessibilityHidden(true)
+                    
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("1RM Formula")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(textColor)
+                        
+                        Text("Formula used to calculate estimated one-rep maximums.")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(subtextColor)
+                    }
+                    
+                    Spacer()
+                    
+                    Picker("", selection: $formula) {
+                        Text("Epley").tag("epley")
+                        Text("Brzycki").tag("brzycki")
+                        Text("Lander").tag("lander")
+                    }
+                    .pickerStyle(.menu)
+                    .tint(.plRed)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+            }
+            .padding(.vertical, 8)
+            .background(cardBgColor)
+            .cornerRadius(24)
+            .overlay(
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(cardStrokeColor, lineWidth: 1.5)
+            )
+            .padding(.horizontal, 24)
+            
+            // Footer hint
+            HStack(spacing: 6) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(subtextColor)
+                Text("All of these can be changed anytime in the Settings tab.")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(subtextColor)
+            }
+            .padding(.horizontal, 28)
+            
+            Spacer()
+        }
+    }
+    
     // MARK: - Calibration Completion Step
     private var completionStep: some View {
         VStack(spacing: 24) {
@@ -647,6 +821,12 @@ struct OnboardingView: View {
             prefs.iCloudSyncEnabled = enableICloudSync
             prefs.showWatchSupport = enableAppleWatch
             prefs.appleHealthEnabled = enableAppleHealth
+            
+            // Persist setup preferences
+            prefs.showRestTimer = showRestTimer
+            prefs.defaultRestDuration = defaultRestDuration
+            prefs.useGridMode = useGridMode
+            prefs.formula = formula
             
             // Sync iCloud flag to UserDefaults (required for ModelContainer at next launch)
             UserDefaults.standard.set(enableICloudSync, forKey: "iCloudSyncEnabled")
