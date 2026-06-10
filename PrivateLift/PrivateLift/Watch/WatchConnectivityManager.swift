@@ -64,7 +64,7 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
     #endif
 
     // MARK: - User Info (Background Queued Transfers)
-    func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any] = [:]) {
+    func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any]) {
         Task { @MainActor in
             saveSetFromWatch(userInfo)
         }
@@ -149,14 +149,34 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
 
     @MainActor
     private func saveSetFromWatch(_ message: [String: Any]) {
-        guard let context = modelContext,
-              let exercise = message["exercise"] as? String,
-              let weight = message["weight"] as? Double,
-              let reps = message["reps"] as? Int,
-              let rpe = message["rpe"] as? Double,
-              let setType = message["setType"] as? String else {
+        guard let context = modelContext else {
+            print("WatchConnectivityManager Error: modelContext is nil")
             return
         }
+        guard let exercise = message["exercise"] as? String else {
+            print("WatchConnectivityManager Error: 'exercise' is missing or not a String in message: \(message)")
+            return
+        }
+        guard let weightNum = message["weight"] as? NSNumber else {
+            print("WatchConnectivityManager Error: 'weight' is missing or not a number in message: \(message)")
+            return
+        }
+        guard let repsNum = message["reps"] as? NSNumber else {
+            print("WatchConnectivityManager Error: 'reps' is missing or not a number in message: \(message)")
+            return
+        }
+        guard let rpeNum = message["rpe"] as? NSNumber else {
+            print("WatchConnectivityManager Error: 'rpe' is missing or not a number in message: \(message)")
+            return
+        }
+        guard let setType = message["setType"] as? String else {
+            print("WatchConnectivityManager Error: 'setType' is missing or not a String in message: \(message)")
+            return
+        }
+
+        let weight = weightNum.doubleValue
+        let reps = repsNum.intValue
+        let rpe = rpeNum.doubleValue
 
         let timestamp = message["timestamp"] as? Date ?? Date()
         let today = WatchConnectivityManager.dayFormatter.string(from: timestamp)

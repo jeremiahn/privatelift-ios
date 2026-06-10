@@ -46,8 +46,17 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObj
     
     private func processApplicationContext(_ context: [String: Any]) {
         if let summary = context["todaySummary"] as? [String: Any] {
-            self.setCount = summary["setCount"] as? Int ?? 0
-            self.totalWeight = summary["totalWeight"] as? Double ?? 0.0
+            if let countNum = summary["setCount"] as? NSNumber {
+                self.setCount = countNum.intValue
+            } else {
+                self.setCount = summary["setCount"] as? Int ?? 0
+            }
+            
+            if let weightNum = summary["totalWeight"] as? NSNumber {
+                self.totalWeight = weightNum.doubleValue
+            } else {
+                self.totalWeight = summary["totalWeight"] as? Double ?? 0.0
+            }
         }
         if let list = context["exercises"] as? [[String: Any]] {
             self.exercises = list.map { dict in
