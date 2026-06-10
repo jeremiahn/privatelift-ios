@@ -31,6 +31,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "277DFDEE2FCC95C900D40D44"
                BuildableName = "PrivateLift.app"
+               BlueprintName = "PrivateLift"
                ReferencedContainer = "container:PrivateLift.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -60,6 +61,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C5428368A3E29008BA85924E"
             BuildableName = "PersonalLiftWatch.app"
+            BlueprintName = "PersonalLiftWatch"
             ReferencedContainer = "container:PrivateLift.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -76,6 +78,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C5428368A3E29008BA85924E"
             BuildableName = "PersonalLiftWatch.app"
+            BlueprintName = "PersonalLiftWatch"
             ReferencedContainer = "container:PrivateLift.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
