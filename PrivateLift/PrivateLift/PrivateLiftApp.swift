@@ -22,8 +22,9 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        // Show banner + sound even when the app is in the foreground
-        completionHandler([.banner, .sound])
+        print("[Notification] willPresent fired: \(notification.request.content.title) — \(notification.request.content.body)")
+        // Show banner + sound + list (Notification Center) even when the app is in the foreground
+        completionHandler([.banner, .sound, .list])
     }
 }
 
@@ -34,7 +35,7 @@ struct PersonalLiftApp: App {
     init() {
         // Set up notification delegate before anything else
         _ = NotificationDelegate.shared
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
 
         let schema = Schema([
             UserPreferences.self,

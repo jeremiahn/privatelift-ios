@@ -20,11 +20,11 @@ struct DashboardView: View {
     @State private var intensity: Double = 85.0
     
     // Log Form Fields
-    @State private var selectedExercise = "SQUAT" // "SQUAT" | "BENCH" | "DEADLIFT"
-    @State private var selectedSetType = "working" // "warmup" | "working" | "failed"
-    @State private var weightInput = ""
-    @State private var repsInput = "5"
-    @State private var rpeInput = 8.0
+    @AppStorage("dashboard.selectedExercise") private var selectedExercise = "SQUAT"
+    @AppStorage("dashboard.selectedSetType") private var selectedSetType = "working"
+    @AppStorage("dashboard.weightInput") private var weightInput = ""
+    @AppStorage("dashboard.repsInput") private var repsInput = "5"
+    @AppStorage("dashboard.rpeInput") private var rpeInput = 8.0
     
     // Calculator Field
     @State private var calcWeight = 225.0
@@ -557,7 +557,9 @@ struct DashboardView: View {
                 if let firstExercise = uniqueExercises.first, !uniqueExercises.contains(where: { $0.name == selectedExercise }) {
                     selectedExercise = firstExercise.name
                 }
-                updateWeightInputForSelectedExercise()
+                if weightInput.isEmpty {
+                    updateWeightInputForSelectedExercise()
+                }
             }
             .onChange(of: uniqueExercises) { oldValue, newValue in
                 if let firstExercise = newValue.first, !newValue.contains(where: { $0.name == selectedExercise }) {

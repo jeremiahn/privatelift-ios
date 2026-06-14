@@ -38,3 +38,7 @@ test_1024.png
 **/build/
 .kotlin/
 local.properties
+
+# PrivateLift custom ignores
+build_ios.log
+test_model_config

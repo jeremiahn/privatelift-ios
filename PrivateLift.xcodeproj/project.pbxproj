@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2726C0392FDF0DFE00DF2EEB /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2726C0382FDF0DFE00DF2EEB /* WidgetKit.framework */; };
+		2726C03B2FDF0DFE00DF2EEB /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2726C03A2FDF0DFE00DF2EEB /* SwiftUI.framework */; };
+		2726C0482FDF0DFF00DF2EEB /* PrivateLiftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2726C0372FDF0DFE00DF2EEB /* PrivateLiftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		277DFE132FCCA24300D40D44 /* web in Resources */ = {isa = PBXBuildFile; fileRef = 277DFE122FCCA24300D40D44 /* web */; };
 		32A5B35F02F8DBDC9D9FED41 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3200270C6488FBA8EE2989 /* WatchConnectivityManager.swift */; };
 		49905BC98133EF24A24333B4 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49355AEFF9B543C281B31981 /* WatchApp.swift */; };
@@ -18,6 +21,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		2726C0462FDF0DFF00DF2EEB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 277DFDE72FCC95C900D40D44 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2726C0362FDF0DFE00DF2EEB;
+			remoteInfo = PrivateLiftWidgetExtension;
+		};
 		3238E8CE7CE7645DF8C65F7E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 277DFDE72FCC95C900D40D44 /* Project object */;
@@ -28,6 +38,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		2726C0492FDF0DFF00DF2EEB /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				2726C0482FDF0DFF00DF2EEB /* PrivateLiftWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		5F99202321594615BDA3D96E /* Embed Watch Content */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -42,6 +63,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		2726C0372FDF0DFE00DF2EEB /* PrivateLiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PrivateLiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		2726C0382FDF0DFE00DF2EEB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		2726C03A2FDF0DFE00DF2EEB /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		277DFDEF2FCC95C900D40D44 /* PrivateLift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PrivateLift.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		277DFE122FCCA24300D40D44 /* web */ = {isa = PBXFileReference; lastKnownFileType = folder; path = web; sourceTree = "<group>"; };
 		46FAA78421491E74A33302A8 /* PersonalLiftWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PersonalLiftWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -55,6 +79,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2726C04D2FDF0DFF00DF2EEB /* Exceptions for "PrivateLiftWidget" folder in "PrivateLiftWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 2726C0362FDF0DFE00DF2EEB /* PrivateLiftWidgetExtension */;
+		};
 		27DEDF642FD1DA8A00A52EBA /* Exceptions for "PrivateLift/PrivateLift" folder in "PrivateLift" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -65,6 +96,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		2726C03C2FDF0DFE00DF2EEB /* PrivateLiftWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2726C04D2FDF0DFF00DF2EEB /* Exceptions for "PrivateLiftWidget" folder in "PrivateLiftWidgetExtension" target */,
+			);
+			path = PrivateLiftWidget;
+			sourceTree = "<group>";
+		};
 		277DFDF12FCC95C900D40D44 /* PrivateLift/PrivateLift */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -76,6 +115,15 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		2726C0342FDF0DFE00DF2EEB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2726C03B2FDF0DFE00DF2EEB /* SwiftUI.framework in Frameworks */,
+				2726C0392FDF0DFE00DF2EEB /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		277DFDEC2FCC95C900D40D44 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -98,6 +146,8 @@
 			isa = PBXGroup;
 			children = (
 				BEE4803F7F9E6D5395E969D0 /* watchOS */,
+				2726C0382FDF0DFE00DF2EEB /* WidgetKit.framework */,
+				2726C03A2FDF0DFE00DF2EEB /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -107,6 +157,7 @@
 			children = (
 				277DFE122FCCA24300D40D44 /* web */,
 				277DFDF12FCC95C900D40D44 /* PrivateLift/PrivateLift */,
+				2726C03C2FDF0DFE00DF2EEB /* PrivateLiftWidget */,
 				277DFDF02FCC95C900D40D44 /* Products */,
 				258CC6927D9F9EC83E8AE20B /* Frameworks */,
 				6CC6D0AFAB68DDEB7A3DFC56 /* PrivateLiftWatch */,
@@ -119,6 +170,7 @@
 				277DFDEF2FCC95C900D40D44 /* PrivateLift.app */,
 				46FAA78421491E74A33302A8 /* PersonalLiftWatch.app */,
 				6D41D251C2AD2743ED6B6B3F /* PersonalLiftWatch.app */,
+				2726C0372FDF0DFE00DF2EEB /* PrivateLiftWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -146,6 +198,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		2726C0362FDF0DFE00DF2EEB /* PrivateLiftWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2726C04C2FDF0DFF00DF2EEB /* Build configuration list for PBXNativeTarget "PrivateLiftWidgetExtension" */;
+			buildPhases = (
+				2726C0332FDF0DFE00DF2EEB /* Sources */,
+				2726C0342FDF0DFE00DF2EEB /* Frameworks */,
+				2726C0352FDF0DFE00DF2EEB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				2726C03C2FDF0DFE00DF2EEB /* PrivateLiftWidget */,
+			);
+			name = PrivateLiftWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = PrivateLiftWidgetExtension;
+			productReference = 2726C0372FDF0DFE00DF2EEB /* PrivateLiftWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		277DFDEE2FCC95C900D40D44 /* PrivateLift */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 277DFDFA2FCC95CB00D40D44 /* Build configuration list for PBXNativeTarget "PrivateLift" */;
@@ -154,11 +228,13 @@
 				277DFDEC2FCC95C900D40D44 /* Frameworks */,
 				277DFDED2FCC95C900D40D44 /* Resources */,
 				5F99202321594615BDA3D96E /* Embed Watch Content */,
+				2726C0492FDF0DFF00DF2EEB /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				C21633C9D7EA4A9F60FE5826 /* PBXTargetDependency */,
+				2726C0472FDF0DFF00DF2EEB /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				277DFDF12FCC95C900D40D44 /* PrivateLift/PrivateLift */,
@@ -195,6 +271,9 @@
 				LastSwiftUpdateCheck = 2650;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
+					2726C0362FDF0DFE00DF2EEB = {
+						CreatedOnToolsVersion = 26.5;
+					};
 					277DFDEE2FCC95C900D40D44 = {
 						CreatedOnToolsVersion = 26.5;
 						SystemCapabilities = {
@@ -224,11 +303,19 @@
 			targets = (
 				277DFDEE2FCC95C900D40D44 /* PrivateLift */,
 				C5428368A3E29008BA85924E /* PersonalLiftWatch */,
+				2726C0362FDF0DFE00DF2EEB /* PrivateLiftWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		2726C0352FDF0DFE00DF2EEB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		277DFDED2FCC95C900D40D44 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -248,6 +335,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		2726C0332FDF0DFE00DF2EEB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		277DFDEB2FCC95C900D40D44 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -269,6 +363,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		2726C0472FDF0DFF00DF2EEB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2726C0362FDF0DFE00DF2EEB /* PrivateLiftWidgetExtension */;
+			targetProxy = 2726C0462FDF0DFF00DF2EEB /* PBXContainerItemProxy */;
+		};
 		C21633C9D7EA4A9F60FE5826 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = PersonalLiftWatch;
@@ -294,7 +393,7 @@
 				INFOPLIST_KEY_WKApplication = YES;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "Nelson-Computers.PrivateLift";
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "Nelson-Computers.PrivateLift.watchkitapp";
 				PRODUCT_NAME = PersonalLiftWatch;
 				SDKROOT = watchos;
@@ -305,6 +404,66 @@
 				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 			};
 			name = Debug;
+		};
+		2726C04A2FDF0DFF00DF2EEB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = D42P76Y3LR;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PrivateLiftWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PrivateLiftWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.3;
+				PRODUCT_BUNDLE_IDENTIFIER = "Nelson-Computers.PrivateLift.PrivateLiftWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		2726C04B2FDF0DFF00DF2EEB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = D42P76Y3LR;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PrivateLiftWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PrivateLiftWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.3;
+				PRODUCT_BUNDLE_IDENTIFIER = "Nelson-Computers.PrivateLift.PrivateLiftWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
 		};
 		277DFDF82FCC95CB00D40D44 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -442,11 +601,12 @@
 				INFOPLIST_FILE = PrivateLift/PrivateLift/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = PersonalLift;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "Nelson-Computers.PrivateLift";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -474,11 +634,12 @@
 				INFOPLIST_FILE = PrivateLift/PrivateLift/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = PersonalLift;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "Nelson-Computers.PrivateLift";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -507,7 +668,7 @@
 				INFOPLIST_KEY_WKApplication = YES;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "Nelson-Computers.PrivateLift";
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "Nelson-Computers.PrivateLift.watchkitapp";
 				PRODUCT_NAME = PersonalLiftWatch;
 				SDKROOT = watchos;
@@ -523,6 +684,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		2726C04C2FDF0DFF00DF2EEB /* Build configuration list for PBXNativeTarget "PrivateLiftWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2726C04A2FDF0DFF00DF2EEB /* Debug */,
+				2726C04B2FDF0DFF00DF2EEB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		277DFDEA2FCC95C900D40D44 /* Build configuration list for PBXProject "PrivateLift" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

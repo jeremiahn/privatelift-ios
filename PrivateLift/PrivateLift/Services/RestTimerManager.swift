@@ -1,6 +1,9 @@
 import Foundation
 import Combine
 import UserNotifications
+#if canImport(UIKit)
+import UIKit
+#endif
 #if canImport(ActivityKit)
 import ActivityKit
 #endif
@@ -31,6 +34,27 @@ class RestTimerManager: ObservableObject {
     private var activeActivity: Activity<RestTimerAttributes>?
     #endif
     
+    #if os(iOS)
+    private var backgroundTaskId: UIBackgroundTaskIdentifier = .invalid
+    #endif
+    
+    private init() {
+        #if os(iOS)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(didEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(willEnterForeground),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+        #endif
+    }
+    
     func startTimer(duration: TimeInterval = 180, allowNotifications: Bool = true, hapticsEnabled: Bool = true) {
         self.hapticsEnabled = hapticsEnabled
         timerEndTime = Date().addingTimeInterval(duration)
@@ -43,16 +67,24 @@ class RestTimerManager: ObservableObject {
                 guard let self = self, let endTime = self.timerEndTime else { return }
                 let remaining = endTime.timeIntervalSince(now)
                 if remaining <= 0 {
-                    self.stopTimer()
+                    // Timer finished naturally: clear state without canceling the pending notification request
+                    self.isActive = false
+                    self.cancellable = nil
+                    self.timerEndTime = nil
+                    #if canImport(ActivityKit)
+                    self.endLiveActivity()
+                    #endif
+                    #if os(iOS)
+                    self.endBackgroundTask()
+                    #endif
                     self.triggerNotification()
                 } else {
                     self.timeRemaining = remaining
                 }
             }
-            
-        if allowNotifications {
-            scheduleRestNotification(in: duration)
-        }
+        
+        // Always schedule the local notification for rest completion
+        scheduleRestNotification(in: duration, totalDuration: duration)
         
         #if canImport(ActivityKit)
         startLiveActivity(endTime: timerEndTime!)
@@ -69,20 +101,101 @@ class RestTimerManager: ObservableObject {
         #if canImport(ActivityKit)
         endLiveActivity()
         #endif
+        
+        #if os(iOS)
+        endBackgroundTask()
+        #endif
     }
     
-    private func scheduleRestNotification(in seconds: TimeInterval) {
+    #if os(iOS)
+    @objc private func didEnterBackground() {
+        guard isActive, timerEndTime != nil else { return }
+        
+        // Start background task to keep timer running and update Live Activity
+        backgroundTaskId = UIApplication.shared.beginBackgroundTask(withName: "RestTimerBackground") { [weak self] in
+            self?.handleBackgroundExpiration()
+        }
+    }
+    
+    @objc private func willEnterForeground() {
+        // End background task if it was running
+        endBackgroundTask()
+        
+        // Re-create/update Live Activity if the timer is still active
+        #if canImport(ActivityKit)
+        if isActive, let endTime = timerEndTime, endTime > Date() {
+            startLiveActivity(endTime: endTime)
+        }
+        #endif
+    }
+    
+    private func endBackgroundTask() {
+        if backgroundTaskId != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTaskId)
+            backgroundTaskId = .invalid
+        }
+    }
+    
+    private func handleBackgroundExpiration() {
+        // Background time ran out, end the Live Activity with a scheduled dismissal at endTime
+        #if canImport(ActivityKit)
+        if let endTime = timerEndTime {
+            endLiveActivity(at: endTime)
+        } else {
+            endLiveActivity()
+        }
+        #endif
+        endBackgroundTask()
+    }
+    #endif
+    
+    private func scheduleRestNotification(in seconds: TimeInterval, totalDuration: TimeInterval) {
+        let center = UNUserNotificationCenter.current()
+        
+        // Check current authorization status and request if needed
+        center.getNotificationSettings { settings in
+            print("[RestTimer] Notification auth status: \(settings.authorizationStatus.rawValue) (0=notDetermined, 1=denied, 2=authorized, 3=provisional)")
+            
+            switch settings.authorizationStatus {
+            case .notDetermined:
+                // Request permission, then schedule
+                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                    print("[RestTimer] Notification permission requested. Granted: \(granted), Error: \(String(describing: error))")
+                    if granted {
+                        self.doScheduleNotification(center: center, seconds: seconds, totalDuration: totalDuration)
+                    }
+                }
+            case .authorized, .provisional, .ephemeral:
+                self.doScheduleNotification(center: center, seconds: seconds, totalDuration: totalDuration)
+            case .denied:
+                print("[RestTimer] Notifications are DENIED in iOS Settings. User must enable them in Settings > PersonalLift > Notifications.")
+            @unknown default:
+                self.doScheduleNotification(center: center, seconds: seconds, totalDuration: totalDuration)
+            }
+        }
+    }
+    
+    private func doScheduleNotification(center: UNUserNotificationCenter, seconds: TimeInterval, totalDuration: TimeInterval) {
+        let minutes = Int(totalDuration) / 60
+        let secs = Int(totalDuration) % 60
+        let durationString = minutes > 0
+            ? (secs > 0 ? "\(minutes):\(String(format: "%02d", secs))" : "\(minutes) min")
+            : "\(secs) sec"
+
         let content = UNMutableNotificationContent()
-        content.title = "Rest Completed!"
-        content.body = "Time for your next set."
+        content.title = "Rest Complete ✅"
+        content.body = "Your \(durationString) rest is up — time for your next set!"
         content.sound = .default
+        content.interruptionLevel = .timeSensitive
         
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: false)
         let request = UNNotificationRequest(identifier: "rest_timer_end", content: content, trigger: trigger)
         
-        UNUserNotificationCenter.current().add(request) { error in
+        center.add(request) { error in
             if let error = error {
-                print("Error scheduling local rest notification: \(error.localizedDescription)")
+                print("[RestTimer] ❌ Error scheduling notification: \(error.localizedDescription)")
+            } else {
+                print("[RestTimer] ✅ Notification scheduled for \(seconds)s from now")
             }
         }
     }
@@ -93,11 +206,50 @@ class RestTimerManager: ObservableObject {
     
     #if canImport(ActivityKit)
     private func startLiveActivity(endTime: Date) {
-        // Disabled for now
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            print("Live Activities are not enabled.")
+            return
+        }
+        
+        let attributes = RestTimerAttributes(timerName: "Rest")
+        let contentState = RestTimerAttributes.ContentState(endTime: endTime)
+        let content = ActivityContent(state: contentState, staleDate: nil)
+        
+        do {
+            // End any existing activity first to avoid multiples
+            endLiveActivity()
+            
+            let activity = try Activity<RestTimerAttributes>.request(
+                attributes: attributes,
+                content: content,
+                pushType: nil
+            )
+            self.activeActivity = activity
+            print("Successfully started live activity: \(activity.id)")
+        } catch {
+            print("Failed to start live activity: \(error.localizedDescription)")
+        }
     }
     
-    private func endLiveActivity() {
-        // Disabled for now
+    private func endLiveActivity(at endTime: Date? = nil) {
+        guard let activity = activeActivity else { return }
+        
+        // Clear reference immediately so subsequent calls don't see or end this activity again
+        self.activeActivity = nil
+        
+        let finalState = RestTimerAttributes.ContentState(endTime: endTime ?? Date())
+        let finalContent = ActivityContent(state: finalState, staleDate: nil)
+        
+        let dismissalPolicy: ActivityUIDismissalPolicy
+        if let endTime = endTime {
+            dismissalPolicy = .after(endTime)
+        } else {
+            dismissalPolicy = .immediate
+        }
+        
+        Task {
+            await activity.end(finalContent, dismissalPolicy: dismissalPolicy)
+        }
     }
     #endif
 }

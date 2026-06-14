@@ -21,16 +21,11 @@ struct SkipTimerIntent: LiveActivityIntent {
     init() {}
     
     func perform() async throws -> some IntentResult {
-        // Since it runs in the main app process, it updates our active singleton
-        await MainActor.run {
-            RestTimerManager.shared.stopTimer()
-        }
         return .result()
     }
 }
 
 // MARK: - Live Activity Widget Configuration
-@main
 struct PrivateLiftWidgetLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RestTimerAttributes.self) { context in
