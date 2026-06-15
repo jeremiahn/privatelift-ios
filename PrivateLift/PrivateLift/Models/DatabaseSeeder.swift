@@ -8,12 +8,82 @@ struct DatabaseSeeder {
         do {
             let existingPrefs = try context.fetch(FetchDescriptor<UserPreferences>())
             if existingPrefs.isEmpty {
-                context.insert(UserPreferences())
+                let prefs = UserPreferences()
+                prefs.isOnboarded = true // Bypass onboarding for screenshots
+                context.insert(prefs)
                 try context.save()
-                print("Default user preferences seeded successfully.")
+                print("Default user preferences seeded successfully (onboarded=true).")
+            } else {
+                for prefs in existingPrefs {
+                    if !prefs.isOnboarded {
+                        prefs.isOnboarded = true
+                    }
+                }
+                try context.save()
             }
         } catch {
             print("Error checking/seeding user preferences: \(error)")
+        }
+
+        // 1.5 Seed historical workout data if none exist
+        do {
+            let existingSessions = try context.fetch(FetchDescriptor<WorkoutSession>())
+            if existingSessions.isEmpty {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd"
+                
+                let calendar = Calendar.current
+                let today = Date()
+                
+                let sessionData = [
+                    (daysAgo: 12, squat: 225.0, bench: 135.0, deadlift: 275.0),
+                    (daysAgo: 10, squat: 245.0, bench: 155.0, deadlift: 315.0),
+                    (daysAgo: 8, squat: 275.0, bench: 175.0, deadlift: 345.0),
+                    (daysAgo: 5, squat: 285.0, bench: 185.0, deadlift: 365.0),
+                    (daysAgo: 3, squat: 300.0, bench: 195.0, deadlift: 385.0),
+                    (daysAgo: 1, squat: 315.0, bench: 225.0, deadlift: 405.0),
+                ]
+                
+                for data in sessionData {
+                    guard let date = calendar.date(byAdding: .day, value: -data.daysAgo, to: today) else { continue }
+                    let dateString = formatter.string(from: date)
+                    let session = WorkoutSession(dateString: dateString, notes: "Felt strong during this workout!")
+                    context.insert(session)
+                    
+                    // Add sets
+                    // Squat sets
+                    let s1 = WorkoutSet(exercise: "SQUAT", weight: data.squat - 40, reps: 5, rpe: 6.0, setType: "warmup", timestamp: date)
+                    let s2 = WorkoutSet(exercise: "SQUAT", weight: data.squat - 20, reps: 5, rpe: 7.0, setType: "warmup", timestamp: date)
+                    let s3 = WorkoutSet(exercise: "SQUAT", weight: data.squat, reps: 5, rpe: 8.5, setType: "working", timestamp: date)
+                    s1.session = session
+                    s2.session = session
+                    s3.session = session
+                    context.insert(s1)
+                    context.insert(s2)
+                    context.insert(s3)
+                    
+                    // Bench sets
+                    let b1 = WorkoutSet(exercise: "BENCH", weight: data.bench - 20, reps: 5, rpe: 7.0, setType: "warmup", timestamp: date)
+                    let b2 = WorkoutSet(exercise: "BENCH", weight: data.bench, reps: 5, rpe: 8.5, setType: "working", timestamp: date)
+                    b1.session = session
+                    b2.session = session
+                    context.insert(b1)
+                    context.insert(b2)
+                    
+                    // Deadlift sets
+                    let d1 = WorkoutSet(exercise: "DEADLIFT", weight: data.deadlift - 40, reps: 5, rpe: 7.0, setType: "warmup", timestamp: date)
+                    let d2 = WorkoutSet(exercise: "DEADLIFT", weight: data.deadlift, reps: 5, rpe: 8.0, setType: "working", timestamp: date)
+                    d1.session = session
+                    d2.session = session
+                    context.insert(d1)
+                    context.insert(d2)
+                }
+                
+                try context.save()
+                print("Seeded mock workout sessions successfully.")
+            }
+        } catch {
+            print("Error seeding mock workout sessions: \(error)")
         }
 
         // 2. Seed the three default powerlifting exercises — only if each is missing by name.

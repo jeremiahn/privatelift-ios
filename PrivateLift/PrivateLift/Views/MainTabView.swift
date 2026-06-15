@@ -38,24 +38,28 @@ struct MainTabView: View {
                         Label("Dashboard", systemImage: "square.grid.2x2.fill")
                     }
                     .tag(0)
+                    .keyboardShortcut("1", modifiers: .command)
                 
                 StatsView()
                     .tabItem {
                         Label("Stats", systemImage: "chart.bar.fill")
                     }
                     .tag(1)
+                    .keyboardShortcut("2", modifiers: .command)
                 
                 HistoryView()
                     .tabItem {
                         Label("History", systemImage: "calendar")
                     }
                     .tag(2)
+                    .keyboardShortcut("3", modifiers: .command)
                 
                 SettingsView(healthService: healthKitService)
                     .tabItem {
                         Label("Settings", systemImage: "gearshape.fill")
                     }
                     .tag(3)
+                    .keyboardShortcut("4", modifiers: .command)
             }
             .tint(brandColors.blue)
             

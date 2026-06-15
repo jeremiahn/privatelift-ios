@@ -52,6 +52,12 @@ class RestTimerManager: ObservableObject {
             name: UIApplication.willEnterForegroundNotification,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleSkipNotification),
+            name: Notification.Name("SkipRestTimerNotification"),
+            object: nil
+        )
         #endif
     }
     
@@ -232,8 +238,6 @@ class RestTimerManager: ObservableObject {
     }
     
     private func endLiveActivity(at endTime: Date? = nil) {
-        guard let activity = activeActivity else { return }
-        
         // Clear reference immediately so subsequent calls don't see or end this activity again
         self.activeActivity = nil
         
@@ -247,11 +251,20 @@ class RestTimerManager: ObservableObject {
             dismissalPolicy = .immediate
         }
         
-        Task {
-            await activity.end(finalContent, dismissalPolicy: dismissalPolicy)
+        // Terminate all active Live Activities of this type on the system
+        for activity in Activity<RestTimerAttributes>.activities {
+            Task {
+                await activity.end(finalContent, dismissalPolicy: dismissalPolicy)
+            }
         }
     }
     #endif
+    
+    @objc private func handleSkipNotification() {
+        Task { @MainActor in
+            self.stopTimer()
+        }
+    }
 }
 
 #if canImport(AppIntents) && canImport(ActivityKit)
@@ -262,9 +275,7 @@ struct SkipTimerIntent: LiveActivityIntent {
     init() {}
     
     func perform() async throws -> some IntentResult {
-        await MainActor.run {
-            RestTimerManager.shared.stopTimer()
-        }
+        NotificationCenter.default.post(name: Notification.Name("SkipRestTimerNotification"), object: nil)
         return .result()
     }
 }

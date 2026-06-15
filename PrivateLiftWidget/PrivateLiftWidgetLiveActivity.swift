@@ -21,6 +21,7 @@ struct SkipTimerIntent: LiveActivityIntent {
     init() {}
     
     func perform() async throws -> some IntentResult {
+        NotificationCenter.default.post(name: Notification.Name("SkipRestTimerNotification"), object: nil)
         return .result()
     }
 }

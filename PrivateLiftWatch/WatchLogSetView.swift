@@ -33,6 +33,9 @@ struct WatchLogSetView: View {
         if selectedExercise.isEmpty, let first = connectivity.exercises.first {
             selectedExercise = first["name"] ?? ""
         }
+        if weight == 135 && connectivity.weightUnit == "kg" {
+            weight = 60
+        }
     }
 
     private var savedConfirmation: some View {
@@ -46,7 +49,7 @@ struct WatchLogSetView: View {
             Text(displayNameFor(selectedExercise))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-            Text("\(Int(weight)) lbs × \(reps)")
+            Text("\(Int(weight)) \(connectivity.weightUnit) × \(reps)")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(.blue)
 
@@ -88,7 +91,7 @@ struct WatchLogSetView: View {
 
             // Weight
             VStack(alignment: .leading, spacing: 2) {
-                Text("WEIGHT (LBS)")
+                Text("WEIGHT (\(connectivity.weightUnit.uppercased()))")
                     .font(.system(size: 9, weight: .heavy))
                     .foregroundStyle(.secondary)
                     .tracking(1)

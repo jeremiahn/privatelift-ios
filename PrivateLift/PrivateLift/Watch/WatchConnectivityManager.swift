@@ -104,9 +104,13 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
         let summary = fetchTodaySummary()
         let exercises = fetchExercises()
         
+        let prefsFetch = FetchDescriptor<UserPreferences>()
+        let weightUnit = (try? modelContext?.fetch(prefsFetch))?.first?.weightUnit ?? "lbs"
+        
         let payload: [String: Any] = [
             "todaySummary": summary,
-            "exercises": exercises
+            "exercises": exercises,
+            "weightUnit": weightUnit
         ]
         
         do {

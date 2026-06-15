@@ -10,6 +10,7 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObj
     @Published var setCount: Int = 0
     @Published var totalWeight: Double = 0.0
     @Published var exercises: [[String: String]] = []
+    @Published var weightUnit: String = "lbs"
     @Published var isActivated = false
     
     private override init() {
@@ -45,6 +46,9 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObj
     }
     
     private func processApplicationContext(_ context: [String: Any]) {
+        if let unit = context["weightUnit"] as? String {
+            self.weightUnit = unit
+        }
         if let summary = context["todaySummary"] as? [String: Any] {
             if let countNum = summary["setCount"] as? NSNumber {
                 self.setCount = countNum.intValue

@@ -123,8 +123,13 @@ struct ManageExercisesView: View {
             }, activePrefs: activePrefs, brandColors: brandColors)
         }
         .sheet(item: $selectedExerciseToEdit) { exercise in
-            EditExerciseSheet(exercise: exercise, exercises: exercises, onSave: {
+            EditExerciseSheet(exercise: exercise, exercises: exercises, onSave: { oldName in
                 enforcePowerliftingUniqueness(for: exercise)
+                
+                let newName = exercise.name
+                if oldName != newName {
+                    updateWorkoutSetsAndTargets(from: oldName, to: newName)
+                }
                 
                 // Sync powerlift oneRepMax back to activePrefs
                 if exercise.isPowerlift, let type = exercise.powerliftType {
@@ -139,6 +144,22 @@ struct ManageExercisesView: View {
                 
                 try? modelContext.save()
             }, activePrefs: activePrefs, brandColors: brandColors)
+        }
+    }
+    
+    private func updateWorkoutSetsAndTargets(from oldName: String, to newName: String) {
+        let setFetch = FetchDescriptor<WorkoutSet>(predicate: #Predicate { $0.exercise == oldName })
+        if let sets = try? modelContext.fetch(setFetch) {
+            for s in sets {
+                s.exercise = newName
+            }
+        }
+        
+        let targetFetch = FetchDescriptor<RoutineExerciseTarget>(predicate: #Predicate { $0.exercise == oldName })
+        if let targets = try? modelContext.fetch(targetFetch) {
+            for t in targets {
+                t.exercise = newName
+            }
         }
     }
     
@@ -342,7 +363,7 @@ struct EditExerciseSheet: View {
     
     var exercise: CustomExercise
     var exercises: [CustomExercise]
-    var onSave: () -> Void
+    var onSave: (String) -> Void
     var activePrefs: UserPreferences
     var brandColors: BrandColors
     
@@ -364,7 +385,7 @@ struct EditExerciseSheet: View {
         ("#eab308", "Yellow")
     ]
     
-    init(exercise: CustomExercise, exercises: [CustomExercise], onSave: @escaping () -> Void, activePrefs: UserPreferences, brandColors: BrandColors) {
+    init(exercise: CustomExercise, exercises: [CustomExercise], onSave: @escaping (String) -> Void, activePrefs: UserPreferences, brandColors: BrandColors) {
         self.exercise = exercise
         self.exercises = exercises
         self.onSave = onSave
@@ -481,6 +502,7 @@ struct EditExerciseSheet: View {
                         }
                         
                         let maxWeight = Double(oneRepMaxString) ?? 0.0
+                        let oldName = exercise.name
                         
                         exercise.displayName = name
                         exercise.name = name.uppercased()
@@ -489,7 +511,7 @@ struct EditExerciseSheet: View {
                         exercise.isPowerlift = isPowerlift
                         exercise.powerliftType = isPowerlift ? powerliftType : nil
                         
-                        onSave()
+                        onSave(oldName)
                         dismiss()
                     }
                     .fontWeight(.black)

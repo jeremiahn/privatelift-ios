@@ -190,14 +190,19 @@ struct SettingsView: View {
     
     private var appPreferencesSection: some View {
         Section(header: Text("APP PREFERENCES").font(.system(size: 10, weight: .black))) {
-            Picker("Weight Unit", selection: Bindable(activePrefs).weightUnit) {
+            Picker("Weight Unit", selection: Binding(
+                get: { activePrefs.weightUnit },
+                set: { newValue in
+                    let oldValue = activePrefs.weightUnit
+                    guard oldValue != newValue else { return }
+                    activePrefs.weightUnit = newValue
+                    convertDatabaseUnits(targetUnit: newValue)
+                }
+            )) {
                 Text("LBS").tag("lbs")
                 Text("KG").tag("kg")
             }
             .pickerStyle(.segmented)
-            .onChange(of: activePrefs.weightUnit) { oldValue, newValue in
-                convertDatabaseUnits(targetUnit: newValue)
-            }
             
             VStack(alignment: .leading, spacing: 6) {
                 Toggle("Apple Health Sync", isOn: Bindable(activePrefs).appleHealthEnabled)

@@ -3,6 +3,7 @@ import SwiftUI
 
 /// Displays today's workout summary, fetched from the companion iPhone app.
 struct WatchDashboardView: View {
+    @State private var isNavigatingToLogSet = false
     @ObservedObject private var connectivity = WatchConnectivityManager.shared
 
     var body: some View {
@@ -44,7 +45,7 @@ struct WatchDashboardView: View {
                                 Text("\(Int(connectivity.totalWeight).formatted())")
                                     .font(.system(size: 24, weight: .bold, design: .rounded))
                                     .foregroundStyle(.blue)
-                                Text("lbs total volume")
+                                Text("\(connectivity.weightUnit) total volume")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
@@ -52,9 +53,9 @@ struct WatchDashboardView: View {
                         .padding(.horizontal, 4)
 
                         // Log Set button
-                        NavigationLink {
-                            WatchLogSetView()
-                        } label: {
+                        Button(action: {
+                            isNavigatingToLogSet = true
+                        }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.caption)
@@ -70,6 +71,17 @@ struct WatchDashboardView: View {
                         .buttonStyle(.plain)
                         .padding(.top, 4)
                     }
+                }
+                .navigationDestination(isPresented: $isNavigatingToLogSet) {
+                    WatchLogSetView()
+                }
+            }
+        }
+        .onAppear {
+            // ponytail: auto-navigate in simulator screenshot automation
+            if UserDefaults.standard.bool(forKey: "TakeWatchScreenshots") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                    self.isNavigatingToLogSet = true
                 }
             }
         }
