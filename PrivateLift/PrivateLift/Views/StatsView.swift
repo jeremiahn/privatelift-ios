@@ -204,27 +204,7 @@ struct StatsView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     
-                    // 1. Lifetime Totals Grid
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("LIFETIME TOTALS")
-                            .font(.system(size: 11, weight: .black))
-                            .foregroundColor(brandColors.blue)
-                            .tracking(2.0)
-                        
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                            statBox(title: "TOTAL VOLUME", value: String(format: "%.0f", totalTonnage), unit: activePrefs.weightUnit, color: brandColors.blue)
-                            statBox(title: "SESSIONS", value: "\(totalSessions)", unit: "COMPLETED", color: brandColors.purple)
-                            
-                            if activePrefs.gender != "other" {
-                                statBox(title: "WILKS SCORE", value: String(format: "%.1f", wilksScore), unit: "PTS", color: brandColors.teal)
-                                statBox(title: "DOTS SCORE", value: String(format: "%.1f", dotsScore), unit: "PTS", color: brandColors.green)
-                            }
-                        }
-                    }
-                    .padding(20)
-                    .glassCard(style: themeStyle)
-                    
-                    // 2. Personal Records Grid (Dynamic)
+                    // 1. Personal Records Grid (Dynamic)
                     VStack(alignment: .leading, spacing: 16) {
                         Text("PERSONAL RECORDS")
                             .font(.system(size: 11, weight: .black))
@@ -247,7 +227,7 @@ struct StatsView: View {
                     .padding(20)
                     .glassCard(style: themeStyle)
                     
-                    // 4. Volume Breakdown bars (Dynamic)
+                    // 2. Volume Breakdown bars (Dynamic)
                     VStack(alignment: .leading, spacing: 16) {
                         Text("WEEKLY VOLUME BREAKDOWN")
                             .font(.system(size: 11, weight: .black))
@@ -263,6 +243,26 @@ struct StatsView: View {
                                 let weight = sets.reduce(0.0) { $0 + ($1.weight * Double($1.reps)) }
                                 let barColor = themeStyle == .night ? Color.plGray400 : Color(hex: exercise.colorHex)
                                 volumeBar(title: exercise.displayName.uppercased(), count: count, reps: reps, weight: weight, color: barColor)
+                            }
+                        }
+                    }
+                    .padding(20)
+                    .glassCard(style: themeStyle)
+
+                    // 3. Lifetime Totals Grid
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("LIFETIME TOTALS")
+                            .font(.system(size: 11, weight: .black))
+                            .foregroundColor(brandColors.blue)
+                            .tracking(2.0)
+                        
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                            statBox(title: "TOTAL VOLUME", value: String(format: "%.0f", totalTonnage), unit: activePrefs.weightUnit, color: brandColors.blue)
+                            statBox(title: "SESSIONS", value: "\(totalSessions)", unit: "COMPLETED", color: brandColors.purple)
+                            
+                            if activePrefs.gender != "other" {
+                                statBox(title: "WILKS SCORE", value: String(format: "%.1f", wilksScore), unit: "PTS", color: brandColors.teal)
+                                statBox(title: "DOTS SCORE", value: String(format: "%.1f", dotsScore), unit: "PTS", color: brandColors.green)
                             }
                         }
                     }
