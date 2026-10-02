@@ -42,3 +42,5 @@ local.properties
 # PrivateLift custom ignores
 build_ios.log
 test_model_config
+simulator_stats_screen.png
+*.xcuserdatad/

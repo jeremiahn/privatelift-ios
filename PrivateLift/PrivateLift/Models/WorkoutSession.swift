@@ -15,9 +15,13 @@ final class WorkoutSession {
         self.sets = []
     }
     
-    var date: Date {
+    private static let dayFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: dateString) ?? Date()
+        return formatter
+    }()
+    
+    var date: Date {
+        Self.dayFormatter.date(from: dateString) ?? Date()
     }
 }

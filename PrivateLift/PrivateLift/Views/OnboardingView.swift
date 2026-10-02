@@ -861,7 +861,7 @@ struct OnboardingView: View {
                         if !authorized {
                             prefs.appleHealthEnabled = false
                             try? modelContext.save()
-                            print("Apple Health authorization was not granted during onboarding.")
+                            debugLog("Apple Health authorization was not granted during onboarding.")
                         }
                         HapticService.play(.success)
                         isPresented = false
@@ -872,7 +872,7 @@ struct OnboardingView: View {
                 isPresented = false
             }
         } catch {
-            print("Failed to save onboarding benchmarks: \(error)")
+            debugLog("Failed to save onboarding benchmarks: \(error)")
         }
     }
 }

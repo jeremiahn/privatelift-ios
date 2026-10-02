@@ -59,18 +59,17 @@ struct DashboardView: View {
         }
     }
     
-    // Cached formatter — DateFormatter is expensive to allocate
-    private static let dayFormatter: DateFormatter = {
+    private func makeDayFormatter() -> DateFormatter {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
+        if let timeZone = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
+            f.timeZone = timeZone
+        }
         return f
-    }()
+    }
 
     var todayString: String {
-        if let timeZone = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
-            DashboardView.dayFormatter.timeZone = timeZone
-        }
-        return DashboardView.dayFormatter.string(from: Date())
+        return makeDayFormatter().string(from: Date())
     }
     
     var todaySets: [WorkoutSet] {
@@ -805,7 +804,7 @@ struct DashboardView: View {
                 )
             }
         } catch {
-            print("Failed to save logged set: \(error)")
+            debugLog("Failed to save logged set: \(error)")
         }
     }
     

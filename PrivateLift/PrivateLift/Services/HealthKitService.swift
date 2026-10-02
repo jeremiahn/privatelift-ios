@@ -31,7 +31,7 @@ class HealthKitService: ObservableObject {
             }
             return authorized
         } catch {
-            print("HealthKit Authorization Failed: \(error.localizedDescription)")
+            debugLog("HealthKit Authorization Failed: \(error.localizedDescription)")
             return false
         }
     }
@@ -81,7 +81,7 @@ class HealthKitService: ObservableObject {
             _ = try await builder.finishWorkout()
             return true
         } catch {
-            print("Error saving workout to Apple Health: \(error.localizedDescription)")
+            debugLog("Error saving workout to Apple Health: \(error.localizedDescription)")
             return false
         }
     }
@@ -100,7 +100,7 @@ class HealthKitService: ObservableObject {
             try await healthStore.save(weightSample)
             return true
         } catch {
-            print("Failed to save weight sample to Apple Health: \(error.localizedDescription)")
+            debugLog("Failed to save weight sample to Apple Health: \(error.localizedDescription)")
             return false
         }
     }

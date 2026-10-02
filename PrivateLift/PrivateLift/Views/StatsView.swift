@@ -53,20 +53,19 @@ struct StatsView: View {
         return cal
     }
 
-    // Cached formatter — DateFormatter is expensive to allocate
-    private static let dayFormatter: DateFormatter = {
+    private func makeDayFormatter() -> DateFormatter {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
+        if let tz = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
+            f.timeZone = tz
+        }
         return f
-    }()
+    }
 
     var currentWeekSets: [WorkoutSet] {
         let cal = userCalendar
         let now = Date()
-        let formatter = StatsView.dayFormatter
-        if let tz = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
-            formatter.timeZone = tz
-        }
+        let formatter = makeDayFormatter()
         guard let interval = cal.dateInterval(of: .weekOfYear, for: now) else { return [] }
         return allSets.filter { set in
             guard let dateStr = set.session?.dateString,

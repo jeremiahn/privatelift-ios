@@ -115,9 +115,9 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
         
         do {
             try session.updateApplicationContext(payload)
-            print("WatchConnectivityManager: successfully updated application context on watch: \(payload)")
+            debugLog("WatchConnectivityManager: successfully updated application context on watch: \(payload)")
         } catch {
-            print("WatchConnectivityManager: failed to update application context: \(error.localizedDescription)")
+            debugLog("WatchConnectivityManager: failed to update application context: \(error.localizedDescription)")
         }
     }
 
@@ -154,27 +154,27 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
     @MainActor
     private func saveSetFromWatch(_ message: [String: Any]) {
         guard let context = modelContext else {
-            print("WatchConnectivityManager Error: modelContext is nil")
+            debugLog("WatchConnectivityManager Error: modelContext is nil")
             return
         }
         guard let exercise = message["exercise"] as? String else {
-            print("WatchConnectivityManager Error: 'exercise' is missing or not a String in message: \(message)")
+            debugLog("WatchConnectivityManager Error: 'exercise' is missing or not a String in message: \(message)")
             return
         }
         guard let weightNum = message["weight"] as? NSNumber else {
-            print("WatchConnectivityManager Error: 'weight' is missing or not a number in message: \(message)")
+            debugLog("WatchConnectivityManager Error: 'weight' is missing or not a number in message: \(message)")
             return
         }
         guard let repsNum = message["reps"] as? NSNumber else {
-            print("WatchConnectivityManager Error: 'reps' is missing or not a number in message: \(message)")
+            debugLog("WatchConnectivityManager Error: 'reps' is missing or not a number in message: \(message)")
             return
         }
         guard let rpeNum = message["rpe"] as? NSNumber else {
-            print("WatchConnectivityManager Error: 'rpe' is missing or not a number in message: \(message)")
+            debugLog("WatchConnectivityManager Error: 'rpe' is missing or not a number in message: \(message)")
             return
         }
         guard let setType = message["setType"] as? String else {
-            print("WatchConnectivityManager Error: 'setType' is missing or not a String in message: \(message)")
+            debugLog("WatchConnectivityManager Error: 'setType' is missing or not a String in message: \(message)")
             return
         }
 
@@ -206,9 +206,9 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
             newSet.session = session
             context.insert(newSet)
             try context.save()
-            print("WatchConnectivityManager: saved set logged from watch: \(exercise) \(weight)x\(reps)")
+            debugLog("WatchConnectivityManager: saved set logged from watch: \(exercise) \(weight)x\(reps)")
         } catch {
-            print("WatchConnectivityManager: failed to save watch set: \(error.localizedDescription)")
+            debugLog("WatchConnectivityManager: failed to save watch set: \(error.localizedDescription)")
         }
     }
 }

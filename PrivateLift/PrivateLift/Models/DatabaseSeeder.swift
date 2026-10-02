@@ -4,16 +4,22 @@ import SwiftData
 @MainActor
 struct DatabaseSeeder {
     static func seedDataIfNeeded(context: ModelContext) {
+        let isScreenshotMode = CommandLine.arguments.contains("-seedScreenshots") ||
+                               UserDefaults.standard.bool(forKey: "SeedScreenshots") ||
+                               UserDefaults.standard.bool(forKey: "FASTLANE_SNAPSHOT")
+
         // 1. Seed Preferences if none exist
         do {
             let existingPrefs = try context.fetch(FetchDescriptor<UserPreferences>())
             if existingPrefs.isEmpty {
                 let prefs = UserPreferences()
-                prefs.isOnboarded = true // Bypass onboarding for screenshots
+                if isScreenshotMode {
+                    prefs.isOnboarded = true // Bypass onboarding for screenshots
+                }
                 context.insert(prefs)
                 try context.save()
-                print("Default user preferences seeded successfully (onboarded=true).")
-            } else {
+                debugLog("Default user preferences seeded successfully (onboarded=\(prefs.isOnboarded)).")
+            } else if isScreenshotMode {
                 for prefs in existingPrefs {
                     if !prefs.isOnboarded {
                         prefs.isOnboarded = true
@@ -22,22 +28,23 @@ struct DatabaseSeeder {
                 try context.save()
             }
         } catch {
-            print("Error checking/seeding user preferences: \(error)")
+            debugLog("Error checking/seeding user preferences: \(error)")
         }
 
-        // 1.5 Seed historical workout data if none exist
-        do {
-            let existingSessions = try context.fetch(FetchDescriptor<WorkoutSession>())
-            if existingSessions.isEmpty {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy-MM-dd"
-                
-                let calendar = Calendar.current
-                let today = Date()
-                
-                let sessionData = [
-                    (daysAgo: 12, squat: 225.0, bench: 135.0, deadlift: 275.0),
-                    (daysAgo: 10, squat: 245.0, bench: 155.0, deadlift: 315.0),
+        // 1.5 Seed historical workout data if in screenshot mode and none exist
+        if isScreenshotMode {
+            do {
+                let existingSessions = try context.fetch(FetchDescriptor<WorkoutSession>())
+                if existingSessions.isEmpty {
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "yyyy-MM-dd"
+                    
+                    let calendar = Calendar.current
+                    let today = Date()
+                    
+                    let sessionData = [
+                        (daysAgo: 12, squat: 225.0, bench: 135.0, deadlift: 275.0),
+                        (daysAgo: 10, squat: 245.0, bench: 155.0, deadlift: 315.0),
                     (daysAgo: 8, squat: 275.0, bench: 175.0, deadlift: 345.0),
                     (daysAgo: 5, squat: 285.0, bench: 185.0, deadlift: 365.0),
                     (daysAgo: 3, squat: 300.0, bench: 195.0, deadlift: 385.0),
@@ -80,10 +87,11 @@ struct DatabaseSeeder {
                 }
                 
                 try context.save()
-                print("Seeded mock workout sessions successfully.")
+                debugLog("Seeded mock workout sessions successfully.")
             }
         } catch {
-            print("Error seeding mock workout sessions: \(error)")
+            debugLog("Error seeding mock workout sessions: \(error)")
+        }
         }
 
         // 2. Seed the three default powerlifting exercises — only if each is missing by name.
@@ -119,12 +127,12 @@ struct DatabaseSeeder {
                         isPowerlift: true,
                         powerliftType: ex.type
                     ))
-                    print("Seeded missing exercise: \(ex.name)")
+                    debugLog("Seeded missing exercise: \(ex.name)")
                 }
             }
             try context.save()
         } catch {
-            print("Error checking/seeding custom exercises: \(error)")
+            debugLog("Error checking/seeding custom exercises: \(error)")
         }
 
         // 3. Seed Routine Templates if none exist
@@ -159,10 +167,10 @@ struct DatabaseSeeder {
                 }
 
                 try context.save()
-                print("Default routine templates seeded successfully.")
+                debugLog("Default routine templates seeded successfully.")
             }
         } catch {
-            print("Error checking/seeding routine templates: \(error)")
+            debugLog("Error checking/seeding routine templates: \(error)")
         }
 
         // 4. De-duplicate any existing exercises with the same name (safety net for
@@ -211,7 +219,7 @@ struct DatabaseSeeder {
         }
         if didDelete {
             try? context.save()
-            print("De-duplicated CustomExercise records.")
+            debugLog("De-duplicated CustomExercise records.")
         }
     }
 }

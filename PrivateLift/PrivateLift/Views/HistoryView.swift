@@ -88,12 +88,14 @@ struct HistoryView: View {
         let e1RM: Double
     }
     
-    // Cached formatter — DateFormatter is expensive to allocate
-    private static let dayFormatter: DateFormatter = {
+    private func makeDayFormatter() -> DateFormatter {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
+        if let tz = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
+            f.timeZone = tz
+        }
         return f
-    }()
+    }
 
     var chartPoints: [ChartDataPoint] {
         let formula = activePrefs.formula
@@ -111,10 +113,7 @@ struct HistoryView: View {
             }
         }
 
-        let formatter = HistoryView.dayFormatter
-        if let tz = TimeZone(identifier: activePrefs.timeZoneIdentifier) {
-            formatter.timeZone = tz
-        }
+        let formatter = makeDayFormatter()
 
         // Pre-build name -> displayName map for O(1) lookup in the loop below
         var displayNameMap: [String: String] = [:]

@@ -533,10 +533,10 @@ struct SettingsView: View {
             let payload = try JSONDecoder().decode(BackupPayload.self, from: data)
             
             // 1. Ingest settings
-            activePrefs.squatMax = payload.settings.squatMax
-            activePrefs.benchMax = payload.settings.benchMax
-            activePrefs.deadliftMax = payload.settings.deadliftMax
-            activePrefs.bodyWeight = payload.settings.bodyWeight
+            activePrefs.squatMax = max(0, min(payload.settings.squatMax, 2000.0))
+            activePrefs.benchMax = max(0, min(payload.settings.benchMax, 2000.0))
+            activePrefs.deadliftMax = max(0, min(payload.settings.deadliftMax, 2000.0))
+            activePrefs.bodyWeight = max(0, min(payload.settings.bodyWeight, 1000.0))
             activePrefs.gender = payload.settings.gender
             activePrefs.formula = payload.settings.formula ?? "epley"
             activePrefs.weightUnit = payload.settings.weightUnit
@@ -632,13 +632,18 @@ struct SettingsView: View {
                 guard columns.count >= 6 else { continue }
                 
                 let sDate = columns[0].trimmingCharacters(in: .whitespaces)
+                guard sDate.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil else { continue }
                 let exercise = columns[1].trimmingCharacters(in: .whitespaces).uppercased()
                 
-                guard let weight = Double(columns[2].trimmingCharacters(in: .whitespaces)),
-                      let reps = Int(columns[3].trimmingCharacters(in: .whitespaces)),
-                      let rpe = Double(columns[4].trimmingCharacters(in: .whitespaces)) else {
+                guard let rawWeight = Double(columns[2].trimmingCharacters(in: .whitespaces)),
+                      let rawReps = Int(columns[3].trimmingCharacters(in: .whitespaces)),
+                      let rawRpe = Double(columns[4].trimmingCharacters(in: .whitespaces)),
+                      rawWeight >= 0, rawReps >= 0 else {
                     continue
                 }
+                let weight = min(rawWeight, 2000.0)
+                let reps = min(rawReps, 1000)
+                let rpe = max(1.0, min(rawRpe, 10.0))
                 
                 let setType = columns[5].trimmingCharacters(in: .whitespaces)
                 
@@ -649,7 +654,7 @@ struct SettingsView: View {
                 modelContext.insert(session)
                 
                 if columns.count >= 7 {
-                    let notes = columns[6].trimmingCharacters(in: .whitespacesAndNewlines)
+                    let notes = columns[6...].joined(separator: ",").trimmingCharacters(in: .whitespacesAndNewlines)
                     if !notes.isEmpty {
                         session.notes = notes
                     }

@@ -55,7 +55,7 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
     private func loadOfflineWebAssets() {
                // Looks for index.html flat in the main app bundle root
                guard let url = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "web") else {
-                   print("Fatal Error: index.html not found in main app bundle root.")
+                   debugLog("Fatal Error: index.html not found in main app bundle root.")
                    return
                }   
         
@@ -131,7 +131,7 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
                     self.present(activityVC, animated: true, completion: nil)
                 }
             } catch {
-                print("Failed to save or share backup file: \(error)")
+                debugLog("Failed to save or share backup file: \(error)")
             }
         }
     }
@@ -232,9 +232,9 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
                 
                 try await builder.endCollection(at: workoutDate.addingTimeInterval(3 * 60))
                 _ = try await builder.finishWorkout()
-                print("Workout successfully saved to Apple Health!")
+                debugLog("Workout successfully saved to Apple Health!")
             } catch {
-                print("Error saving workout to Apple Health: \(error.localizedDescription)")
+                debugLog("Error saving workout to Apple Health: \(error.localizedDescription)")
             }
         }
     }
@@ -249,9 +249,9 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKUIDelegate {
         
         healthStore.save(weightSample) { (success, error) in
             if success {
-                print("Body Weight successfully updated in Apple Health!")
+                debugLog("Body Weight successfully updated in Apple Health!")
             } else {
-                print("Error saving weight to Apple Health: \(String(describing: error))")
+                debugLog("Error saving weight to Apple Health: \(String(describing: error))")
             }
         }
     }

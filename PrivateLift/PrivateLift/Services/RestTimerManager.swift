@@ -160,13 +160,13 @@ class RestTimerManager: ObservableObject {
         
         // Check current authorization status and request if needed
         center.getNotificationSettings { settings in
-            print("[RestTimer] Notification auth status: \(settings.authorizationStatus.rawValue) (0=notDetermined, 1=denied, 2=authorized, 3=provisional)")
+            debugLog("[RestTimer] Notification auth status: \(settings.authorizationStatus.rawValue) (0=notDetermined, 1=denied, 2=authorized, 3=provisional)")
             
             switch settings.authorizationStatus {
             case .notDetermined:
                 // Request permission, then schedule
                 center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-                    print("[RestTimer] Notification permission requested. Granted: \(granted), Error: \(String(describing: error))")
+                    debugLog("[RestTimer] Notification permission requested. Granted: \(granted), Error: \(String(describing: error))")
                     if granted {
                         self.doScheduleNotification(center: center, seconds: seconds, totalDuration: totalDuration)
                     }
@@ -174,7 +174,7 @@ class RestTimerManager: ObservableObject {
             case .authorized, .provisional, .ephemeral:
                 self.doScheduleNotification(center: center, seconds: seconds, totalDuration: totalDuration)
             case .denied:
-                print("[RestTimer] Notifications are DENIED in iOS Settings. User must enable them in Settings > PersonalLift > Notifications.")
+                debugLog("[RestTimer] Notifications are DENIED in iOS Settings. User must enable them in Settings > PersonalLift > Notifications.")
             @unknown default:
                 self.doScheduleNotification(center: center, seconds: seconds, totalDuration: totalDuration)
             }
@@ -199,9 +199,9 @@ class RestTimerManager: ObservableObject {
         
         center.add(request) { error in
             if let error = error {
-                print("[RestTimer] ❌ Error scheduling notification: \(error.localizedDescription)")
+                debugLog("[RestTimer] ❌ Error scheduling notification: \(error.localizedDescription)")
             } else {
-                print("[RestTimer] ✅ Notification scheduled for \(seconds)s from now")
+                debugLog("[RestTimer] ✅ Notification scheduled for \(seconds)s from now")
             }
         }
     }
@@ -213,7 +213,7 @@ class RestTimerManager: ObservableObject {
     #if canImport(ActivityKit)
     private func startLiveActivity(endTime: Date) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            print("Live Activities are not enabled.")
+            debugLog("Live Activities are not enabled.")
             return
         }
         
@@ -231,9 +231,9 @@ class RestTimerManager: ObservableObject {
                 pushType: nil
             )
             self.activeActivity = activity
-            print("Successfully started live activity: \(activity.id)")
+            debugLog("Successfully started live activity: \(activity.id)")
         } catch {
-            print("Failed to start live activity: \(error.localizedDescription)")
+            debugLog("Failed to start live activity: \(error.localizedDescription)")
         }
     }
     

@@ -22,7 +22,7 @@ class LegacyMigrationManager: NSObject, WKNavigationDelegate, WKScriptMessageHan
             return
         }
         
-        print("Starting legacy web data migration...")
+        debugLog("Starting legacy web data migration...")
         isMigrating = true
         
         // 1. Initialize modern WebView Configuration
@@ -37,7 +37,7 @@ class LegacyMigrationManager: NSObject, WKNavigationDelegate, WKScriptMessageHan
         
         // 3. Load flat HTML app to load Web sandbox data
         guard let url = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "web") else {
-            print("Migration Error: index.html not found in main app bundle.")
+            debugLog("Migration Error: index.html not found in main app bundle.")
             completeMigration(success: false, error: "Legacy asset files missing.")
             return
         }
@@ -180,7 +180,7 @@ class LegacyMigrationManager: NSObject, WKNavigationDelegate, WKScriptMessageHan
                         deadliftExercise.oneRepMax = settings.deadliftMax
                     }
                 } catch {
-                    print("Failed to sync exercises during migration: \(error)")
+                    debugLog("Failed to sync exercises during migration: \(error)")
                 }
             } else {
                 // If there is no settings payload, it means this was a fresh install with no legacy data.
@@ -223,7 +223,7 @@ class LegacyMigrationManager: NSObject, WKNavigationDelegate, WKScriptMessageHan
             try modelContext.save()
             completeMigration(success: true)
         } catch {
-            print("Failed to save legacy data inside SwiftData context: \(error)")
+            debugLog("Failed to save legacy data inside SwiftData context: \(error)")
             completeMigration(success: false, error: "Failed to persist database models.")
         }
     }
@@ -234,10 +234,10 @@ class LegacyMigrationManager: NSObject, WKNavigationDelegate, WKScriptMessageHan
         
         if success {
             UserDefaults.standard.set(true, forKey: "hasMigratedWebData")
-            print("Legacy web data migration completed successfully.")
+            debugLog("Legacy web data migration completed successfully.")
         } else {
             migrationError = error
-            print("Legacy web data migration failed: \(error ?? "Unknown error")")
+            debugLog("Legacy web data migration failed: \(error ?? "Unknown error")")
         }
     }
 }
