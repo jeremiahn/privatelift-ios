@@ -1,8 +1,8 @@
-# PrivateLift iOS & watchOS
+# Personal Lift iOS & watchOS
 
 > A privacy-first, 100% on-device strength training tracker and workout companion built with SwiftUI and SwiftData.
 
-PrivateLift is designed for lifters who want a powerful, streamlined workout tracker without subscriptions, ads, tracking, or cloud lock-in. All data lives locally on your device with optional private Apple iCloud sync.
+Personal Lift is designed for lifters who want a powerful, streamlined workout tracker without subscriptions, ads, tracking, or cloud lock-in. All data lives locally on your device with optional private Apple iCloud sync.
 
 ---
 

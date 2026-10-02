@@ -67,7 +67,7 @@ class HealthKitService: ObservableObject {
             }
 
             let metadata: [String: Any] = [
-                HKMetadataKeyWorkoutBrandName: "PersonalLift",
+                HKMetadataKeyWorkoutBrandName: "Personal Lift",
                 HKMetadataKeyIndoorWorkout: true,
                 "Exercise": exercise,
                 "Weight": "\(weight)",

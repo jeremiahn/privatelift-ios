@@ -71,8 +71,8 @@ struct PrivateLiftWidget: Widget {
                     .background()
             }
         }
-        .configurationDisplayName("My Widget")
-        .description("This is an example widget.")
+        .configurationDisplayName("Personal Lift")
+        .description("View your personal lifting stats and rest timer.")
     }
 }
 

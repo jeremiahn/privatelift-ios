@@ -147,7 +147,7 @@ struct DatabaseRecoveryView: View {
                 .font(.title)
                 .fontWeight(.black)
 
-            Text("PersonalLift encountered an unrecoverable database initialization error. You can copy the diagnostic details or reset your local database to recover.")
+            Text("Personal Lift encountered an unrecoverable database initialization error. You can copy the diagnostic details or reset your local database to recover.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
