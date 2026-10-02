@@ -11,7 +11,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Personal Lift</string>
+	<string>PersonalLift</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -19,7 +19,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Personal Lift</string>
+	<string>PersonalLift</string>
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
@@ -31,9 +31,9 @@
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.healthcare-fitness</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Personal Lift does not read data from Apple Health. It only writes workout records and related metrics.</string>
+	<string>PersonalLift does not read data from Apple Health. It only writes workout records and related metrics.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Personal Lift requires permission to save workout records, active energy burned, and body mass directly to your Apple Health app.</string>
+	<string>PersonalLift requires permission to save workout records, active energy burned, and body mass directly to your Apple Health app.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

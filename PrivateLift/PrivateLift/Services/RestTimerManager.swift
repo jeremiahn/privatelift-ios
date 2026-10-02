@@ -174,7 +174,7 @@ class RestTimerManager: ObservableObject {
             case .authorized, .provisional, .ephemeral:
                 self.doScheduleNotification(center: center, seconds: seconds, totalDuration: totalDuration)
             case .denied:
-                debugLog("[RestTimer] Notifications are DENIED in iOS Settings. User must enable them in Settings > Personal Lift > Notifications.")
+                debugLog("[RestTimer] Notifications are DENIED in iOS Settings. User must enable them in Settings > PersonalLift > Notifications.")
             @unknown default:
                 self.doScheduleNotification(center: center, seconds: seconds, totalDuration: totalDuration)
             }

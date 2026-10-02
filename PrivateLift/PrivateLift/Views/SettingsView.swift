@@ -141,12 +141,12 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Personal Lift requires Health permissions to sync workouts. Tap 'Open Settings' -> select 'Personal Lift' under Data Access & Devices -> and enable write/read permissions.")
+                Text("PersonalLift requires Health permissions to sync workouts. Tap 'Open Settings' -> select 'PersonalLift' under Data Access & Devices -> and enable write/read permissions.")
             }
             .alert("Restart Required", isPresented: $showICloudAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Your iCloud sync setting has been saved. Please fully close and relaunch Personal Lift to apply the change. Your data will not be affected.")
+                Text("Your iCloud sync setting has been saved. Please fully close and relaunch PersonalLift to apply the change. Your data will not be affected.")
             }
 
         }
@@ -286,7 +286,7 @@ struct SettingsView: View {
                 if WCSession.isSupported() {
                     let session = WCSession.default
                     if !session.isWatchAppInstalled {
-                        Text("Watch App is not installed. Open the Watch app on your iPhone to install Personal Lift on your Apple Watch.")
+                        Text("Watch App is not installed. Open the Watch app on your iPhone to install PersonalLift on your Apple Watch.")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(.orange)
                             .padding(.top, -4)
@@ -358,7 +358,7 @@ struct SettingsView: View {
     private var backupRestoreSection: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             // Export JSON ShareLink
-            ShareLink(item: jsonBackupString, subject: Text("Personal Lift Backup"), message: Text("Personal Lift Backup JSON file")) {
+            ShareLink(item: jsonBackupString, subject: Text("PersonalLift Backup"), message: Text("PersonalLift Backup JSON file")) {
                 dbGridBox(title: "EXPORT DATABASE", format: "JSON", icon: "square.and.arrow.up", color: brandColors.blue)
             }
             .buttonStyle(PlainButtonStyle())
@@ -374,7 +374,7 @@ struct SettingsView: View {
             .buttonStyle(PlainButtonStyle())
             
             // Export CSV ShareLink
-            ShareLink(item: csvBackupString, subject: Text("Workout History CSV"), message: Text("Personal Lift workout logs exported in CSV format")) {
+            ShareLink(item: csvBackupString, subject: Text("Workout History CSV"), message: Text("PersonalLift workout logs exported in CSV format")) {
                 dbGridBox(title: "EXPORT WORKOUTS", format: "CSV", icon: "tablecells", color: brandColors.green)
             }
             .buttonStyle(PlainButtonStyle())

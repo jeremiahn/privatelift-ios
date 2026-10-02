@@ -511,7 +511,7 @@ struct OnboardingView: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 10))
                                 .foregroundColor(.orange)
-                            Text("Health permission was not granted. You can enable it in iOS Settings → Health → Personal Lift.")
+                            Text("Health permission was not granted. You can enable it in iOS Settings → Health → PersonalLift.")
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(.orange)
                                 .lineSpacing(2)
