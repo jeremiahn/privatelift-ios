@@ -194,6 +194,13 @@ extension View {
     func scaledFont(size: CGFloat, weight: Font.Weight = .regular, design: Font.Design = .default) -> some View {
         modifier(ScaledSystemFont(size: size, weight: weight, design: design))
     }
+
+    /// Caps tab content at a readable width and centers it, so cards don't stretch
+    /// edge to edge on iPad or in a wide Stage Manager window. No effect on iPhone.
+    // ponytail: fixed 720 pt cap rather than a two-column iPad layout.
+    func plReadableWidth() -> some View {
+        frame(maxWidth: 720).frame(maxWidth: .infinity)
+    }
 }
 
 /// "PERSONAL LIFT" toolbar wordmark shared by every tab.

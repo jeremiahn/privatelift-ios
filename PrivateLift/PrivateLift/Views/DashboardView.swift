@@ -359,6 +359,7 @@ struct DashboardView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 100) // Padding for Rest Timer + Tabbar
                 .scrollTargetLayout()
+                .plReadableWidth()
             }
             .scrollPosition(id: $scrollTarget, anchor: .top)
             .navigationBarTitleDisplayMode(.inline)

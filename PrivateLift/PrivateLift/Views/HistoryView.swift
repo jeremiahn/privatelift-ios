@@ -236,6 +236,7 @@ struct HistoryView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
                 .padding(.bottom, 100)
+                .plReadableWidth()
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
