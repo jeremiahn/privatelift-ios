@@ -14,27 +14,7 @@ struct StatsView: View {
         preferences.first ?? UserPreferences()
     }
     
-    var uniqueExercises: [CustomExercise] {
-        var seen = Set<String>()
-        return exercises.filter { exercise in
-            let normalized = exercise.name.uppercased().replacingOccurrences(of: " ", with: "")
-            let key: String
-            if normalized == "BENCH" || normalized == "BENCHPRESS" {
-                key = "BENCH"
-            } else if normalized == "SQUAT" {
-                key = "SQUAT"
-            } else if normalized == "DEADLIFT" {
-                key = "DEADLIFT"
-            } else {
-                key = normalized
-            }
-            if seen.contains(key) {
-                return false
-            }
-            seen.insert(key)
-            return true
-        }
-    }
+    var uniqueExercises: [CustomExercise] { exercises.uniqued }
     
     var themeStyle: ThemeStyle {
         ThemeStyle(rawValue: activePrefs.theme) ?? .system
@@ -79,9 +59,9 @@ struct StatsView: View {
         Dictionary(grouping: currentWeekSets, by: \.exercise)
     }
 
-    /// Pre-groups all sets by exercise name for PR computations.
-    private var allSetsByExercise: [String: [WorkoutSet]] {
-        Dictionary(grouping: allSets, by: \.exercise)
+    /// Pre-groups completed sets (no failed or 0-rep sets) by exercise for PR computations.
+    private var recordSetsByExercise: [String: [WorkoutSet]] {
+        Dictionary(grouping: allSets.filter { LiftMath.countsTowardRecords(setType: $0.setType, reps: $0.reps) }, by: \.exercise)
     }
     
     // MARK: - Aggregated Metrics
@@ -96,26 +76,28 @@ struct StatsView: View {
     var squatPR: Double {
         let squatEx = exercises.first(where: { $0.isPowerlift && $0.powerliftType == "squat" })
         let name = squatEx?.name ?? "SQUAT"
-        let loggedMax = (allSetsByExercise[name] ?? []).map { $0.weight }.max() ?? 0.0
+        let loggedMax = (recordSetsByExercise[name] ?? []).map { $0.weight }.max() ?? 0.0
         return max(loggedMax, squatEx?.oneRepMax ?? activePrefs.squatMax)
     }
 
     var benchPR: Double {
         let benchEx = exercises.first(where: { $0.isPowerlift && $0.powerliftType == "bench" })
         let name = benchEx?.name ?? "BENCH"
-        let loggedMax = (allSetsByExercise[name] ?? []).map { $0.weight }.max() ?? 0.0
+        let loggedMax = (recordSetsByExercise[name] ?? []).map { $0.weight }.max() ?? 0.0
         return max(loggedMax, benchEx?.oneRepMax ?? activePrefs.benchMax)
     }
 
     var deadliftPR: Double {
         let deadliftEx = exercises.first(where: { $0.isPowerlift && $0.powerliftType == "deadlift" })
         let name = deadliftEx?.name ?? "DEADLIFT"
-        let loggedMax = (allSetsByExercise[name] ?? []).map { $0.weight }.max() ?? 0.0
+        let loggedMax = (recordSetsByExercise[name] ?? []).map { $0.weight }.max() ?? 0.0
         return max(loggedMax, deadliftEx?.oneRepMax ?? activePrefs.deadliftMax)
     }
     
+    /// Largest weekly set count; bars are relative to this week, not lifetime totals.
     var maxExerciseVolume: Int {
-        let volumes = uniqueExercises.map { ex in (allSetsByExercise[ex.name] ?? []).count }
+        let weekByExercise = currentWeekSetsByExercise
+        let volumes = uniqueExercises.map { ex in (weekByExercise[ex.name] ?? []).count }
         return Swift.max(1, volumes.max() ?? 1)
     }
     
@@ -206,13 +188,13 @@ struct StatsView: View {
                     // 1. Personal Records Grid (Dynamic)
                     VStack(alignment: .leading, spacing: 16) {
                         Text("PERSONAL RECORDS")
-                            .font(.system(size: 11, weight: .black))
+                            .scaledFont(size: 11, weight: .black)
                             .foregroundColor(brandColors.purple)
                             .tracking(2.0)
                         
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
-                                let byExercise = allSetsByExercise
+                                let byExercise = recordSetsByExercise
                                 ForEach(uniqueExercises) { exercise in
                                     let loggedMax = (byExercise[exercise.name] ?? []).map { $0.weight }.max() ?? 0.0
                                     let prVal = max(loggedMax, exercise.oneRepMax)
@@ -229,7 +211,7 @@ struct StatsView: View {
                     // 2. Volume Breakdown bars (Dynamic)
                     VStack(alignment: .leading, spacing: 16) {
                         Text("WEEKLY VOLUME BREAKDOWN")
-                            .font(.system(size: 11, weight: .black))
+                            .scaledFont(size: 11, weight: .black)
                             .foregroundColor(brandColors.green)
                             .tracking(2.0)
                         
@@ -251,12 +233,12 @@ struct StatsView: View {
                     // 3. Lifetime Totals Grid
                     VStack(alignment: .leading, spacing: 16) {
                         Text("LIFETIME TOTALS")
-                            .font(.system(size: 11, weight: .black))
+                            .scaledFont(size: 11, weight: .black)
                             .foregroundColor(brandColors.blue)
                             .tracking(2.0)
                         
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                            statBox(title: "TOTAL VOLUME", value: String(format: "%.0f", totalTonnage), unit: activePrefs.weightUnit, color: brandColors.blue)
+                            statBox(title: "TOTAL VOLUME", value: totalTonnage.formatted(.number.precision(.fractionLength(0))), unit: activePrefs.weightUnit, color: brandColors.blue)
                             statBox(title: "SESSIONS", value: "\(totalSessions)", unit: "COMPLETED", color: brandColors.purple)
                             
                             if activePrefs.gender != "other" {
@@ -276,15 +258,7 @@ struct StatsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    HStack(spacing: 2) {
-                        Text("PERSONAL")
-                            .font(.system(size: 24, weight: .black))
-                            .foregroundColor(.primary)
-                        Text("LIFT")
-                            .font(.system(size: 24, weight: .black))
-                            .foregroundColor(brandColors.blue)
-                    }
-                    .tracking(-0.5)
+                    PLWordmark(accent: brandColors.blue)
                 }
             }
             .plBackground(style: themeStyle)
@@ -297,18 +271,18 @@ struct StatsView: View {
         
         return VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 8, weight: .black))
+                .scaledFont(size: 8, weight: .black)
                 .foregroundColor(textColor)
                 .tracking(1.0)
             
             HStack(alignment: .lastTextBaseline, spacing: 4) {
                 Text(value)
-                    .font(.system(size: 26, weight: .black, design: .monospaced))
+                    .scaledFont(size: 26, weight: .black, design: .monospaced)
                     .foregroundColor(brandColors.whiteText)
                 
                 Text(unit)
-                    .font(.system(size: 10, weight: .black))
-                    .foregroundColor(.plGray400)
+                    .scaledFont(size: 10, weight: .black)
+                    .foregroundColor(.plSecondaryLabel)
             }
         }
         .padding(.horizontal, 16)
@@ -328,18 +302,18 @@ struct StatsView: View {
     private func prMetric(title: String, value: Double, unit: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 9, weight: .black))
+                .scaledFont(size: 9, weight: .black)
                 .foregroundColor(color)
                 .tracking(1.0)
             
             HStack(alignment: .lastTextBaseline, spacing: 2) {
-                Text("\(Int(value))")
-                    .font(.system(size: 20, weight: .black, design: .monospaced))
+                Text(LiftMath.format(value))
+                    .scaledFont(size: 20, weight: .black, design: .monospaced)
                     .foregroundColor(brandColors.whiteText)
                 
                 Text(unit)
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(.plGray400)
+                    .scaledFont(size: 9, weight: .bold)
+                    .foregroundColor(.plSecondaryLabel)
             }
         }
         .padding(.horizontal, 12)
@@ -353,7 +327,7 @@ struct StatsView: View {
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title) Personal Record")
-        .accessibilityValue("\(Int(value)) \(unit)")
+        .accessibilityValue("\(LiftMath.format(value)) \(unit)")
     }
     
     private func volumeBar(title: String, count: Int, reps: Int, weight: Double, color: Color) -> some View {
@@ -364,11 +338,11 @@ struct StatsView: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(title)
-                    .font(.system(size: 11, weight: .black))
+                    .scaledFont(size: 11, weight: .black)
                     .foregroundColor(brandColors.whiteText)
                 Spacer()
-                Text("\(count) sets • \(reps) reps • \(Int(weight)) \(activePrefs.weightUnit)")
-                    .font(.system(size: 11, weight: .black, design: .monospaced))
+                Text("\(count) sets • \(reps) reps • \(LiftMath.format(weight)) \(activePrefs.weightUnit)")
+                    .scaledFont(size: 11, weight: .black, design: .monospaced)
                     .foregroundColor(color)
             }
             
@@ -388,6 +362,6 @@ struct StatsView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title) volume breakdown")
-        .accessibilityValue("\(count) sets, \(reps) repetitions, and total volume of \(Int(weight)) \(activePrefs.weightUnit)")
+        .accessibilityValue("\(count) sets, \(reps) repetitions, and total volume of \(LiftMath.format(weight)) \(activePrefs.weightUnit)")
     }
 }

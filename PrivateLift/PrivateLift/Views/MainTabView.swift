@@ -6,7 +6,7 @@ struct MainTabView: View {
     @Query private var preferences: [UserPreferences]
     
     @StateObject private var timerManager = RestTimerManager.shared
-    @StateObject private var healthKitService = HealthKitService()
+    @StateObject private var healthKitService = HealthKitService.shared
     @State private var selectedTab = 0
     @State private var showOnboarding = false
     @State private var migrationManager: LegacyMigrationManager?
@@ -62,9 +62,14 @@ struct MainTabView: View {
                     .keyboardShortcut("4", modifiers: .command)
             }
             .tint(brandColors.blue)
-            
-            // Rest Timer floating overlay when active
-            if timerManager.isActive && activePrefs.showRestTimer {
+            .modifier(RestTimerAccessoryModifier(
+                isEnabled: timerManager.isActive && activePrefs.showRestTimer,
+                timerManager: timerManager,
+                brandColors: brandColors
+            ))
+
+            // Rest Timer floating overlay when active (iOS 18 – 26.0; see usesTabAccessory)
+            if timerManager.isActive && activePrefs.showRestTimer && !Self.usesTabAccessory {
                 VStack {
                     Spacer()
                     RestTimerFloatingCapsule(timerManager: timerManager, brandColors: brandColors)
@@ -77,12 +82,26 @@ struct MainTabView: View {
         .preferredColorScheme(preferredColorScheme)
         .onAppear {
             checkOnboardingAndMigration()
+            #if DEBUG
+            // Screenshot/UI check helper: `-demoRestTimer YES` starts a rest timer on launch.
+            if UserDefaults.standard.bool(forKey: "demoRestTimer") {
+                timerManager.startTimer(duration: 150)
+            }
+            #endif
         }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView(isPresented: $showOnboarding)
         }
     }
     
+    /// iOS 26.1+ shows the rest timer in the system tab-bar accessory, which the system
+    /// positions and styles. 26.0 has the accessory but can't hide it when idle
+    /// (`isEnabled:` is 26.1+), so 26.0 and earlier keep the floating capsule.
+    static var usesTabAccessory: Bool {
+        if #available(iOS 26.1, *) { return true }
+        return false
+    }
+
     private func checkOnboardingAndMigration() {
         // Trigger silent data migration if needed
         if !UserDefaults.standard.bool(forKey: "hasMigratedWebData") {
@@ -113,7 +132,7 @@ struct RestTimerFloatingCapsule: View {
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("REST TIMER")
-                        .font(.system(size: 8, weight: .black))
+                        .scaledFont(size: 8, weight: .black)
                         .tracking(1.5)
                         .foregroundColor(brandColors.darkBgText.opacity(0.7))
                     
@@ -128,13 +147,16 @@ struct RestTimerFloatingCapsule: View {
             .accessibilityValue(accessibilityTimeString(from: timerManager.timeRemaining))
             
             Spacer()
-            
+
+            adjustButton("-30", seconds: -30, label: "Remove 30 seconds")
+            adjustButton("+30", seconds: 30, label: "Add 30 seconds")
+
             Button(action: {
                 HapticService.play(.medium)
                 timerManager.stopTimer()
             }) {
                 Text("SKIP")
-                    .font(.system(size: 10, weight: .black))
+                    .scaledFont(size: 10, weight: .black)
                     .foregroundColor(brandColors.darkBgText)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
@@ -157,6 +179,22 @@ struct RestTimerFloatingCapsule: View {
         .frame(maxWidth: 400)
     }
     
+    private func adjustButton(_ title: String, seconds: TimeInterval, label: String) -> some View {
+        Button {
+            HapticService.play(.medium)
+            timerManager.adjust(by: seconds)
+        } label: {
+            Text(title)
+                .scaledFont(size: 10, weight: .black, design: .monospaced)
+                .foregroundColor(brandColors.darkBgText)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(brandColors.darkBgText.opacity(0.12))
+                .cornerRadius(8)
+        }
+        .accessibilityLabel(label)
+    }
+
     private func timeString(from interval: TimeInterval) -> String {
         let mins = Int(interval) / 60
         let secs = Int(interval) % 60
@@ -174,4 +212,72 @@ struct RestTimerFloatingCapsule: View {
     }
 }
 
+// MARK: - iOS 26.1+ Tab Bar Accessory
 
+private struct RestTimerAccessoryModifier: ViewModifier {
+    var isEnabled: Bool
+    @ObservedObject var timerManager: RestTimerManager
+    var brandColors: BrandColors
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.1, *) {
+            content.tabViewBottomAccessory(isEnabled: isEnabled) {
+                RestTimerAccessoryView(timerManager: timerManager, brandColors: brandColors)
+            }
+        } else {
+            content
+        }
+    }
+}
+
+/// Compact rest timer for the tab-bar accessory. The system draws the glass background,
+/// so this uses plain foreground colors rather than the capsule's filled blue.
+private struct RestTimerAccessoryView: View {
+    @ObservedObject var timerManager: RestTimerManager
+    var brandColors: BrandColors
+
+    var body: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "timer")
+                    .foregroundColor(brandColors.blue)
+                    .symbolEffect(.pulse, isActive: true)
+                Text(timeString)
+                    .font(.system(.body, design: .monospaced))
+                    .fontWeight(.black)
+                    .monospacedDigit()
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Rest timer")
+            .accessibilityValue("\(Int(timerManager.timeRemaining)) seconds remaining")
+
+            Spacer(minLength: 4)
+
+            control("-30", label: "Remove 30 seconds") { timerManager.adjust(by: -30) }
+            control("+30", label: "Add 30 seconds") { timerManager.adjust(by: 30) }
+            control("SKIP", label: "Skip rest timer") { timerManager.stopTimer() }
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private var timeString: String {
+        let total = max(0, Int(timerManager.timeRemaining))
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+
+    private func control(_ title: String, label: String, action: @escaping () -> Void) -> some View {
+        Button {
+            HapticService.play(.medium)
+            action()
+        } label: {
+            Text(title)
+                .scaledFont(size: 11, weight: .black, design: .monospaced)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.primary.opacity(0.08))
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+}

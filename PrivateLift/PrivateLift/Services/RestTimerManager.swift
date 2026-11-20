@@ -12,7 +12,7 @@ import AppIntents
 #endif
 
 #if canImport(ActivityKit)
-struct RestTimerAttributes: ActivityAttributes {
+nonisolated struct RestTimerAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         var endTime: Date
     }
@@ -58,6 +58,12 @@ class RestTimerManager: ObservableObject {
             name: Notification.Name("SkipRestTimerNotification"),
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAddTimeNotification),
+            name: Notification.Name("AddRestTimeNotification"),
+            object: nil
+        )
         #endif
     }
     
@@ -97,6 +103,28 @@ class RestTimerManager: ObservableObject {
         #endif
     }
     
+    /// Adds (or with a negative value, removes) rest time, keeping the pending
+    /// notification and the Live Activity in step. Ends the timer if nothing is left.
+    func adjust(by seconds: TimeInterval) {
+        guard isActive, let end = timerEndTime else { return }
+        let newEnd = end.addingTimeInterval(seconds)
+        let remaining = newEnd.timeIntervalSinceNow
+        guard remaining > 1 else {
+            stopTimer()
+            return
+        }
+        timerEndTime = newEnd
+        timeRemaining = remaining
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest_timer_end"])
+        scheduleRestNotification(in: remaining, totalDuration: remaining)
+        #if canImport(ActivityKit)
+        let content = ActivityContent(state: RestTimerAttributes.ContentState(endTime: newEnd), staleDate: nil)
+        for activity in Activity<RestTimerAttributes>.activities {
+            Task { await activity.update(content) }
+        }
+        #endif
+    }
+
     func stopTimer() {
         isActive = false
         cancellable = nil
@@ -174,7 +202,7 @@ class RestTimerManager: ObservableObject {
             case .authorized, .provisional, .ephemeral:
                 self.doScheduleNotification(center: center, seconds: seconds, totalDuration: totalDuration)
             case .denied:
-                debugLog("[RestTimer] Notifications are DENIED in iOS Settings. User must enable them in Settings > PersonalLift > Notifications.")
+                debugLog("[RestTimer] Notifications are DENIED in iOS Settings. User must enable them in Settings > Personal Lift > Notifications.")
             @unknown default:
                 self.doScheduleNotification(center: center, seconds: seconds, totalDuration: totalDuration)
             }
@@ -265,6 +293,12 @@ class RestTimerManager: ObservableObject {
             self.stopTimer()
         }
     }
+
+    @objc private func handleAddTimeNotification() {
+        Task { @MainActor in
+            self.adjust(by: 30)
+        }
+    }
 }
 
 #if canImport(AppIntents) && canImport(ActivityKit)
@@ -276,6 +310,19 @@ struct SkipTimerIntent: LiveActivityIntent {
     
     func perform() async throws -> some IntentResult {
         NotificationCenter.default.post(name: Notification.Name("SkipRestTimerNotification"), object: nil)
+        return .result()
+    }
+}
+
+// Mirrored in PrivateLiftWidgetLiveActivity.swift; runs in the app process when tapped.
+@available(iOS 17.0, macOS 14.0, watchOS 10.0, tvOS 17.0, *)
+struct AddRestTimeIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Add 30 Seconds of Rest"
+
+    init() {}
+
+    func perform() async throws -> some IntentResult {
+        NotificationCenter.default.post(name: Notification.Name("AddRestTimeNotification"), object: nil)
         return .result()
     }
 }

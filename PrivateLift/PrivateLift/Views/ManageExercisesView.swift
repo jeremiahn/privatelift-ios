@@ -23,7 +23,7 @@ struct ManageExercisesView: View {
     
     var body: some View {
         List {
-            Section(header: Text("EXERCISES & 1RM BENCHMARKS").font(.system(size: 10, weight: .black))) {
+            Section(header: Text("EXERCISES & 1RM BENCHMARKS").scaledFont(size: 10, weight: .black)) {
                 ForEach(exercises) { exercise in
                     Button(action: {
                         HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
@@ -45,11 +45,16 @@ struct ManageExercisesView: View {
                                         .foregroundColor(brandColors.blue)
                                         .fontWeight(.semibold)
                                 }
+                                if let summary = overrideSummary(exercise) {
+                                    Text(summary)
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
                             }
                             
                             Spacer()
                             
-                            Text("\(Int(exercise.oneRepMax)) \(activePrefs.weightUnit)")
+                            Text("\(LiftMath.format(exercise.oneRepMax)) \(activePrefs.weightUnit)")
                                 .font(.system(.body, design: .monospaced))
                                 .fontWeight(.black)
                                 .foregroundColor(.secondary)
@@ -63,23 +68,23 @@ struct ManageExercisesView: View {
                     .buttonStyle(PlainButtonStyle())
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(exercise.displayName)
-                    .accessibilityValue("\(Int(exercise.oneRepMax)) \(activePrefs.weightUnit)" + (exercise.isPowerlift ? ", Powerlifting \(exercise.powerliftType ?? "") contributor" : ""))
+                    .accessibilityValue("\(LiftMath.format(exercise.oneRepMax)) \(activePrefs.weightUnit)" + (exercise.isPowerlift ? ", Powerlifting \(exercise.powerliftType ?? "") contributor" : "") + (overrideSummary(exercise).map { ", \($0)" } ?? ""))
                     .accessibilityHint("Double tap to edit this exercise")
                 }
                 .onDelete(perform: deleteExercises)
                 .onMove(perform: moveExercises)
             }
         }
-        .navigationTitle("Manage LIlllfts") // Keeping layout styling intact
+        .navigationTitle("Manage Lifts") // shown as the back-button label and to VoiceOver
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 2) {
                     Text("MANAGE")
-                        .font(.system(size: 20, weight: .black))
+                        .scaledFont(size: 20, weight: .black)
                         .foregroundColor(.primary)
                     Text("LIFTS")
-                        .font(.system(size: 20, weight: .black))
+                        .scaledFont(size: 20, weight: .black)
                         .foregroundColor(brandColors.blue)
                 }
                 .tracking(-0.5)
@@ -128,7 +133,7 @@ struct ManageExercisesView: View {
                 
                 let newName = exercise.name
                 if oldName != newName {
-                    updateWorkoutSetsAndTargets(from: oldName, to: newName)
+                    updateWorkoutSets(from: oldName, to: newName)
                 }
                 
                 // Sync powerlift oneRepMax back to activePrefs
@@ -147,18 +152,19 @@ struct ManageExercisesView: View {
         }
     }
     
-    private func updateWorkoutSetsAndTargets(from oldName: String, to newName: String) {
+    /// "Rest 3:00 · 55 lb bar" when an exercise overrides the Settings defaults.
+    private func overrideSummary(_ exercise: CustomExercise) -> String? {
+        var parts: [String] = []
+        if let rest = exercise.restSeconds { parts.append("Rest \(LiftMath.formatRest(rest))") }
+        if let bar = exercise.barWeight { parts.append("\(LiftMath.format(bar)) \(activePrefs.weightUnit) bar") }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private func updateWorkoutSets(from oldName: String, to newName: String) {
         let setFetch = FetchDescriptor<WorkoutSet>(predicate: #Predicate { $0.exercise == oldName })
         if let sets = try? modelContext.fetch(setFetch) {
             for s in sets {
                 s.exercise = newName
-            }
-        }
-        
-        let targetFetch = FetchDescriptor<RoutineExerciseTarget>(predicate: #Predicate { $0.exercise == oldName })
-        if let targets = try? modelContext.fetch(targetFetch) {
-            for t in targets {
-                t.exercise = newName
             }
         }
     }
@@ -216,6 +222,8 @@ struct AddExerciseSheet: View {
     @State private var isPowerlift = false
     @State private var powerliftType = "squat"
     @State private var showDuplicateAlert = false
+    @State private var restSeconds: Double = 0   // 0 = use the Settings default
+    @State private var barString = ""            // empty = use the Settings default
     
     private let colorChoices = [
         ("#ef4444", "Red"),
@@ -231,7 +239,7 @@ struct AddExerciseSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("EXERCISE DETAILS").font(.system(size: 10, weight: .black))) {
+                Section(header: Text("EXERCISE DETAILS").scaledFont(size: 10, weight: .black)) {
                     TextField("Exercise Name (e.g. Overhead Press)", text: $displayName)
                         .fontWeight(.bold)
                     
@@ -248,7 +256,7 @@ struct AddExerciseSheet: View {
                     }
                 }
                 
-                Section(header: Text("THEME COLOR").font(.system(size: 10, weight: .black))) {
+                Section(header: Text("THEME COLOR").scaledFont(size: 10, weight: .black)) {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 40))], spacing: 12) {
                         ForEach(colorChoices, id: \.0) { color in
                             Circle()
@@ -271,7 +279,7 @@ struct AddExerciseSheet: View {
                     .padding(.vertical, 8)
                 }
                 
-                Section(header: Text("POWERLIFTING SCORE").font(.system(size: 10, weight: .black))) {
+                Section(header: Text("POWERLIFTING SCORE").scaledFont(size: 10, weight: .black)) {
                     Toggle("Powerlifting Score Contribution", isOn: $isPowerlift)
                         .fontWeight(.bold)
                         .tint(brandColors.blue)
@@ -285,6 +293,8 @@ struct AddExerciseSheet: View {
                         .fontWeight(.bold)
                     }
                 }
+
+                ExerciseOverridesSection(restSeconds: $restSeconds, barString: $barString, activePrefs: activePrefs)
             }
             .navigationTitle("Add Exercise")
             .navigationBarTitleDisplayMode(.inline)
@@ -329,7 +339,7 @@ struct AddExerciseSheet: View {
                             return
                         }
                         
-                        let maxWeight = Double(oneRepMaxString) ?? 0.0
+                        let maxWeight = max(0, min(LiftMath.parse(oneRepMaxString) ?? 0.0, 2000))
                         let newExercise = CustomExercise(
                             name: name.uppercased(),
                             displayName: name,
@@ -339,7 +349,9 @@ struct AddExerciseSheet: View {
                             isPowerlift: isPowerlift,
                             powerliftType: isPowerlift ? powerliftType : nil
                         )
-                        
+                        newExercise.restSeconds = restSeconds > 0 ? restSeconds : nil
+                        newExercise.barWeight = ExerciseOverridesSection.parsedBar(barString)
+
                         onSave(newExercise)
                         dismiss()
                     }
@@ -373,6 +385,8 @@ struct EditExerciseSheet: View {
     @State private var isPowerlift = false
     @State private var powerliftType = "squat"
     @State private var showDuplicateAlert = false
+    @State private var restSeconds: Double = 0   // 0 = use the Settings default
+    @State private var barString = ""            // empty = use the Settings default
     
     private let colorChoices = [
         ("#ef4444", "Red"),
@@ -393,16 +407,18 @@ struct EditExerciseSheet: View {
         self.brandColors = brandColors
         
         _displayName = State(initialValue: exercise.displayName)
-        _oneRepMaxString = State(initialValue: String(format: "%.1f", exercise.oneRepMax))
+        _oneRepMaxString = State(initialValue: LiftMath.format(exercise.oneRepMax))
         _selectedColorHex = State(initialValue: exercise.colorHex)
         _isPowerlift = State(initialValue: exercise.isPowerlift)
         _powerliftType = State(initialValue: exercise.powerliftType ?? "squat")
+        _restSeconds = State(initialValue: exercise.restSeconds ?? 0)
+        _barString = State(initialValue: exercise.barWeight.map { LiftMath.format($0) } ?? "")
     }
     
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("EXERCISE DETAILS").font(.system(size: 10, weight: .black))) {
+                Section(header: Text("EXERCISE DETAILS").scaledFont(size: 10, weight: .black)) {
                     TextField("Exercise Name", text: $displayName)
                         .fontWeight(.bold)
                     
@@ -419,7 +435,7 @@ struct EditExerciseSheet: View {
                     }
                 }
                 
-                Section(header: Text("THEME COLOR").font(.system(size: 10, weight: .black))) {
+                Section(header: Text("THEME COLOR").scaledFont(size: 10, weight: .black)) {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 40))], spacing: 12) {
                         ForEach(colorChoices, id: \.0) { color in
                             Circle()
@@ -442,7 +458,7 @@ struct EditExerciseSheet: View {
                     .padding(.vertical, 8)
                 }
                 
-                Section(header: Text("POWERLIFTING SCORE").font(.system(size: 10, weight: .black))) {
+                Section(header: Text("POWERLIFTING SCORE").scaledFont(size: 10, weight: .black)) {
                     Toggle("Powerlifting Score Contribution", isOn: $isPowerlift)
                         .fontWeight(.bold)
                         .tint(brandColors.blue)
@@ -456,6 +472,8 @@ struct EditExerciseSheet: View {
                         .fontWeight(.bold)
                     }
                 }
+
+                ExerciseOverridesSection(restSeconds: $restSeconds, barString: $barString, activePrefs: activePrefs)
             }
             .navigationTitle("Edit Exercise")
             .navigationBarTitleDisplayMode(.inline)
@@ -501,7 +519,7 @@ struct EditExerciseSheet: View {
                             return
                         }
                         
-                        let maxWeight = Double(oneRepMaxString) ?? 0.0
+                        let maxWeight = max(0, min(LiftMath.parse(oneRepMaxString) ?? 0.0, 2000))
                         let oldName = exercise.name
                         
                         exercise.displayName = name
@@ -510,7 +528,9 @@ struct EditExerciseSheet: View {
                         exercise.colorHex = selectedColorHex
                         exercise.isPowerlift = isPowerlift
                         exercise.powerliftType = isPowerlift ? powerliftType : nil
-                        
+                        exercise.restSeconds = restSeconds > 0 ? restSeconds : nil
+                        exercise.barWeight = ExerciseOverridesSection.parsedBar(barString)
+
                         onSave(oldName)
                         dismiss()
                     }
@@ -523,6 +543,54 @@ struct EditExerciseSheet: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text("An exercise with this name already exists. Please choose a unique name.")
+            }
+        }
+    }
+}
+
+// MARK: - Per-Exercise Overrides
+/// Rest timer and bar weight overrides shared by the Add and Edit sheets.
+/// "Default" / an empty field fall back to the values in Settings.
+struct ExerciseOverridesSection: View {
+    @Binding var restSeconds: Double
+    @Binding var barString: String
+    var activePrefs: UserPreferences
+
+    private var defaultBar: Double {
+        activePrefs.barWeight ?? LiftMath.barWeight(unit: activePrefs.weightUnit)
+    }
+
+    /// Empty, unparseable, or out-of-range (0 to 200) input means "use the default".
+    static func parsedBar(_ text: String) -> Double? {
+        guard let value = LiftMath.parse(text), value > 0, value <= 200 else { return nil }
+        return value
+    }
+
+    var body: some View {
+        Section(
+            header: Text("REST & BAR").scaledFont(size: 10, weight: .black),
+            footer: Text("Default uses the rest time and bar weight from Settings. Use a custom bar for a trap bar, safety squat bar, or 15 kg / 35 lb bar.")
+        ) {
+            Picker("Rest Timer", selection: $restSeconds) {
+                Text("Default (\(LiftMath.formatRest(activePrefs.defaultRestDuration)))").tag(0.0)
+                ForEach(LiftMath.restChoices, id: \.self) { seconds in
+                    Text(LiftMath.formatRest(seconds)).tag(seconds)
+                }
+            }
+            .fontWeight(.bold)
+
+            HStack {
+                Text("Bar Weight (\(activePrefs.weightUnit.uppercased()))")
+                    .fontWeight(.bold)
+                Spacer()
+                TextField("Default \(LiftMath.format(defaultBar))", text: $barString)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(.system(.body, design: .monospaced))
+                    .fontWeight(.black)
+                    .frame(width: 120)
+                    .accessibilityLabel("Bar weight")
+                    .accessibilityHint("Leave empty to use the default \(LiftMath.format(defaultBar)) \(activePrefs.weightUnit) bar")
             }
         }
     }

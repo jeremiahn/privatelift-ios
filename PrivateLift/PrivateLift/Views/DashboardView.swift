@@ -5,9 +5,6 @@ struct DashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var preferences: [UserPreferences]
     
-    // Fetch today's workout sets
-    @Query(sort: \WorkoutSet.timestamp, order: .forward) private var allSets: [WorkoutSet]
-    
     // Fetch all sessions to access today's notes
     @Query private var allSessions: [WorkoutSession]
     
@@ -28,36 +25,30 @@ struct DashboardView: View {
     
     // Calculator Field
     @State private var calcWeight = 225.0
+    /// Exercise whose bar the plate calculator uses; nil follows the selected exercise.
+    @State private var calcExercise: String? = nil
     @FocusState private var isFieldFocused: Bool
     
-    @State private var showDeleteConfirmation = false
-    @State private var setToDelete: WorkoutSet? = nil
+    @State private var pendingUndo: DeletedSet? = nil
+    /// Bumped after a log, delete or undo so `lastSetForSelected` (a direct fetch) re-runs.
+    @State private var refreshToken = 0
+
+    private struct DeletedSet {
+        let id = UUID()
+        let exercise: String
+        let weight: Double
+        let reps: Int
+        let rpe: Double
+        let setType: String
+        let timestamp: Date
+        let session: WorkoutSession?
+    }
     
     var activePrefs: UserPreferences {
         preferences.first ?? UserPreferences()
     }
     
-    var uniqueExercises: [CustomExercise] {
-        var seen = Set<String>()
-        return exercises.filter { exercise in
-            let normalized = exercise.name.uppercased().replacingOccurrences(of: " ", with: "")
-            let key: String
-            if normalized == "BENCH" || normalized == "BENCHPRESS" {
-                key = "BENCH"
-            } else if normalized == "SQUAT" {
-                key = "SQUAT"
-            } else if normalized == "DEADLIFT" {
-                key = "DEADLIFT"
-            } else {
-                key = normalized
-            }
-            if seen.contains(key) {
-                return false
-            }
-            seen.insert(key)
-            return true
-        }
-    }
+    var uniqueExercises: [CustomExercise] { exercises.uniqued }
     
     private func makeDayFormatter() -> DateFormatter {
         let f = DateFormatter()
@@ -73,8 +64,7 @@ struct DashboardView: View {
     }
     
     var todaySets: [WorkoutSet] {
-        let dateStr = todayString
-        return allSets.filter { $0.session?.dateString == dateStr }
+        (todaySession?.sets ?? []).sorted { $0.timestamp < $1.timestamp }
     }
     
     var todaySession: WorkoutSession? {
@@ -86,20 +76,26 @@ struct DashboardView: View {
         Binding(
             get: { todaySession?.notes ?? "" },
             set: { newValue in
-                if let session = todaySession {
-                    session.notes = newValue
-                    try? modelContext.save()
-                }
+                fetchOrCreateTodaySession().notes = newValue
+                try? modelContext.save()
             }
         )
     }
     
-    // Dynamically calculate target weight for custom exercises
+    // Target weight for an exercise at the current intensity, rounded to a loadable plate step
     private func calculateTargetWeight(for exerciseName: String) -> Double {
         let max = exercises.first(where: { $0.name == exerciseName })?.oneRepMax ?? 0.0
-        let target = (max * (intensity / 100.0))
-        return Double(Swift.max(45, Int(Foundation.round(target / 5.0) * 5.0)))
+        return LiftMath.target(oneRepMax: max, percent: intensity, unit: activePrefs.weightUnit, bar: barWeight(for: exerciseName))
     }
+
+    /// Exercise override, else the Settings bar, else a standard bar for the unit.
+    private func barWeight(for exerciseName: String) -> Double {
+        exercises.first(where: { $0.name == exerciseName })?.barWeight
+            ?? activePrefs.barWeight
+            ?? LiftMath.barWeight(unit: activePrefs.weightUnit)
+    }
+
+    private var calcBar: Double { barWeight(for: calcExercise ?? selectedExercise) }
     
     var themeStyle: ThemeStyle {
         ThemeStyle(rawValue: activePrefs.theme) ?? .system
@@ -119,12 +115,12 @@ struct DashboardView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("WEEKLY PROGRAM")
-                                    .font(.system(size: 11, weight: .black))
+                                    .scaledFont(size: 11, weight: .black)
                                     .foregroundColor(brandColors.blue)
                                     .tracking(2.0)
                                 
                                 Text("Target Intensity: \(Int(intensity))%")
-                                    .font(.system(size: 22, weight: .black))
+                                    .scaledFont(size: 22, weight: .black)
                                     .foregroundColor(brandColors.whiteText)
                             }
                             Spacer()
@@ -149,7 +145,7 @@ struct DashboardView: View {
                     // 3. Log New Set Form
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Log New Set")
-                            .font(.system(size: 15, weight: .black))
+                            .scaledFont(size: 15, weight: .black)
                             .foregroundColor(brandColors.purple)
                             .tracking(2.0)
                         
@@ -157,8 +153,8 @@ struct DashboardView: View {
                             // Exercise pills row (Dynamic)
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("EXERCISE")
-                                    .font(.system(size: 9, weight: .black))
-                                    .foregroundColor(.plGray400)
+                                    .scaledFont(size: 9, weight: .black)
+                                    .foregroundColor(.plSecondaryLabel)
                                     .tracking(1.5)
                                 
                                 exerciseSelectionSection
@@ -168,8 +164,8 @@ struct DashboardView: View {
                             // Set Type pills row
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("SET TYPE")
-                                    .font(.system(size: 9, weight: .black))
-                                    .foregroundColor(.plGray400)
+                                    .scaledFont(size: 9, weight: .black)
+                                    .foregroundColor(.plSecondaryLabel)
                                     .tracking(1.5)
                                 
                                 HStack(spacing: 8) {
@@ -179,26 +175,17 @@ struct DashboardView: View {
                                 }
                             }
                             
-                            // Weight + Reps textfields
+                            // Weight + Reps textfields (tap -/+ for a plate step, long press for a fine step)
                             HStack(spacing: 12) {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Weight (\(activePrefs.weightUnit.uppercased()))")
-                                        .font(.system(size: 9, weight: .black))
-                                        .foregroundColor(.plGray400)
+                                        .scaledFont(size: 9, weight: .black)
+                                        .foregroundColor(.plSecondaryLabel)
                                     HStack(spacing: 4) {
-                                        Button(action: {
-                                            adjustWeight(by: -1)
-                                        }) {
-                                            Image(systemName: "minus")
-                                                .font(.system(size: 12, weight: .bold))
-                                                .foregroundColor(brandColors.whiteText)
-                                                .frame(width: 32, height: 48)
-                                                .background(brandColors.whiteText.opacity(0.04))
-                                                .cornerRadius(8)
+                                        stepButton("minus", label: "Decrease weight", height: 48) { fine in
+                                            adjustWeight(direction: -1, fine: fine)
                                         }
-                                        .buttonStyle(PlainButtonStyle())
-                                        .accessibilityLabel("Decrease weight by 1")
-                                        
+
                                         TextField("0", text: $weightInput)
                                             .focused($isFieldFocused)
                                             .keyboardType(.decimalPad)
@@ -215,42 +202,43 @@ struct DashboardView: View {
                                             )
                                             .accessibilityLabel("Weight")
                                             .accessibilityValue("\(weightInput) \(activePrefs.weightUnit)")
-                                        
-                                        Button(action: {
-                                            adjustWeight(by: 1)
-                                        }) {
-                                            Image(systemName: "plus")
-                                                .font(.system(size: 12, weight: .bold))
-                                                .foregroundColor(brandColors.whiteText)
-                                                .frame(width: 32, height: 48)
-                                                .background(brandColors.whiteText.opacity(0.04))
-                                                .cornerRadius(8)
+
+                                        stepButton("plus", label: "Increase weight", height: 48) { fine in
+                                            adjustWeight(direction: 1, fine: fine)
                                         }
-                                        .buttonStyle(PlainButtonStyle())
-                                        .accessibilityLabel("Increase weight by 1")
                                     }
                                 }
-                                
+
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Reps")
-                                        .font(.system(size: 9, weight: .black))
-                                        .foregroundColor(.plGray400)
-                                    TextField("5", text: $repsInput)
-                                        .focused($isFieldFocused)
-                                        .keyboardType(.numberPad)
-                                        .font(.system(.body, design: .monospaced))
-                                        .fontWeight(.bold)
-                                        .foregroundColor(brandColors.whiteText)
-                                        .padding(.horizontal, 12)
-                                        .frame(height: 48)
-                                        .background(brandColors.whiteText.opacity(0.04))
-                                        .cornerRadius(12)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(brandColors.whiteText.opacity(0.08), lineWidth: 1.5)
-                                        )
-                                        .accessibilityLabel("Reps")
-                                        .accessibilityValue("\(repsInput)")
+                                        .scaledFont(size: 9, weight: .black)
+                                        .foregroundColor(.plSecondaryLabel)
+                                    HStack(spacing: 4) {
+                                        stepButton("minus", label: "Decrease reps", height: 48) { fine in
+                                            adjustReps(by: -1, fine: fine)
+                                        }
+
+                                        TextField("5", text: $repsInput)
+                                            .focused($isFieldFocused)
+                                            .keyboardType(.numberPad)
+                                            .font(.system(.body, design: .monospaced))
+                                            .fontWeight(.bold)
+                                            .foregroundColor(brandColors.whiteText)
+                                            .multilineTextAlignment(.center)
+                                            .frame(height: 48)
+                                            .background(brandColors.whiteText.opacity(0.04))
+                                            .cornerRadius(8)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(brandColors.whiteText.opacity(0.08), lineWidth: 1.5)
+                                            )
+                                            .accessibilityLabel("Reps")
+                                            .accessibilityValue("\(repsInput)")
+
+                                        stepButton("plus", label: "Increase reps", height: 48) { fine in
+                                            adjustReps(by: 1, fine: fine)
+                                        }
+                                    }
                                 }
                             }
                             
@@ -258,8 +246,8 @@ struct DashboardView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack {
                                     Text("RPE (Intensity of effort)")
-                                        .font(.system(size: 12, weight: .black))
-                                        .foregroundColor(.plGray400)
+                                        .scaledFont(size: 12, weight: .black)
+                                        .foregroundColor(.plSecondaryLabel)
                                     Spacer()
                                     Text(String(format: "@ %.1f", rpeInput))
                                         .font(.system(.caption, design: .monospaced))
@@ -273,12 +261,14 @@ struct DashboardView: View {
                                     .accessibilityValue(String(format: "%.1f", rpeInput))
                             }
                             
+                            lastTimeRow
+
                             // Save Button
                             Button(action: saveLoggedSet) {
                                 HStack {
                                     Image(systemName: "plus.circle.fill")
                                     Text("Log Completed Set")
-                                        .font(.system(size: 12, weight: .black))
+                                        .scaledFont(size: 12, weight: .black)
                                         .tracking(1.5)
                                 }
                                 .foregroundColor(themeStyle == .night ? .black : .white)
@@ -296,10 +286,13 @@ struct DashboardView: View {
                     .padding(20)
                     .glassCard(style: themeStyle)
                     
-                    // 4. Barbell Plate Calculator Widget
+                    // 4. Today's Logs List
+                    todayLogSection
+
+                    // 5. Barbell Plate Calculator Widget
                     VStack(alignment: .leading, spacing: 16) {
                         Text("PLATE CALCULATOR")
-                            .font(.system(size: 11, weight: .black))
+                            .scaledFont(size: 11, weight: .black)
                             .foregroundColor(brandColors.teal)
                             .tracking(2.0)
                         
@@ -309,26 +302,16 @@ struct DashboardView: View {
                         VStack(spacing: 20) {
                             HStack {
                                 Text("BAR LOAD WEIGHT:")
-                                    .font(.system(size: 9, weight: .black))
-                                    .foregroundColor(.plGray400)
+                                    .scaledFont(size: 9, weight: .black)
+                                    .foregroundColor(.plSecondaryLabel)
                                     .tracking(1.0)
                                 
                                 HStack(spacing: 4) {
-                                    Button(action: {
-                                        HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
-                                        calcWeight = max(0.0, calcWeight - 1)
-                                    }) {
-                                        Image(systemName: "minus")
-                                            .font(.system(size: 14, weight: .bold))
-                                            .foregroundColor(brandColors.whiteText)
-                                            .frame(width: 36, height: 52)
-                                            .background(brandColors.whiteText.opacity(0.04))
-                                            .cornerRadius(8)
+                                    stepButton("minus", label: "Decrease calculator weight", height: 52) { fine in
+                                        adjustCalcWeight(direction: -1, fine: fine)
                                     }
-                                    .buttonStyle(PlainButtonStyle())
-                                    .accessibilityLabel("Decrease calculator weight by 1")
                                     
-                                    TextField("Weight", value: $calcWeight, format: .number)
+                                    TextField("Weight", value: $calcWeight, format: .number.precision(.fractionLength(0...2)))
                                         .focused($isFieldFocused)
                                         .keyboardType(.decimalPad)
                                         .font(.system(.title2, design: .monospaced))
@@ -343,185 +326,28 @@ struct DashboardView: View {
                                                 .stroke(brandColors.whiteText.opacity(0.08), lineWidth: 1.5)
                                         )
                                         .accessibilityLabel("Plate calculator weight")
-                                        .accessibilityValue("\(Int(calcWeight)) \(activePrefs.weightUnit)")
+                                        .accessibilityValue("\(LiftMath.format(calcWeight)) \(activePrefs.weightUnit)")
                                     
-                                    Button(action: {
-                                        HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
-                                        calcWeight = calcWeight + 1
-                                    }) {
-                                        Image(systemName: "plus")
-                                            .font(.system(size: 14, weight: .bold))
-                                            .foregroundColor(brandColors.whiteText)
-                                            .frame(width: 36, height: 52)
-                                            .background(brandColors.whiteText.opacity(0.04))
-                                            .cornerRadius(8)
+                                    stepButton("plus", label: "Increase calculator weight", height: 52) { fine in
+                                        adjustCalcWeight(direction: 1, fine: fine)
                                     }
-                                    .buttonStyle(PlainButtonStyle())
-                                    .accessibilityLabel("Increase calculator weight by 1")
                                 }
                                     
                                 Text(activePrefs.weightUnit.uppercased())
-                                    .font(.system(size: 12, weight: .black))
-                                    .foregroundColor(.plGray400)
+                                    .scaledFont(size: 12, weight: .black)
+                                    .foregroundColor(.plSecondaryLabel)
                             }
                             
                             // Visual Barbell Drawing
-                            BarbellPlateGraphic(weight: calcWeight, isLbs: activePrefs.weightUnit == "lbs", isNight: themeStyle == .night)
+                            BarbellPlateGraphic(weight: calcWeight, bar: calcBar, isLbs: activePrefs.weightUnit == "lbs", isNight: themeStyle == .night)
                                 .frame(height: 120)
+
+                            plateLoadNote
                         }
                     }
                     .padding(20)
                     .glassCard(style: themeStyle)
                     
-                    // 5. Today's Logs List
-                    if !todaySets.isEmpty {
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack {
-                                Text("TODAY'S WORKOUT LOG")
-                                    .font(.system(size: 11, weight: .black))
-                                    .foregroundColor(brandColors.green)
-                                    .tracking(2.0)
-                                
-                                Spacer()
-                                
-                                if activePrefs.appleHealthEnabled {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "heart.fill")
-                                            .font(.system(size: 8))
-                                            .foregroundColor(.plRed)
-                                        Text("Apple Health")
-                                            .font(.system(size: 9, weight: .bold))
-                                            .foregroundColor(.plGray400)
-                                    }
-                                }
-                            }
-                            
-                            VStack(spacing: 12) {
-                                ForEach(todaySets) { loggedSet in
-                                    let matchedExercise = exercises.first(where: { $0.name == loggedSet.exercise })
-                                    let rawColor = Color(hex: matchedExercise?.colorHex ?? "#8b5cf6")
-                                    let exerciseColor = themeStyle == .night ? Color.plGray300 : rawColor
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(matchedExercise?.displayName ?? loggedSet.exercise)
-                                                .font(.system(size: 14, weight: .black))
-                                                .foregroundColor(brandColors.whiteText)
-                                            Menu {
-                                                Button("Warmup") {
-                                                    HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
-                                                    withAnimation {
-                                                        loggedSet.setType = "warmup"
-                                                        try? modelContext.save()
-                                                    }
-                                                }
-                                                Button("Working") {
-                                                    HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
-                                                    withAnimation {
-                                                        loggedSet.setType = "working"
-                                                        try? modelContext.save()
-                                                    }
-                                                }
-                                                Button("Failed") {
-                                                    HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
-                                                    withAnimation {
-                                                        loggedSet.setType = "failed"
-                                                        try? modelContext.save()
-                                                    }
-                                                }
-                                            } label: {
-                                                HStack(spacing: 2) {
-                                                    Text("\((loggedSet.setType == "drop" || loggedSet.setType == "failed" ? "FAILED" : loggedSet.setType.uppercased())) SET")
-                                                        .font(.system(size: 9, weight: .black))
-                                                        .foregroundColor(loggedSet.setType == "working" ? exerciseColor : .plGray400)
-                                                    Image(systemName: "chevron.up.chevron.down")
-                                                        .font(.system(size: 7, weight: .black))
-                                                        .foregroundColor(loggedSet.setType == "working" ? exerciseColor : .plGray400)
-                                                }
-                                            }
-                                            .buttonStyle(PlainButtonStyle())
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        HStack(spacing: 8) {
-                                            Text("\(Int(loggedSet.weight)) \(activePrefs.weightUnit)")
-                                                .font(.system(size: 14, weight: .black, design: .monospaced))
-                                                .foregroundColor(brandColors.whiteText)
-                                            
-                                            Text("x\(loggedSet.reps)")
-                                                .font(.system(size: 14, weight: .black, design: .monospaced))
-                                                .foregroundColor(brandColors.whiteText)
-                                            
-                                            Menu {
-                                                ForEach(Array(stride(from: 5.0, through: 10.0, by: 0.5)), id: \.self) { val in
-                                                    Button(String(format: "@ RPE %.1f", val)) {
-                                                        HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
-                                                        withAnimation {
-                                                            loggedSet.rpe = val
-                                                            try? modelContext.save()
-                                                        }
-                                                    }
-                                                }
-                                            } label: {
-                                                HStack(spacing: 4) {
-                                                    Text("@ RPE \(String(format: "%.1f", loggedSet.rpe))")
-                                                        .font(.system(size: 10, weight: .black, design: .monospaced))
-                                                        .foregroundColor(brandColors.purple)
-                                                    Image(systemName: "chevron.up.chevron.down")
-                                                        .font(.system(size: 7, weight: .black))
-                                                        .foregroundColor(brandColors.purple)
-                                                }
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 4)
-                                                .background(brandColors.purple.opacity(0.15))
-                                                .cornerRadius(6)
-                                            }
-                                            .buttonStyle(PlainButtonStyle())
-                                        }
-                                        
-                                        Button(action: {
-                                            setToDelete = loggedSet
-                                            showDeleteConfirmation = true
-                                        }) {
-                                            Image(systemName: "trash")
-                                                .foregroundColor(brandColors.red)
-                                                .padding(.leading, 8)
-                                        }
-                                    }
-                                    .padding(.vertical, 10)
-                                    .padding(.horizontal, 14)
-                                    .background(brandColors.whiteText.opacity(0.02))
-                                    .cornerRadius(12)
-                                }
-                                
-                                // Divider between logs and notes
-                                Divider()
-                                    .background(brandColors.whiteText.opacity(0.08))
-                                    .padding(.vertical, 8)
-                                
-                                // Today's Notes Editor
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text("TODAY'S SESSION NOTES")
-                                        .font(.system(size: 9, weight: .black))
-                                        .foregroundColor(.plGray400)
-                                        .tracking(1.5)
-                                    
-                                    TextField("Enter notes, mood, accessories...", text: todayNotesBinding, axis: .vertical)
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundColor(brandColors.whiteText)
-                                        .padding(12)
-                                        .background(Color.black.opacity(themeStyle == .night ? 0.4 : 0.2))
-                                        .cornerRadius(10)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .stroke(brandColors.whiteText.opacity(0.08), lineWidth: 1.0)
-                                        )
-                                }
-                            }
-                        }
-                        .padding(20)
-                        .glassCard(style: themeStyle)
-                    }
                     
                 }
                 .padding(.horizontal, 16)
@@ -531,15 +357,7 @@ struct DashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    HStack(spacing: 2) {
-                        Text("PERSONAL")
-                            .font(.system(size: 24, weight: .black))
-                            .foregroundColor(.primary)
-                        Text("LIFT")
-                            .font(.system(size: 24, weight: .black))
-                            .foregroundColor(brandColors.blue)
-                    }
-                    .tracking(-0.5)
+                    PLWordmark(accent: brandColors.blue)
                 }
                 
                 ToolbarItemGroup(placement: .keyboard) {
@@ -567,22 +385,14 @@ struct DashboardView: View {
                 }
             }
             .onChange(of: weightInput) { oldValue, newValue in
-                if let parsed = Double(newValue) {
+                if let parsed = LiftMath.parse(newValue) {
                     calcWeight = parsed
                 } else if newValue.isEmpty {
                     calcWeight = 0.0
                 }
             }
-            .alert("Confirm Set Deletion", isPresented: $showDeleteConfirmation) {
-                Button("Delete", role: .destructive) {
-                    if let set = setToDelete {
-                        deleteSet(set)
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("Are you sure you want to permanently delete this set?")
-            }
+            .onChange(of: selectedExercise) { _, _ in calcExercise = nil }
+            .overlay(alignment: .bottom) { undoToast }
         }
     }
     
@@ -675,7 +485,7 @@ struct DashboardView: View {
                     let chunk = chunks[index]
                     HStack(spacing: 10) {
                         ForEach(chunk) { exercise in
-                            plateAutofillButton(exercise: exercise.displayName, value: calculateTargetWeight(for: exercise.name), isSquare: false)
+                            plateAutofillButton(exercise: exercise.displayName, name: exercise.name, value: calculateTargetWeight(for: exercise.name), isSquare: false)
                                 .frame(minWidth: 95, maxWidth: .infinity, minHeight: 48, maxHeight: .infinity)
                         }
                     }
@@ -685,7 +495,7 @@ struct DashboardView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(uniqueExercises) { exercise in
-                        plateAutofillButton(exercise: exercise.displayName, value: calculateTargetWeight(for: exercise.name), isSquare: false)
+                        plateAutofillButton(exercise: exercise.displayName, name: exercise.name, value: calculateTargetWeight(for: exercise.name), isSquare: false)
                             .frame(minWidth: 95, maxWidth: .infinity, minHeight: 48, maxHeight: .infinity)
                     }
                 }
@@ -693,22 +503,23 @@ struct DashboardView: View {
         }
     }
     
-    private func plateAutofillButton(exercise: String, value: Double, isSquare: Bool = false) -> some View {
+    private func plateAutofillButton(exercise: String, name: String, value: Double, isSquare: Bool = false) -> some View {
         Button(action: {
             HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
             calcWeight = value
+            calcExercise = name
         }) {
             VStack(spacing: 2) {
                 Spacer(minLength: 0)
                 Text(exercise.uppercased())
-                    .font(.system(size: 8, weight: .black))
+                    .scaledFont(size: 8, weight: .black)
                     .foregroundColor(brandColors.whiteText)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 4)
                 
                 Spacer(minLength: 0)
-                Text("\(Int(value))")
-                    .font(.system(size: 11, weight: .black, design: .monospaced))
+                Text(LiftMath.format(value))
+                    .scaledFont(size: 11, weight: .black, design: .monospaced)
                     .foregroundColor(brandColors.teal)
                 Spacer(minLength: 0)
             }
@@ -721,8 +532,8 @@ struct DashboardView: View {
             )
         }
         .accessibilityLabel("Autofill weight for \(exercise)")
-        .accessibilityValue("\(Int(value)) \(activePrefs.weightUnit)")
-        .accessibilityHint("Loads \(Int(value)) \(activePrefs.weightUnit) into the plate calculator")
+        .accessibilityValue("\(LiftMath.format(value)) \(activePrefs.weightUnit)")
+        .accessibilityHint("Loads \(LiftMath.format(value)) \(activePrefs.weightUnit) into the plate calculator")
     }
     
     private func chunkedExercises(by size: Int) -> [[CustomExercise]] {
@@ -742,31 +553,38 @@ struct DashboardView: View {
     }
     
     private func updateWeightInputForSelectedExercise() {
-        let weight = calculateTargetWeight(for: selectedExercise)
-        weightInput = "\(Int(weight))"
+        weightInput = inputString(calculateTargetWeight(for: selectedExercise))
     }
-    
+
+    /// Field text for a weight: POSIX "%g" so `LiftMath.parse` always reads it back.
+    private func inputString(_ value: Double) -> String {
+        String(format: "%g", (value * 100).rounded() / 100)
+    }
+
+    private func fetchOrCreateTodaySession() -> WorkoutSession {
+        if let session = todaySession { return session }
+        let dateStr = todayString
+        let fetch = FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.dateString == dateStr })
+        if let existing = try? modelContext.fetch(fetch).first { return existing }
+        let session = WorkoutSession(dateString: dateStr)
+        modelContext.insert(session)
+        return session
+    }
+
+    private func syncHealth(_ session: WorkoutSession?) {
+        guard activePrefs.appleHealthEnabled, let session else { return }
+        healthService.syncSession(dateString: session.dateString, sets: session.sets ?? [], unit: activePrefs.weightUnit)
+    }
+
     private func saveLoggedSet() {
-        guard let weight = Double(weightInput),
-              let reps = Int(repsInput) else {
+        guard let weight = LiftMath.parse(weightInput), weight >= 0, weight <= 2000,
+              let reps = Int(repsInput.trimmingCharacters(in: .whitespaces)), reps > 0, reps <= 1000 else {
             HapticService.play(.error, enabled: activePrefs.hapticsEnabled)
             return
         }
-        
-        let dateStr = todayString
-        
-        // 1. Fetch or create today's Session
-        let sessionFetch = FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.dateString == dateStr })
-        let session: WorkoutSession
+
         do {
-            if let existing = try modelContext.fetch(sessionFetch).first {
-                session = existing
-            } else {
-                session = WorkoutSession(dateString: dateStr)
-                modelContext.insert(session)
-            }
-            
-            // 2. Log Set in SwiftData
+            let session = fetchOrCreateTodaySession()
             let newSet = WorkoutSet(
                 exercise: selectedExercise,
                 weight: weight,
@@ -776,29 +594,16 @@ struct DashboardView: View {
             )
             newSet.session = session
             modelContext.insert(newSet)
-            
             try modelContext.save()
-            
-            // 3. Trigger Apple Health Sync if enabled
-            if activePrefs.appleHealthEnabled {
-                Task {
-                    _ = await healthService.saveWorkout(
-                        date: Date(),
-                        exercise: selectedExercise,
-                        weight: weight,
-                        reps: reps,
-                        setType: selectedSetType,
-                        rpe: rpeInput
-                    )
-                }
-            }
-            
+            refreshToken += 1
+
+            syncHealth(session)
             HapticService.play(.success, enabled: activePrefs.hapticsEnabled)
-            
-            // 4. Start Rest Timer if enabled
+
             if activePrefs.showRestTimer {
                 timerManager.startTimer(
-                    duration: activePrefs.defaultRestDuration,
+                    // Per-exercise rest (e.g. 4:00 after deadlifts) falls back to the Settings default.
+                    duration: exercises.first(where: { $0.name == selectedExercise })?.restSeconds ?? activePrefs.defaultRestDuration,
                     allowNotifications: activePrefs.pushNotificationsEnabled,
                     hapticsEnabled: activePrefs.hapticsEnabled
                 )
@@ -807,21 +612,354 @@ struct DashboardView: View {
             debugLog("Failed to save logged set: \(error)")
         }
     }
-    
+
+    /// Deletes immediately and offers Undo for 5 seconds instead of a confirmation alert.
     private func deleteSet(_ set: WorkoutSet) {
         HapticService.play(.heavy, enabled: activePrefs.hapticsEnabled)
-        modelContext.delete(set)
-        try? modelContext.save()
+        let snapshot = DeletedSet(
+            exercise: set.exercise, weight: set.weight, reps: set.reps, rpe: set.rpe,
+            setType: set.setType, timestamp: set.timestamp, session: set.session
+        )
+        withAnimation {
+            modelContext.delete(set)
+            try? modelContext.save()
+            pendingUndo = snapshot
+        }
+        refreshToken += 1
+        syncHealth(snapshot.session)
     }
 
-    private func adjustWeight(by increment: Double) {
+    private func restoreDeletedSet() {
+        guard let undo = pendingUndo else { return }
         HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
-        let currentWeight = Double(weightInput) ?? 0.0
-        let newWeight = max(0.0, currentWeight + increment)
-        if newWeight.truncatingRemainder(dividingBy: 1.0) == 0 {
-            weightInput = String(format: "%.0f", newWeight)
-        } else {
-            weightInput = String(format: "%.1f", newWeight)
+        let restored = WorkoutSet(
+            exercise: undo.exercise, weight: undo.weight, reps: undo.reps,
+            rpe: undo.rpe, setType: undo.setType, timestamp: undo.timestamp
+        )
+        withAnimation {
+            restored.session = undo.session ?? fetchOrCreateTodaySession()
+            modelContext.insert(restored)
+            try? modelContext.save()
+            pendingUndo = nil
+        }
+        refreshToken += 1
+        syncHealth(restored.session)
+    }
+
+    private func adjustWeight(direction: Double, fine: Bool) {
+        HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+        let unit = activePrefs.weightUnit
+        let step = fine ? LiftMath.fineStep(unit: unit) : LiftMath.plateStep(unit: unit)
+        weightInput = inputString(max(0, (LiftMath.parse(weightInput) ?? 0) + direction * step))
+    }
+
+    private func adjustCalcWeight(direction: Double, fine: Bool) {
+        HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+        let unit = activePrefs.weightUnit
+        let step = fine ? LiftMath.fineStep(unit: unit) : LiftMath.plateStep(unit: unit)
+        calcWeight = max(0, calcWeight + direction * step)
+    }
+
+    private func adjustReps(by delta: Int, fine: Bool) {
+        HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+        repsInput = "\(max(1, (Int(repsInput) ?? 0) + delta))"
+    }
+
+    /// Tap runs `action(false)`; long press runs `action(true)` (fine step). VoiceOver gets both.
+    private func stepButton(_ systemImage: String, label: String, height: CGFloat, action: @escaping (_ fine: Bool) -> Void) -> some View {
+        Image(systemName: systemImage)
+            .scaledFont(size: 12, weight: .bold)
+            .foregroundColor(brandColors.whiteText)
+            .frame(width: 40, height: height)
+            .background(brandColors.whiteText.opacity(0.04))
+            .cornerRadius(8)
+            .contentShape(Rectangle())
+            .onTapGesture { action(false) }
+            .onLongPressGesture(minimumDuration: 0.4) { action(true) }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(label)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("Long press for a smaller step")
+            .accessibilityAction { action(false) }
+            .accessibilityAction(named: "Small step") { action(true) }
+    }
+
+    // MARK: - Last Time / Repeat
+
+    /// Today: the previous set of the selected exercise, whatever its type. Earlier days:
+    /// the last working set (warmups aren't what you'd repeat), else the last set of any type.
+    /// Limit-1 fetches instead of querying every set.
+    private var lastSetForSelected: WorkoutSet? {
+        _ = refreshToken
+        let name = selectedExercise
+        var any = FetchDescriptor<WorkoutSet>(
+            predicate: #Predicate { $0.exercise == name },
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        any.fetchLimit = 1
+        guard let latest = try? modelContext.fetch(any).first else { return nil }
+        if latest.session?.dateString == todayString || latest.setType == "working" { return latest }
+        var working = FetchDescriptor<WorkoutSet>(
+            predicate: #Predicate { $0.exercise == name && $0.setType == "working" },
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        working.fetchLimit = 1
+        return (try? modelContext.fetch(working).first) ?? latest
+    }
+
+    @ViewBuilder
+    private var lastTimeRow: some View {
+        if let last = lastSetForSelected {
+            let isToday = last.session?.dateString == todayString
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(isToday ? "PREVIOUS SET" : "LAST TIME")
+                        .scaledFont(size: 9, weight: .black)
+                        .foregroundColor(.plSecondaryLabel)
+                        .tracking(1.5)
+                    Text(lastSetSummary(last, includeDate: !isToday))
+                        .scaledFont(size: 13, weight: .black, design: .monospaced)
+                        .foregroundColor(brandColors.whiteText)
+                }
+                Spacer()
+                Button {
+                    repeatSet(last)
+                } label: {
+                    Label("Repeat", systemImage: "arrow.counterclockwise")
+                        .scaledFont(size: 12, weight: .black)
+                        .foregroundColor(brandColors.purple)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(brandColors.purple.opacity(0.15))
+                        .cornerRadius(10)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Fills the form with this set's weight, reps, and RPE")
+            }
+            .padding(12)
+            .background(brandColors.whiteText.opacity(0.04))
+            .cornerRadius(12)
+        }
+    }
+
+    private func lastSetSummary(_ set: WorkoutSet, includeDate: Bool) -> String {
+        var text = "\(LiftMath.format(set.weight)) \(activePrefs.weightUnit) × \(set.reps) @ \(String(format: "%.1f", set.rpe))"
+        if includeDate, let date = set.session?.date {
+            text += " · " + date.formatted(.dateTime.month(.abbreviated).day())
+        }
+        return text
+    }
+
+    private func repeatSet(_ set: WorkoutSet) {
+        HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+        weightInput = inputString(set.weight)
+        repsInput = "\(set.reps)"
+        rpeInput = set.rpe
+        selectedSetType = (set.setType == "failed" || set.setType == "drop") ? "working" : set.setType
+    }
+
+    // MARK: - Today's Log
+
+    private var todayLogSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("TODAY'S WORKOUT LOG")
+                    .scaledFont(size: 11, weight: .black)
+                    .foregroundColor(brandColors.green)
+                    .tracking(2.0)
+                Spacer()
+                if activePrefs.appleHealthEnabled {
+                    HStack(spacing: 4) {
+                        Image(systemName: "heart.fill")
+                            .scaledFont(size: 8)
+                            .foregroundColor(.plRed)
+                        Text("Apple Health")
+                            .scaledFont(size: 9, weight: .bold)
+                            .foregroundColor(.plSecondaryLabel)
+                    }
+                }
+            }
+
+            VStack(spacing: 12) {
+                if todaySets.isEmpty {
+                    Text("No sets logged yet today.")
+                        .scaledFont(size: 12, weight: .bold)
+                        .foregroundColor(.plSecondaryLabel)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                ForEach(todaySets) { loggedSet in
+                    todaySetRow(loggedSet)
+                }
+
+                Divider()
+                    .background(brandColors.whiteText.opacity(0.08))
+                    .padding(.vertical, 8)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("TODAY'S SESSION NOTES")
+                        .scaledFont(size: 9, weight: .black)
+                        .foregroundColor(.plSecondaryLabel)
+                        .tracking(1.5)
+
+                    TextField("Enter notes, mood, accessories...", text: todayNotesBinding, axis: .vertical)
+                        .scaledFont(size: 13, weight: .bold)
+                        .foregroundColor(brandColors.whiteText)
+                        .padding(12)
+                        .background(Color.black.opacity(themeStyle == .night ? 0.4 : 0.2))
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(brandColors.whiteText.opacity(0.08), lineWidth: 1.0)
+                        )
+                        .accessibilityLabel("Today's session notes")
+                }
+            }
+        }
+        .padding(20)
+        .glassCard(style: themeStyle)
+    }
+
+    private func todaySetRow(_ loggedSet: WorkoutSet) -> some View {
+        let matchedExercise = exercises.first(where: { $0.name == loggedSet.exercise })
+        let rawColor = Color(hex: matchedExercise?.colorHex ?? "#8b5cf6")
+        let exerciseColor = themeStyle == .night ? Color.plGray300 : rawColor
+        let typeColor = loggedSet.setType == "working" ? exerciseColor : Color.plSecondaryLabel
+        let typeLabel = (loggedSet.setType == "drop" || loggedSet.setType == "failed") ? "FAILED" : loggedSet.setType.uppercased()
+
+        return HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(matchedExercise?.displayName ?? loggedSet.exercise)
+                    .scaledFont(size: 14, weight: .black)
+                    .foregroundColor(brandColors.whiteText)
+                Menu {
+                    ForEach([("Warmup", "warmup"), ("Working", "working"), ("Failed", "failed")], id: \.1) { title, tag in
+                        Button(title) {
+                            HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+                            withAnimation {
+                                loggedSet.setType = tag
+                                try? modelContext.save()
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 2) {
+                        Text("\(typeLabel) SET")
+                            .scaledFont(size: 9, weight: .black)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .scaledFont(size: 7, weight: .black)
+                    }
+                    .foregroundColor(typeColor)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .accessibilityLabel("Set type")
+                .accessibilityValue(typeLabel.lowercased())
+            }
+
+            Spacer()
+
+            HStack(spacing: 8) {
+                Text("\(LiftMath.format(loggedSet.weight)) \(activePrefs.weightUnit)")
+                    .scaledFont(size: 14, weight: .black, design: .monospaced)
+                    .foregroundColor(brandColors.whiteText)
+
+                Text("x\(loggedSet.reps)")
+                    .scaledFont(size: 14, weight: .black, design: .monospaced)
+                    .foregroundColor(brandColors.whiteText)
+
+                Menu {
+                    ForEach(Array(stride(from: 5.0, through: 10.0, by: 0.5)), id: \.self) { val in
+                        Button(String(format: "@ RPE %.1f", val)) {
+                            HapticService.play(.medium, enabled: activePrefs.hapticsEnabled)
+                            withAnimation {
+                                loggedSet.rpe = val
+                                try? modelContext.save()
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("@ RPE \(String(format: "%.1f", loggedSet.rpe))")
+                            .scaledFont(size: 10, weight: .black, design: .monospaced)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .scaledFont(size: 7, weight: .black)
+                    }
+                    .foregroundColor(brandColors.purple)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(brandColors.purple.opacity(0.15))
+                    .cornerRadius(6)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .accessibilityLabel("Rate of perceived exertion")
+                .accessibilityValue(String(format: "%.1f", loggedSet.rpe))
+            }
+
+            Button {
+                deleteSet(loggedSet)
+            } label: {
+                Image(systemName: "trash")
+                    .foregroundColor(brandColors.red)
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Delete set")
+            .accessibilityHint("Deletes this set. Undo is offered for a few seconds.")
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 14)
+        .background(brandColors.whiteText.opacity(0.02))
+        .cornerRadius(12)
+    }
+
+    @ViewBuilder
+    private var undoToast: some View {
+        if let undo = pendingUndo {
+            HStack {
+                Text("Set deleted")
+                    .scaledFont(size: 13, weight: .bold)
+                Spacer()
+                Button("UNDO", action: restoreDeletedSet)
+                    .scaledFont(size: 13, weight: .black)
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.plGray800)
+            .cornerRadius(14)
+            .padding(.horizontal, 16)
+            // Clear the floating rest timer (pre-26.1); the tab-bar accessory insets the safe area itself.
+            .padding(.bottom, timerManager.isActive && activePrefs.showRestTimer && !MainTabView.usesTabAccessory ? 90 : 12)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .task(id: undo.id) {
+                try? await Task.sleep(for: .seconds(5))
+                withAnimation {
+                    if pendingUndo?.id == undo.id { pendingUndo = nil }
+                }
+            }
+        }
+    }
+
+    // MARK: - Plate Calculator
+
+    @ViewBuilder
+    private var plateLoadNote: some View {
+        let unit = activePrefs.weightUnit
+        let bar = calcBar
+        let unloadable = LiftMath.plates(total: calcWeight, unit: unit, bar: bar).unloadable
+        if bar != LiftMath.barWeight(unit: unit) {
+            Text("On a \(LiftMath.format(bar)) \(unit) bar")
+                .scaledFont(size: 11, weight: .bold)
+                .foregroundColor(.plSecondaryLabel)
+        }
+        if calcWeight > 0 && calcWeight < bar {
+            Text("Below the empty \(LiftMath.format(bar)) \(unit) bar")
+                .scaledFont(size: 11, weight: .bold)
+                .foregroundColor(.orange)
+        } else if unloadable > 0 {
+            Text("\(LiftMath.format(unloadable)) \(unit) can't be loaded with standard plates")
+                .scaledFont(size: 11, weight: .bold)
+                .foregroundColor(.orange)
         }
     }
     
@@ -845,7 +983,7 @@ struct DashboardView: View {
                     Spacer(minLength: 0)
                 }
                 Text(title)
-                    .font(.system(size: 12, weight: .black))
+                    .scaledFont(size: 12, weight: .black)
                     .foregroundColor(pillText)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
@@ -883,7 +1021,7 @@ struct DashboardView: View {
             }
         }) {
             Text(title)
-                .font(.system(size: 12, weight: .black))
+                .scaledFont(size: 12, weight: .black)
                 .foregroundColor(pillText)
                 .frame(maxWidth: .infinity)
                 .frame(height: 38)
@@ -917,7 +1055,7 @@ struct TargetCard: View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
-                    .font(.system(size: 10, weight: .black))
+                    .scaledFont(size: 10, weight: .black)
                     .foregroundColor(color)
                     .tracking(1.0)
                 
@@ -926,13 +1064,13 @@ struct TargetCard: View {
                 }
                 
                 HStack(alignment: .lastTextBaseline, spacing: 2) {
-                    Text("\(Int(weight))")
-                        .font(.system(size: 20, weight: .black, design: .monospaced))
+                    Text(LiftMath.format(weight))
+                        .scaledFont(size: 20, weight: .black, design: .monospaced)
                         .foregroundColor(whiteText)
                     
                     Text(unit)
-                        .font(.system(size: 11, weight: .black))
-                        .foregroundColor(.plGray400)
+                        .scaledFont(size: 11, weight: .black)
+                        .foregroundColor(.plSecondaryLabel)
                 }
             }
             .padding(.horizontal, isSquare ? 8 : 12)
@@ -948,7 +1086,7 @@ struct TargetCard: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(title)
-        .accessibilityValue("\(Int(weight)) \(unit)")
+        .accessibilityValue("\(LiftMath.format(weight)) \(unit)")
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : [.isButton])
         .accessibilityHint("Double tap to select \(title) for logging, and load this weight into the plate calculator.")
     }
@@ -957,6 +1095,7 @@ struct TargetCard: View {
 // MARK: - Barbell Plate Drawing Widget
 struct BarbellPlateGraphic: View {
     var weight: Double
+    var bar: Double
     var isLbs: Bool
     var isNight: Bool
     
@@ -966,25 +1105,7 @@ struct BarbellPlateGraphic: View {
     }
     
     var plates: [Double] {
-        let bar = isLbs ? 45.0 : 20.0
-        guard weight > bar else { return [] }
-        let sideWeight = (weight - bar) / 2.0
-        
-        let lbsPlates = [45.0, 35.0, 25.0, 10.0, 5.0, 2.5, 1.0]
-        let kgPlates = [25.0, 20.0, 15.0, 10.0, 5.0, 2.5, 1.25]
-        let config = isLbs ? lbsPlates : kgPlates
-        
-        var remaining = sideWeight
-        var resolvedPlates: [Double] = []
-        
-        for p in config {
-            while remaining >= p {
-                resolvedPlates.append(p)
-                remaining -= p
-            }
-        }
-        
-        return resolvedPlates
+        LiftMath.plates(total: weight, unit: isLbs ? "lbs" : "kg", bar: bar).perSide
     }
     
     private var leftPlates: [IdentifiablePlate] {
@@ -997,9 +1118,8 @@ struct BarbellPlateGraphic: View {
     
     private var barbellAccessibilityValue: String {
         let unitStr = isLbs ? "pounds" : "kilograms"
-        let bar = isLbs ? 45.0 : 20.0
         if weight <= bar {
-            return "Empty \(Int(bar)) \(unitStr) barbell."
+            return "Empty \(LiftMath.format(bar)) \(unitStr) barbell."
         }
         
         let plateCounts = plates.reduce(into: [Double: Int]()) { counts, p in
@@ -1014,7 +1134,7 @@ struct BarbellPlateGraphic: View {
         }
         
         let platesText = plateDescriptionList.joined(separator: ", ")
-        return "Total weight \(Int(weight)) \(unitStr). Loaded with \(platesText) per side on a \(Int(bar)) \(unitStr) barbell."
+        return "Total weight \(LiftMath.format(weight)) \(unitStr). Loaded with \(platesText) per side on a \(LiftMath.format(bar)) \(unitStr) barbell."
     }
     
     private func plateColor(for wt: Double, isNight: Bool) -> Color {

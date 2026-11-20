@@ -46,14 +46,15 @@ struct PersonalLiftApp: App {
     init() {
         // Set up notification delegate before anything else
         _ = NotificationDelegate.shared
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+        // Notification permission is requested the first time a rest timer starts
+        // (RestTimerManager), when the prompt has an obvious reason, not at first launch.
 
+        // RoutineTemplate / RoutineExerciseTarget were removed in 1.3.3 (never shown in the UI);
+        // SwiftData's lightweight migration drops their tables from existing stores.
         let schema = Schema([
             UserPreferences.self,
             WorkoutSession.self,
             WorkoutSet.self,
-            RoutineTemplate.self,
-            RoutineExerciseTarget.self,
             CustomExercise.self
         ])
 
@@ -140,14 +141,14 @@ struct DatabaseRecoveryView: View {
     var body: some View {
         VStack(spacing: 24) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 54))
+                .scaledFont(size: 54)
                 .foregroundColor(.red)
 
             Text("Database Error")
                 .font(.title)
                 .fontWeight(.black)
 
-            Text("PersonalLift encountered an unrecoverable database initialization error. You can copy the diagnostic details or reset your local database to recover.")
+            Text("Personal Lift encountered an unrecoverable database initialization error. You can copy the diagnostic details or reset your local database to recover.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

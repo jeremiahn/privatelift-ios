@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import UIKit
 
 enum ThemeStyle: String, Codable, CaseIterable {
     case system = "system"
@@ -159,5 +160,55 @@ extension View {
     
     func glassCard(style: ThemeStyle, accentColor: Color? = nil) -> some View {
         self.modifier(GlassCardModifier(style: style, accentColor: accentColor))
+    }
+}
+
+extension Color {
+    /// Secondary label text: gray-400 on dark backgrounds, gray-500 on light, so small
+    /// labels clear WCAG AA (4.5:1) in both. gray-400 on the light background was ~2.5:1.
+    static let plSecondaryLabel = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark ? UIColor(Color.plGray400) : UIColor(Color.plGray500)
+    })
+}
+
+/// `.system(size:)` that scales with Dynamic Type. Identical to the fixed size at the
+/// default text size; grows or shrinks with the user's setting.
+struct ScaledSystemFont: ViewModifier {
+    @ScaledMetric private var size: CGFloat
+    private let weight: Font.Weight
+    private let design: Font.Design
+
+    init(size: CGFloat, weight: Font.Weight, design: Font.Design) {
+        let style: Font.TextStyle = size < 12 ? .caption2 : size < 15 ? .footnote : size < 20 ? .body : .title2
+        _size = ScaledMetric(wrappedValue: size, relativeTo: style)
+        self.weight = weight
+        self.design = design
+    }
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: size, weight: weight, design: design))
+    }
+}
+
+extension View {
+    func scaledFont(size: CGFloat, weight: Font.Weight = .regular, design: Font.Design = .default) -> some View {
+        modifier(ScaledSystemFont(size: size, weight: weight, design: design))
+    }
+}
+
+/// "PERSONAL LIFT" toolbar wordmark shared by every tab.
+struct PLWordmark: View {
+    var accent: Color
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Text("PERSONAL").foregroundColor(.primary)
+            Text("LIFT").foregroundColor(accent)
+        }
+        .font(.system(size: 24, weight: .black))
+        .tracking(-0.5)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Personal Lift")
+        .accessibilityAddTraits(.isHeader)
     }
 }

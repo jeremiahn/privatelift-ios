@@ -11,8 +11,8 @@ import SwiftUI
 @main
 struct PrivateLiftWidgetBundle: WidgetBundle {
     var body: some Widget {
-        PrivateLiftWidget()
-        PrivateLiftWidgetControl()
+        // The Xcode template widget ("My Widget") and control ("Start Timer") were removed:
+        // they shipped placeholder UI and did nothing. Only the rest-timer Live Activity remains.
         PrivateLiftWidgetLiveActivity()
     }
 }

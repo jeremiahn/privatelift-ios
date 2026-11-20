@@ -28,7 +28,7 @@ struct OnboardingView: View {
     @State private var defaultRestDuration: Double = 180.0
     @State private var useGridMode: Bool = false
     @State private var formula: String = "epley"
-    @StateObject private var healthKitService = HealthKitService()
+    @StateObject private var healthKitService = HealthKitService.shared
     @FocusState private var isInputFocused: Bool
     
     private let totalSteps = 7
@@ -85,7 +85,7 @@ struct OnboardingView: View {
                 // Top Progress indicator bar
                 HStack {
                     Text("ONBOARDING")
-                        .font(.system(size: 10, weight: .black))
+                        .scaledFont(size: 10, weight: .black)
                         .tracking(2.0)
                         .foregroundColor(.gray)
                     
@@ -108,7 +108,7 @@ struct OnboardingView: View {
                             }
                         }) {
                             Image(systemName: isLightMode ? "moon.fill" : "sun.max.fill")
-                                .font(.system(size: 13, weight: .bold))
+                                .scaledFont(size: 13, weight: .bold)
                                 .foregroundColor(isLightMode ? .plBlue : .white)
                                 .frame(width: 28, height: 28)
                                 .background(isLightMode ? Color.black.opacity(0.04) : Color.white.opacity(0.1))
@@ -126,9 +126,9 @@ struct OnboardingView: View {
                 // Content Cards
                 TabView(selection: $currentStep) {
                     welcomeStep.tag(0)
-                    liftMaxStep(title: "Squat 1RM Max", description: "Your estimated single rep maximum for Squats.", value: $squatMax, range: 45...800, step: 5, accentColor: .plRed, stepLabel: "Step 1 of 6").tag(1)
-                    liftMaxStep(title: "Bench 1RM Max", description: "Your estimated single rep maximum for Bench Press.", value: $benchMax, range: 45...600, step: 5, accentColor: .plBlue, stepLabel: "Step 2 of 6").tag(2)
-                    liftMaxStep(title: "Deadlift 1RM Max", description: "Your estimated single rep maximum for Deadlifts.", value: $deadliftMax, range: 45...1000, step: 5, accentColor: .plGreen, stepLabel: "Step 3 of 6").tag(3)
+                    liftMaxStep(title: "Squat 1RM Max", description: "Your estimated single rep maximum for Squats.", value: $squatMax, range: LiftMath.barWeight(unit: weightUnit)...800, step: LiftMath.plateStep(unit: weightUnit), accentColor: .plRed, stepLabel: "Step 1 of 6").tag(1)
+                    liftMaxStep(title: "Bench 1RM Max", description: "Your estimated single rep maximum for Bench Press.", value: $benchMax, range: LiftMath.barWeight(unit: weightUnit)...600, step: LiftMath.plateStep(unit: weightUnit), accentColor: .plBlue, stepLabel: "Step 2 of 6").tag(2)
+                    liftMaxStep(title: "Deadlift 1RM Max", description: "Your estimated single rep maximum for Deadlifts.", value: $deadliftMax, range: LiftMath.barWeight(unit: weightUnit)...1000, step: LiftMath.plateStep(unit: weightUnit), accentColor: .plGreen, stepLabel: "Step 3 of 6").tag(3)
                     bodyWeightGenderStep.tag(4)
                     integrationsStep.tag(5)
                     preferencesStep.tag(6)
@@ -145,7 +145,7 @@ struct OnboardingView: View {
                             withAnimation { currentStep -= 1 }
                         }) {
                             Text("BACK")
-                                .font(.system(size: 11, weight: .black))
+                                .scaledFont(size: 11, weight: .black)
                                 .tracking(1.5)
                                 .foregroundColor(textColor)
                                 .frame(width: 100, height: 50)
@@ -169,7 +169,7 @@ struct OnboardingView: View {
                         }
                     }) {
                         Text(currentStep == 0 ? "GET STARTED" : (currentStep == 7 ? "START LIFTING" : "NEXT"))
-                            .font(.system(size: 11, weight: .black))
+                            .scaledFont(size: 11, weight: .black)
                             .tracking(1.5)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -214,7 +214,7 @@ struct OnboardingView: View {
                     .shadow(color: .plBlue.opacity(0.3), radius: 15, y: 8)
                 
                 Image(systemName: "bolt.fill")
-                    .font(.system(size: 40, weight: .black))
+                    .scaledFont(size: 40, weight: .black)
                     .foregroundColor(.white)
             }
             .scaleEffect(1.0)
@@ -223,10 +223,10 @@ struct OnboardingView: View {
             VStack(spacing: 8) {
                 HStack(spacing: 2) {
                     Text("PERSONAL")
-                        .font(.system(size: 28, weight: .black))
+                        .scaledFont(size: 28, weight: .black)
                         .foregroundColor(textColor)
                     Text("LIFT")
-                        .font(.system(size: 28, weight: .black))
+                        .scaledFont(size: 28, weight: .black)
                         .foregroundColor(.plBlue)
                 }
                 .tracking(-0.5)
@@ -234,7 +234,7 @@ struct OnboardingView: View {
                 .accessibilityLabel("Personal Lift")
                 
                 Text("Your personal, offline-first strength companion. Let's calibrate your starting profile to customize your target weight intensities.")
-                    .font(.system(size: 13, weight: .medium))
+                    .scaledFont(size: 13, weight: .medium)
                     .foregroundColor(secondarySubtextColor)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
@@ -260,16 +260,16 @@ struct OnboardingView: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(stepLabel)
-                    .font(.system(size: 10, weight: .black))
+                    .scaledFont(size: 10, weight: .black)
                     .foregroundColor(accentColor)
                     .tracking(1.5)
                 
                 Text(title)
-                    .font(.system(size: 24, weight: .black))
+                    .scaledFont(size: 24, weight: .black)
                     .foregroundColor(textColor)
                 
                 Text(description)
-                    .font(.system(size: 12, weight: .semibold))
+                    .scaledFont(size: 12, weight: .semibold)
                     .foregroundColor(subtextColor)
             }
             .padding(.horizontal, 24)
@@ -279,16 +279,16 @@ struct OnboardingView: View {
                 VStack(spacing: 4) {
                     TextField(title, value: value, format: .number)
                         .focused($isInputFocused)
-                        .font(.system(size: 64, weight: .black, design: .monospaced))
+                        .scaledFont(size: 64, weight: .black, design: .monospaced)
                         .foregroundColor(textColor)
                         .multilineTextAlignment(.center)
-                        .keyboardType(.numberPad)
+                        .keyboardType(.decimalPad) // kg maxes like 142.5
                         .frame(maxWidth: 240)
                         .accessibilityLabel("\(title) value")
-                        .accessibilityValue("\(Int(value.wrappedValue)) \(weightUnit)")
+                        .accessibilityValue("\(LiftMath.format(value.wrappedValue)) \(weightUnit)")
                     
                     Text(weightUnit.uppercased())
-                        .font(.system(size: 14, weight: .black))
+                        .scaledFont(size: 14, weight: .black)
                         .foregroundColor(subtextColor)
                         .tracking(2.0)
                         .accessibilityHidden(true)
@@ -298,7 +298,7 @@ struct OnboardingView: View {
                     .tint(accentColor)
                     .padding(.horizontal, 16)
                     .accessibilityLabel("\(title) slider")
-                    .accessibilityValue("\(Int(value.wrappedValue)) \(weightUnit)")
+                    .accessibilityValue("\(LiftMath.format(value.wrappedValue)) \(weightUnit)")
             }
             .padding(.vertical, 32)
             .padding(.horizontal, 16)
@@ -321,16 +321,16 @@ struct OnboardingView: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text("STEP 4 OF 6")
-                    .font(.system(size: 10, weight: .black))
+                    .scaledFont(size: 10, weight: .black)
                     .foregroundColor(.plPurple)
                     .tracking(1.5)
                 
                 Text("Body Weight & Gender")
-                    .font(.system(size: 24, weight: .black))
+                    .scaledFont(size: 24, weight: .black)
                     .foregroundColor(textColor)
                 
                 Text("We use these metrics to calculate advanced power-to-weight lifting ratios.")
-                    .font(.system(size: 12, weight: .semibold))
+                    .scaledFont(size: 12, weight: .semibold)
                     .foregroundColor(subtextColor)
             }
             .padding(.horizontal, 24)
@@ -339,7 +339,7 @@ struct OnboardingView: View {
                 Toggle("Track Weight & Gender", isOn: $trackWeightAndGender)
                     .tint(.plPurple)
                     .fontWeight(.bold)
-                    .font(.system(size: 13))
+                    .scaledFont(size: 13)
                     .foregroundColor(textColor)
                     .onChange(of: trackWeightAndGender) { oldValue, newValue in
                         HapticService.play(.medium)
@@ -359,19 +359,19 @@ struct OnboardingView: View {
                     // Weight input
                     VStack(alignment: .leading, spacing: 8) {
                         Text("BODY WEIGHT")
-                            .font(.system(size: 9, weight: .black))
+                            .scaledFont(size: 9, weight: .black)
                             .foregroundColor(subtextColor)
                             .tracking(1.5)
                         
                         HStack {
                             TextField("Weight", value: $bodyWeight, format: .number)
                                 .focused($isInputFocused)
-                                .font(.system(size: 18, weight: .black, design: .monospaced))
+                                .scaledFont(size: 18, weight: .black, design: .monospaced)
                                 .foregroundColor(textColor)
                                 .keyboardType(.decimalPad)
                                 .disabled(!trackWeightAndGender)
                                 .accessibilityLabel("Body weight")
-                                .accessibilityValue("\(bodyWeight) \(weightUnit)")
+                                .accessibilityValue("\(LiftMath.format(bodyWeight)) \(weightUnit)")
                             
                             Spacer()
                             
@@ -381,8 +381,17 @@ struct OnboardingView: View {
                             }
                             .pickerStyle(.segmented)
                             .frame(width: 100)
-                            .disabled(!trackWeightAndGender)
-                            .accessibilityLabel("Body weight unit")
+                            // Not disabled with "Don't Track": the unit also applies to every lift.
+                            .accessibilityLabel("Weight unit")
+                            .onChange(of: weightUnit) { _, newUnit in
+                                // Maxes were entered on earlier steps; convert them instead of relabeling.
+                                let step = LiftMath.plateStep(unit: newUnit)
+                                let toStep = { (v: Double) in (LiftMath.convert(v, to: newUnit) / step).rounded() * step }
+                                squatMax = toStep(squatMax)
+                                benchMax = toStep(benchMax)
+                                deadliftMax = toStep(deadliftMax)
+                                bodyWeight = (LiftMath.convert(bodyWeight, to: newUnit) * 10).rounded() / 10
+                            }
                         }
                         .padding(.horizontal, 16)
                         .frame(height: 52)
@@ -397,7 +406,7 @@ struct OnboardingView: View {
                     // Gender Selection
                     VStack(alignment: .leading, spacing: 10) {
                         Text("GENDER")
-                            .font(.system(size: 9, weight: .black))
+                            .scaledFont(size: 9, weight: .black)
                             .foregroundColor(subtextColor)
                             .tracking(1.5)
                         
@@ -432,7 +441,7 @@ struct OnboardingView: View {
             gender = tag
         }) {
             Text(label)
-                .font(.system(size: 10, weight: .black))
+                .scaledFont(size: 10, weight: .black)
                 .foregroundColor(gender == tag ? .white : textColor)
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
@@ -455,16 +464,16 @@ struct OnboardingView: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text("STEP 5 OF 6")
-                    .font(.system(size: 10, weight: .black))
+                    .scaledFont(size: 10, weight: .black)
                     .foregroundColor(.plBlue)
                     .tracking(1.5)
                 
                 Text("Integrations & Sync")
-                    .font(.system(size: 24, weight: .black))
+                    .scaledFont(size: 24, weight: .black)
                     .foregroundColor(textColor)
                 
                 Text("Enable optional integrations. You can always change these later in Settings.")
-                    .font(.system(size: 12, weight: .semibold))
+                    .scaledFont(size: 12, weight: .semibold)
                     .foregroundColor(subtextColor)
             }
             .padding(.horizontal, 24)
@@ -509,10 +518,10 @@ struct OnboardingView: View {
                     if healthAuthFailed {
                         HStack(spacing: 8) {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 10))
+                                .scaledFont(size: 10)
                                 .foregroundColor(.orange)
-                            Text("Health permission was not granted. You can enable it in iOS Settings → Health → PersonalLift.")
-                                .font(.system(size: 10, weight: .semibold))
+                            Text("Health permission was not granted. You can enable it in iOS Settings → Health → Personal Lift.")
+                                .scaledFont(size: 10, weight: .semibold)
                                 .foregroundColor(.orange)
                                 .lineSpacing(2)
                         }
@@ -535,10 +544,10 @@ struct OnboardingView: View {
             // Footer hint
             HStack(spacing: 6) {
                 Image(systemName: "gearshape")
-                    .font(.system(size: 10, weight: .bold))
+                    .scaledFont(size: 10, weight: .bold)
                     .foregroundColor(subtextColor)
                 Text("All of these can be changed anytime in the Settings tab.")
-                    .font(.system(size: 11, weight: .medium))
+                    .scaledFont(size: 11, weight: .medium)
                     .foregroundColor(subtextColor)
             }
             .padding(.horizontal, 28)
@@ -556,7 +565,7 @@ struct OnboardingView: View {
     ) -> some View {
         HStack(spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 20, weight: .semibold))
+                .scaledFont(size: 20, weight: .semibold)
                 .foregroundColor(iconColor)
                 .frame(width: 36, height: 36)
                 .background(iconColor.opacity(isLightMode ? 0.1 : 0.15))
@@ -565,11 +574,11 @@ struct OnboardingView: View {
             
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 13, weight: .bold))
+                    .scaledFont(size: 13, weight: .bold)
                     .foregroundColor(textColor)
                 
                 Text(subtitle)
-                    .font(.system(size: 10, weight: .medium))
+                    .scaledFont(size: 10, weight: .medium)
                     .foregroundColor(subtextColor)
                     .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -599,16 +608,16 @@ struct OnboardingView: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text("STEP 6 OF 6")
-                    .font(.system(size: 10, weight: .black))
+                    .scaledFont(size: 10, weight: .black)
                     .foregroundColor(.plPurple)
                     .tracking(1.5)
                 
                 Text("Preferences")
-                    .font(.system(size: 24, weight: .black))
+                    .scaledFont(size: 24, weight: .black)
                     .foregroundColor(textColor)
                 
                 Text("Customize your rest intervals, dashboard layouts, and calculations.")
-                    .font(.system(size: 12, weight: .semibold))
+                    .scaledFont(size: 12, weight: .semibold)
                     .foregroundColor(subtextColor)
             }
             .padding(.horizontal, 24)
@@ -631,7 +640,7 @@ struct OnboardingView: View {
                     // Default Rest Duration
                     HStack(spacing: 14) {
                         Image(systemName: "hourglass")
-                            .font(.system(size: 20, weight: .semibold))
+                            .scaledFont(size: 20, weight: .semibold)
                             .foregroundColor(.plTeal)
                             .frame(width: 36, height: 36)
                             .background(Color.plTeal.opacity(isLightMode ? 0.1 : 0.15))
@@ -640,11 +649,11 @@ struct OnboardingView: View {
                         
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Default Rest Duration")
-                                .font(.system(size: 13, weight: .bold))
+                                .scaledFont(size: 13, weight: .bold)
                                 .foregroundColor(textColor)
                             
                             Text("Choose the length of your default rest periods.")
-                                .font(.system(size: 10, weight: .medium))
+                                .scaledFont(size: 10, weight: .medium)
                                 .foregroundColor(subtextColor)
                         }
                         
@@ -671,7 +680,7 @@ struct OnboardingView: View {
                 // Dashboard Layout (Carousel vs Grid)
                 HStack(spacing: 14) {
                     Image(systemName: "square.grid.2x2.fill")
-                        .font(.system(size: 20, weight: .semibold))
+                        .scaledFont(size: 20, weight: .semibold)
                         .foregroundColor(.plPurple)
                         .frame(width: 36, height: 36)
                         .background(Color.plPurple.opacity(isLightMode ? 0.1 : 0.15))
@@ -680,11 +689,11 @@ struct OnboardingView: View {
                     
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Dashboard Layout")
-                            .font(.system(size: 13, weight: .bold))
+                            .scaledFont(size: 13, weight: .bold)
                             .foregroundColor(textColor)
                         
                         Text("Choose how your exercises are presented on the main tab.")
-                            .font(.system(size: 10, weight: .medium))
+                            .scaledFont(size: 10, weight: .medium)
                             .foregroundColor(subtextColor)
                     }
                     
@@ -707,7 +716,7 @@ struct OnboardingView: View {
                 // 1RM Formula (Epley vs Brzycki vs Lander)
                 HStack(spacing: 14) {
                     Image(systemName: "function")
-                        .font(.system(size: 20, weight: .semibold))
+                        .scaledFont(size: 20, weight: .semibold)
                         .foregroundColor(.plRed)
                         .frame(width: 36, height: 36)
                         .background(Color.plRed.opacity(isLightMode ? 0.1 : 0.15))
@@ -716,11 +725,11 @@ struct OnboardingView: View {
                     
                     VStack(alignment: .leading, spacing: 3) {
                         Text("1RM Formula")
-                            .font(.system(size: 13, weight: .bold))
+                            .scaledFont(size: 13, weight: .bold)
                             .foregroundColor(textColor)
                         
                         Text("Formula used to calculate estimated one-rep maximums.")
-                            .font(.system(size: 10, weight: .medium))
+                            .scaledFont(size: 10, weight: .medium)
                             .foregroundColor(subtextColor)
                     }
                     
@@ -749,10 +758,10 @@ struct OnboardingView: View {
             // Footer hint
             HStack(spacing: 6) {
                 Image(systemName: "gearshape")
-                    .font(.system(size: 10, weight: .bold))
+                    .scaledFont(size: 10, weight: .bold)
                     .foregroundColor(subtextColor)
                 Text("All of these can be changed anytime in the Settings tab.")
-                    .font(.system(size: 11, weight: .medium))
+                    .scaledFont(size: 11, weight: .medium)
                     .foregroundColor(subtextColor)
             }
             .padding(.horizontal, 28)
@@ -774,19 +783,19 @@ struct OnboardingView: View {
                     .shadow(color: .plGreen.opacity(0.3), radius: 15, y: 8)
                 
                 Image(systemName: "checkmark")
-                    .font(.system(size: 36, weight: .black))
+                    .scaledFont(size: 36, weight: .black)
                     .foregroundColor(.white)
             }
             .accessibilityHidden(true)
             
             VStack(spacing: 8) {
                 Text("CALIBRATION COMPLETE")
-                    .font(.system(size: 20, weight: .black))
+                    .scaledFont(size: 20, weight: .black)
                     .foregroundColor(textColor)
                     .tracking(-0.5)
                 
                 Text("Your strength benchmarks have been established. Your workout intensity target weight plates will now adapt automatically.")
-                    .font(.system(size: 13, weight: .medium))
+                    .scaledFont(size: 13, weight: .medium)
                     .foregroundColor(secondarySubtextColor)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
@@ -804,9 +813,10 @@ struct OnboardingView: View {
             let existingPrefs = try modelContext.fetch(prefsFetch)
             let prefs = existingPrefs.first ?? UserPreferences()
             
-            let finalSquat = max(45, min(squatMax, 800))
-            let finalBench = max(45, min(benchMax, 600))
-            let finalDeadlift = max(45, min(deadliftMax, 1000))
+            let bar = LiftMath.barWeight(unit: weightUnit)
+            let finalSquat = max(bar, min(squatMax, 800))
+            let finalBench = max(bar, min(benchMax, 600))
+            let finalDeadlift = max(bar, min(deadliftMax, 1000))
             
             prefs.squatMax = finalSquat
             prefs.benchMax = finalBench

@@ -135,45 +135,7 @@ struct DatabaseSeeder {
             debugLog("Error checking/seeding custom exercises: \(error)")
         }
 
-        // 3. Seed Routine Templates if none exist
-        do {
-            let existingTemplates = try context.fetch(FetchDescriptor<RoutineTemplate>())
-            if existingTemplates.isEmpty {
-                // Template 1: Powerlifting Big Three
-                let t1 = RoutineTemplate(name: "Powerlifting Big Three", templateDescription: "Squat, Bench, and Deadlift target weights.")
-                context.insert(t1)
-                for exName in ["SQUAT", "BENCH", "DEADLIFT"] {
-                    let e = RoutineExerciseTarget(exercise: exName, reps: 5, setType: "working", pct: 0.85)
-                    e.template = t1
-                    context.insert(e)
-                }
-
-                // Template 2: Squat Focus (3x5)
-                let t2 = RoutineTemplate(name: "Squat Focus (3x5)", templateDescription: "Triple working sets for leg development.")
-                context.insert(t2)
-                for _ in 0..<3 {
-                    let e = RoutineExerciseTarget(exercise: "SQUAT", reps: 5, setType: "working", pct: 0.85)
-                    e.template = t2
-                    context.insert(e)
-                }
-
-                // Template 3: Bench Press Volume (3x5)
-                let t3 = RoutineTemplate(name: "Bench Press Volume (3x5)", templateDescription: "Triple working sets for upper body pushing power.")
-                context.insert(t3)
-                for _ in 0..<3 {
-                    let e = RoutineExerciseTarget(exercise: "BENCH", reps: 5, setType: "working", pct: 0.85)
-                    e.template = t3
-                    context.insert(e)
-                }
-
-                try context.save()
-                debugLog("Default routine templates seeded successfully.")
-            }
-        } catch {
-            debugLog("Error checking/seeding routine templates: \(error)")
-        }
-
-        // 4. De-duplicate any existing exercises with the same name (safety net for
+        // 3. De-duplicate any existing exercises with the same name (safety net for
         //    CloudKit sync races that may have already inserted duplicates).
         deduplicateExercises(context: context)
     }

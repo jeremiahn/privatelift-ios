@@ -24,6 +24,7 @@ final class UserPreferences {
     var showWatchSupport: Bool = false
     var timeZoneIdentifier: String = TimeZone.current.identifier
     var startOfWeekDay: Int = Calendar.current.firstWeekday // 1 = Sunday, 2 = Monday, ... 7 = Saturday
+    var barWeight: Double? = nil // nil = standard bar for the unit (45 lb / 20 kg)
 
     init(
         squatMax: Double = 315.0,

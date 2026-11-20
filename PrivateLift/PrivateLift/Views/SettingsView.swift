@@ -23,6 +23,9 @@ struct SettingsView: View {
     @State private var showResetAlert = false
     @State private var showHealthSettingsAlert = false
     @State private var showICloudAlert = false
+    @State private var showHealthRebuildAlert = false
+    @State private var isRebuildingHealth = false
+    @State private var healthRebuildResult: String? = nil
     @State private var importSuccessAlert = false
     @State private var showImportErrorAlert = false
     @State private var importErrorMessage = ""
@@ -42,23 +45,14 @@ struct SettingsView: View {
         BrandColors(theme: themeStyle)
     }
     
-    var jsonBackupString: String {
-        generateJSONBackupString()
-    }
     
-    var csvBackupString: String {
-        generateCSVBackupString()
-    }
-    
-    // Default rest timer choices (seconds)
-    private let restTimerChoices: [Double] = [60.0, 90.0, 120.0, 180.0, 300.0]
     
     var body: some View {
         NavigationStack {
             Form {
                 strengthBenchmarksSection
                 appPreferencesSection
-                Section(header: Text("DATABASE BACKUP & RESTORE").font(.system(size: 10, weight: .black))) {
+                Section(header: Text("DATABASE BACKUP & RESTORE").scaledFont(size: 10, weight: .black)) {
                     backupRestoreSection
                 }
                 dangerZoneSection
@@ -74,15 +68,7 @@ struct SettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    HStack(spacing: 2) {
-                        Text("PERSONAL")
-                            .font(.system(size: 24, weight: .black))
-                            .foregroundColor(.primary)
-                        Text("LIFT")
-                            .font(.system(size: 24, weight: .black))
-                            .foregroundColor(brandColors.blue)
-                    }
-                    .tracking(-0.5)
+                    PLWordmark(accent: brandColors.blue)
                 }
                 
                 ToolbarItemGroup(placement: .keyboard) {
@@ -141,19 +127,30 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("PersonalLift requires Health permissions to sync workouts. Tap 'Open Settings' -> select 'PersonalLift' under Data Access & Devices -> and enable write/read permissions.")
+                Text("Personal Lift requires Health permissions to sync workouts. Tap 'Open Settings' -> select 'Personal Lift' under Data Access & Devices -> and enable write/read permissions.")
+            }
+            .alert("Rebuild Apple Health Workouts?", isPresented: $showHealthRebuildAlert) {
+                Button("Rebuild") { rebuildHealthWorkouts() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Versions before 1.3.3 saved every set as its own workout. This removes the workouts and energy samples Personal Lift has written and saves one workout per logged session instead. Data from other apps is not touched.")
+            }
+            .alert("Apple Health", isPresented: Binding(get: { healthRebuildResult != nil }, set: { if !$0 { healthRebuildResult = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(healthRebuildResult ?? "")
             }
             .alert("Restart Required", isPresented: $showICloudAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Your iCloud sync setting has been saved. Please fully close and relaunch PersonalLift to apply the change. Your data will not be affected.")
+                Text("Your iCloud sync setting has been saved. Please fully close and relaunch Personal Lift to apply the change. Your data will not be affected.")
             }
 
         }
     }
     
     private var strengthBenchmarksSection: some View {
-        Section(header: Text("STRENGTH BENCHMARKS & PROFILE").font(.system(size: 10, weight: .black))) {
+        Section(header: Text("STRENGTH BENCHMARKS & PROFILE").scaledFont(size: 10, weight: .black)) {
             NavigationLink(destination: ManageExercisesView()) {
                 HStack {
                     Text("Manage Exercises & Maxes")
@@ -167,7 +164,7 @@ struct SettingsView: View {
                 Text("Body Weight")
                     .fontWeight(.bold)
                 Spacer()
-                TextField("lbs", value: Bindable(activePrefs).bodyWeight, format: .number)
+                TextField(activePrefs.weightUnit, value: Bindable(activePrefs).bodyWeight, format: .number.precision(.fractionLength(0...1)))
                     .focused($isFieldFocused)
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
@@ -175,9 +172,32 @@ struct SettingsView: View {
                     .font(.system(.body, design: .monospaced))
                     .fontWeight(.black)
                     .accessibilityLabel("Body weight")
-                    .accessibilityValue("\(activePrefs.bodyWeight) \(activePrefs.weightUnit)")
+                    .accessibilityValue("\(LiftMath.format(activePrefs.bodyWeight)) \(activePrefs.weightUnit)")
             }
             
+            HStack {
+                Text("Bar Weight")
+                    .fontWeight(.bold)
+                Spacer()
+                TextField("Standard \(LiftMath.format(LiftMath.barWeight(unit: activePrefs.weightUnit)))",
+                          value: Bindable(activePrefs).barWeight,
+                          format: .number.precision(.fractionLength(0...1)))
+                    .focused($isFieldFocused)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 130)
+                    .font(.system(.body, design: .monospaced))
+                    .fontWeight(.black)
+                    .accessibilityLabel("Default bar weight")
+                    .accessibilityHint("Leave empty for a standard \(LiftMath.format(LiftMath.barWeight(unit: activePrefs.weightUnit))) \(activePrefs.weightUnit) bar. Exercises can override this.")
+                    .onChange(of: activePrefs.barWeight) { _, newValue in
+                        // Validate at the input boundary: nothing non-positive or implausible.
+                        if let value = newValue, value <= 0 || value > 200 {
+                            activePrefs.barWeight = nil
+                        }
+                    }
+            }
+
             Picker("Gender", selection: Bindable(activePrefs).gender) {
                 Text("Male").tag("male")
                 Text("Female").tag("female")
@@ -189,7 +209,7 @@ struct SettingsView: View {
     }
     
     private var appPreferencesSection: some View {
-        Section(header: Text("APP PREFERENCES").font(.system(size: 10, weight: .black))) {
+        Section(header: Text("APP PREFERENCES").scaledFont(size: 10, weight: .black)) {
             Picker("Weight Unit", selection: Binding(
                 get: { activePrefs.weightUnit },
                 set: { newValue in
@@ -226,11 +246,11 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Label {
                             Text("Data written to Apple Health:")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.plGray400)
+                                .scaledFont(size: 11, weight: .semibold)
+                                .foregroundColor(.plSecondaryLabel)
                         } icon: {
                             Image(systemName: "heart.fill")
-                                .font(.system(size: 9))
+                                .scaledFont(size: 9)
                                 .foregroundColor(.plRed)
                         }
                         VStack(alignment: .leading, spacing: 2) {
@@ -238,15 +258,29 @@ struct SettingsView: View {
                             Text("• Active Energy Burned (estimated calories)")
                             Text("• Body Mass (if logged)")
                         }
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.plGray400)
+                        .scaledFont(size: 11, weight: .medium)
+                        .foregroundColor(.plSecondaryLabel)
                         .padding(.leading, 16)
+
+                        Button {
+                            showHealthRebuildAlert = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                if isRebuildingHealth { ProgressView() }
+                                Text(isRebuildingHealth ? "Rebuilding..." : "Rebuild Apple Health Workouts")
+                                    .scaledFont(size: 12, weight: .bold)
+                            }
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(isRebuildingHealth)
+                        .padding(.top, 6)
+                        .accessibilityHint("Replaces per-set workouts from older versions with one workout per session")
                     }
                     .padding(.top, 2)
                 } else {
-                    Text("When enabled, each logged set is saved as a Strength Training workout to Apple Health, including estimated active energy burned.")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.plGray400)
+                    Text("When enabled, each day's logged sets are saved to Apple Health as one Strength Training workout, including estimated active energy burned.")
+                        .scaledFont(size: 11, weight: .medium)
+                        .foregroundColor(.plSecondaryLabel)
                         .padding(.top, 2)
                 }
             }
@@ -286,13 +320,13 @@ struct SettingsView: View {
                 if WCSession.isSupported() {
                     let session = WCSession.default
                     if !session.isWatchAppInstalled {
-                        Text("Watch App is not installed. Open the Watch app on your iPhone to install PersonalLift on your Apple Watch.")
-                            .font(.system(size: 11, weight: .semibold))
+                        Text("Watch App is not installed. Open the Watch app on your iPhone to install Personal Lift on your Apple Watch.")
+                            .scaledFont(size: 11, weight: .semibold)
                             .foregroundColor(.orange)
                             .padding(.top, -4)
                     } else {
                         Text("Watch App is connected and installed.")
-                            .font(.system(size: 11, weight: .semibold))
+                            .scaledFont(size: 11, weight: .semibold)
                             .foregroundColor(.green)
                             .padding(.top, -4)
                     }
@@ -305,11 +339,9 @@ struct SettingsView: View {
                 
             if activePrefs.showRestTimer {
                 Picker("Default Rest Duration", selection: Bindable(activePrefs).defaultRestDuration) {
-                    Text("1 Min").tag(60.0)
-                    Text("1:30 Min").tag(90.0)
-                    Text("2 Min").tag(120.0)
-                    Text("3 Min").tag(180.0)
-                    Text("5 Min").tag(300.0)
+                    ForEach(LiftMath.restChoices, id: \.self) { seconds in
+                        Text(LiftMath.formatRest(seconds)).tag(seconds)
+                    }
                 }
                 .fontWeight(.bold)
                 .tint(.plBlue)
@@ -358,7 +390,9 @@ struct SettingsView: View {
     private var backupRestoreSection: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             // Export JSON ShareLink
-            ShareLink(item: jsonBackupString, subject: Text("PersonalLift Backup"), message: Text("PersonalLift Backup JSON file")) {
+            ShareLink(item: JSONBackupExport(build: generateJSONBackupString),
+                      subject: Text("Personal Lift Backup"),
+                      preview: SharePreview("Personal Lift Backup (JSON)")) {
                 dbGridBox(title: "EXPORT DATABASE", format: "JSON", icon: "square.and.arrow.up", color: brandColors.blue)
             }
             .buttonStyle(PlainButtonStyle())
@@ -374,7 +408,9 @@ struct SettingsView: View {
             .buttonStyle(PlainButtonStyle())
             
             // Export CSV ShareLink
-            ShareLink(item: csvBackupString, subject: Text("Workout History CSV"), message: Text("PersonalLift workout logs exported in CSV format")) {
+            ShareLink(item: CSVBackupExport(build: generateCSVBackupString),
+                      subject: Text("Workout History CSV"),
+                      preview: SharePreview("Personal Lift Workouts (CSV)")) {
                 dbGridBox(title: "EXPORT WORKOUTS", format: "CSV", icon: "tablecells", color: brandColors.green)
             }
             .buttonStyle(PlainButtonStyle())
@@ -394,20 +430,20 @@ struct SettingsView: View {
     }
     
     private var dangerZoneSection: some View {
-        Section(header: Text("DANGER ZONE").font(.system(size: 10, weight: .black))) {
+        Section(header: Text("DANGER ZONE").scaledFont(size: 10, weight: .black)) {
             Button(action: {
                 HapticService.play(.heavy, enabled: activePrefs.hapticsEnabled)
                 showResetAlert = true
             }) {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 14, weight: .bold))
+                        .scaledFont(size: 14, weight: .bold)
                     Text("DELETE ALL WORKOUT DATA")
-                        .font(.system(size: 12, weight: .black))
+                        .scaledFont(size: 12, weight: .black)
                         .tracking(1.0)
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .black))
+                        .scaledFont(size: 10, weight: .black)
                         .foregroundColor(themeStyle == .light ? .plGray950.opacity(0.6) : brandColors.red.opacity(0.6))
                 }
                 .foregroundColor(themeStyle == .light ? .plGray950 : .white)
@@ -435,26 +471,41 @@ struct SettingsView: View {
     private func convertDatabaseUnits(targetUnit: String) {
         HapticService.play(.heavy, enabled: activePrefs.hapticsEnabled)
         
-        let multiplier = targetUnit == "kg" ? 0.45359237 : (1.0 / 0.45359237)
-        
+        // Unrounded on purpose: rounding here permanently altered history on every switch
+        // (102.5 kg -> 226 lb -> 103 kg). Display code rounds instead.
+        let convert = { (value: Double) in LiftMath.convert(value, to: targetUnit) }
+
         // 1. Convert Benchmarks
-        activePrefs.squatMax = Foundation.round(activePrefs.squatMax * multiplier)
-        activePrefs.benchMax = Foundation.round(activePrefs.benchMax * multiplier)
-        activePrefs.deadliftMax = Foundation.round(activePrefs.deadliftMax * multiplier)
-        activePrefs.bodyWeight = Foundation.round(activePrefs.bodyWeight * multiplier)
-        
+        activePrefs.squatMax = convert(activePrefs.squatMax)
+        activePrefs.benchMax = convert(activePrefs.benchMax)
+        activePrefs.deadliftMax = convert(activePrefs.deadliftMax)
+        activePrefs.bodyWeight = convert(activePrefs.bodyWeight)
+        activePrefs.barWeight = activePrefs.barWeight.map(convert)
+
         for exercise in customExercises {
-            exercise.oneRepMax = Foundation.round(exercise.oneRepMax * multiplier)
+            exercise.oneRepMax = convert(exercise.oneRepMax)
+            exercise.barWeight = exercise.barWeight.map(convert)
         }
-        
+
         // 2. Convert All sets
         for item in allSets {
-            item.weight = Foundation.round(item.weight * multiplier)
+            item.weight = convert(item.weight)
         }
         
         try? modelContext.save()
     }
     
+    private func rebuildHealthWorkouts() {
+        isRebuildingHealth = true
+        Task {
+            let ok = await healthService.rebuildAllWorkouts(sessions: allSessions, unit: activePrefs.weightUnit)
+            isRebuildingHealth = false
+            healthRebuildResult = ok
+                ? "Apple Health now has one workout per logged session."
+                : "The rebuild could not finish. Check that Personal Lift can write workouts in the Health app's sharing settings."
+        }
+    }
+
     // MARK: - Backup Serializers
     private func generateJSONBackupString() -> String {
         let encoder = JSONEncoder()
@@ -465,7 +516,7 @@ struct SettingsView: View {
         for session in allSessions {
             var setsList: [BackupSet] = []
             for s in session.sets ?? [] {
-                setsList.append(BackupSet(exercise: s.exercise, weight: s.weight, reps: s.reps, rpe: s.rpe, setType: s.setType))
+                setsList.append(BackupSet(exercise: s.exercise, weight: s.weight, reps: s.reps, rpe: s.rpe, setType: s.setType, timestamp: s.timestamp))
             }
             exportSessions.append(BackupSession(date: session.dateString, notes: session.notes, sets: setsList))
         }
@@ -489,7 +540,8 @@ struct SettingsView: View {
             lastIntensity: activePrefs.lastIntensity,
             theme: activePrefs.theme,
             timeZoneIdentifier: activePrefs.timeZoneIdentifier,
-            startOfWeekDay: activePrefs.startOfWeekDay
+            startOfWeekDay: activePrefs.startOfWeekDay,
+            barWeight: activePrefs.barWeight
         )
         
         let payload = BackupPayload(settings: settings, sessions: exportSessions)
@@ -553,6 +605,7 @@ struct SettingsView: View {
             activePrefs.theme = payload.settings.theme ?? "system"
             activePrefs.timeZoneIdentifier = payload.settings.timeZoneIdentifier ?? TimeZone.current.identifier
             activePrefs.startOfWeekDay = payload.settings.startOfWeekDay ?? Calendar.current.firstWeekday
+            activePrefs.barWeight = payload.settings.barWeight.flatMap { $0 > 0 && $0 <= 200 ? $0 : nil }
             
             // Update CustomExercises with imported values for powerlifts
             for exercise in customExercises {
@@ -590,7 +643,8 @@ struct SettingsView: View {
                             weight: setData.weight,
                             reps: setData.reps,
                             rpe: setData.rpe,
-                            setType: setData.setType
+                            setType: setData.setType,
+                            timestamp: setData.timestamp ?? Date()
                         )
                         newSet.session = session
                         modelContext.insert(newSet)
@@ -715,18 +769,18 @@ struct SettingsView: View {
     private func dbGridBox(title: String, format: String, icon: String, color: Color) -> some View {
         VStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.system(size: 18, weight: .bold))
+                .scaledFont(size: 18, weight: .bold)
                 .foregroundColor(color)
                 .accessibilityHidden(true)
             
             VStack(spacing: 2) {
                 Text(title)
-                    .font(.system(size: 8, weight: .black))
-                    .foregroundColor(.plGray400)
+                    .scaledFont(size: 8, weight: .black)
+                    .foregroundColor(.plSecondaryLabel)
                     .tracking(1.0)
                 
                 Text(format)
-                    .font(.system(size: 11, weight: .black))
+                    .scaledFont(size: 11, weight: .black)
                     .foregroundColor(brandColors.whiteText)
             }
         }
@@ -770,6 +824,7 @@ private struct BackupSettings: Codable {
     let theme: String?
     let timeZoneIdentifier: String?
     let startOfWeekDay: Int?
+    let barWeight: Double? // added in 1.3.3
 }
 private struct BackupSession: Codable {
     let date: String
@@ -782,6 +837,29 @@ private struct BackupSet: Codable {
     let reps: Int
     let rpe: Double
     let setType: String
+    let timestamp: Date? // absent in backups from before 1.3.3
 }
 
+/// Share-sheet payloads that build the backup only when the user actually shares,
+/// instead of serializing the whole database on every Settings redraw. Real file types
+/// (not plain text) so the Import buttons, which accept .json / .csv, can read them back.
+struct JSONBackupExport: Transferable {
+    let build: @MainActor () -> String
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(exportedContentType: .json) { try await writeExport($0.build, named: "PersonalLift-Backup.json") }
+    }
+}
 
+struct CSVBackupExport: Transferable {
+    let build: @MainActor () -> String
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(exportedContentType: .commaSeparatedText) { try await writeExport($0.build, named: "PersonalLift-Workouts.csv") }
+    }
+}
+
+private func writeExport(_ build: @MainActor () -> String, named name: String) async throws -> SentTransferredFile {
+    let text = build() // writeExport is main-actor isolated (target default), so no hop needed
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+    try Data(text.utf8).write(to: url, options: .atomic)
+    return SentTransferredFile(url)
+}

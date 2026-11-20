@@ -206,6 +206,9 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
             newSet.session = session
             context.insert(newSet)
             try context.save()
+            if let prefs = (try? context.fetch(FetchDescriptor<UserPreferences>()))?.first, prefs.appleHealthEnabled {
+                HealthKitService.shared.syncSession(dateString: session.dateString, sets: session.sets ?? [], unit: prefs.weightUnit)
+            }
             debugLog("WatchConnectivityManager: saved set logged from watch: \(exercise) \(weight)x\(reps)")
         } catch {
             debugLog("WatchConnectivityManager: failed to save watch set: \(error.localizedDescription)")

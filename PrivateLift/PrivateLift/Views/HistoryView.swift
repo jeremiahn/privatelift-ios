@@ -31,27 +31,7 @@ struct HistoryView: View {
         preferences.first ?? UserPreferences()
     }
     
-    var uniqueExercises: [CustomExercise] {
-        var seen = Set<String>()
-        return exercises.filter { exercise in
-            let normalized = exercise.name.uppercased().replacingOccurrences(of: " ", with: "")
-            let key: String
-            if normalized == "BENCH" || normalized == "BENCHPRESS" {
-                key = "BENCH"
-            } else if normalized == "SQUAT" {
-                key = "SQUAT"
-            } else if normalized == "DEADLIFT" {
-                key = "DEADLIFT"
-            } else {
-                key = normalized
-            }
-            if seen.contains(key) {
-                return false
-            }
-            seen.insert(key)
-            return true
-        }
-    }
+    var uniqueExercises: [CustomExercise] { exercises.uniqued }
     
     var themeStyle: ThemeStyle {
         ThemeStyle(rawValue: activePrefs.theme) ?? .system
@@ -101,9 +81,9 @@ struct HistoryView: View {
         let formula = activePrefs.formula
         var dailyMaxes: [String: [String: Double]] = [:] // YYYY-MM-DD -> [LIFT -> MAX_E1RM]
 
-        for set in allSets {
+        for set in allSets where LiftMath.countsTowardRecords(setType: set.setType, reps: set.reps) {
             guard let dateStr = set.session?.dateString else { continue }
-            let e1rm = calculateE1RM(weight: set.weight, reps: set.reps, formula: formula)
+            let e1rm = LiftMath.e1RM(weight: set.weight, reps: set.reps, formula: formula)
 
             var dayLifts = dailyMaxes[dateStr] ?? [:]
             let currentMax = dayLifts[set.exercise] ?? 0.0
@@ -163,35 +143,21 @@ struct HistoryView: View {
         }
     }
     
-    private func calculateE1RM(weight: Double, reps: Int, formula: String) -> Double {
-        if reps <= 1 { return weight }
-        switch formula {
-        case "brzycki":
-            let denom = 1.0278 - (0.0278 * Double(reps))
-            return weight / max(0.01, denom)
-        case "lander":
-            let denom = 101.3 - (2.6712 * Double(reps))
-            return (100.0 * weight) / max(0.01, denom)
-        default: // epley
-            return weight * (1.0 + Double(reps) / 30.0)
-        }
-    }
-    
     @ViewBuilder
     private var progressionChartCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("ESTIMATED 1RM PROGRESSION")
-                .font(.system(size: 11, weight: .black))
+                .scaledFont(size: 11, weight: .black)
                 .foregroundColor(brandColors.teal)
                 .tracking(2.0)
             
             if chartPoints.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "chart.line.uptrend.xyaxis")
-                        .font(.system(size: 32))
+                        .scaledFont(size: 32)
                         .foregroundColor(.plGray700)
                     Text("No progression data yet.")
-                        .font(.system(size: 12, weight: .bold))
+                        .scaledFont(size: 12, weight: .bold)
                         .foregroundColor(.plGray500)
                 }
                 .frame(maxWidth: .infinity)
@@ -233,13 +199,13 @@ struct HistoryView: View {
                     if sessions.isEmpty {
                         VStack(spacing: 12) {
                             Image(systemName: "calendar.badge.exclamationmark")
-                                .font(.system(size: 44))
+                                .scaledFont(size: 44)
                                 .foregroundColor(.plGray700)
                             Text("No logged sessions found.")
-                                .font(.system(size: 15, weight: .black))
-                                .foregroundColor(.plGray400)
+                                .scaledFont(size: 15, weight: .black)
+                                .foregroundColor(.plSecondaryLabel)
                             Text("Your logged lift sets will appear here grouped chronologically.")
-                                .font(.system(size: 11, weight: .bold))
+                                .scaledFont(size: 11, weight: .bold)
                                 .foregroundColor(.plGray500)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 40)
@@ -262,15 +228,7 @@ struct HistoryView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    HStack(spacing: 2) {
-                        Text("PERSONAL")
-                            .font(.system(size: 24, weight: .black))
-                            .foregroundColor(.primary)
-                        Text("LIFT")
-                            .font(.system(size: 24, weight: .black))
-                            .foregroundColor(brandColors.blue)
-                    }
-                    .tracking(-0.5)
+                    PLWordmark(accent: brandColors.blue)
                 }
             }
             .onAppear {
@@ -330,21 +288,21 @@ struct HistoryView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(formatSessionDate(session.dateString))
-                            .font(.system(size: 16, weight: .black))
+                            .scaledFont(size: 16, weight: .black)
                             .foregroundColor(brandColors.whiteText)
                         
                         HStack(spacing: 8) {
                             Text("\((session.sets ?? []).count) sets")
-                                .font(.system(size: 11, weight: .black, design: .monospaced))
+                                .scaledFont(size: 11, weight: .black, design: .monospaced)
                                 .foregroundColor(brandColors.blue)
                             
                             Text("•")
-                                .font(.system(size: 11, weight: .black))
+                                .scaledFont(size: 11, weight: .black)
                                 .foregroundColor(.plGray700)
                             
-                            Text("\(Int(totalVolume)) \(activePrefs.weightUnit)")
-                                .font(.system(size: 11, weight: .black, design: .monospaced))
-                                .foregroundColor(.plGray400)
+                            Text("\(totalVolume.formatted(.number.precision(.fractionLength(0)))) \(activePrefs.weightUnit)")
+                                .scaledFont(size: 11, weight: .black, design: .monospaced)
+                                .foregroundColor(.plSecondaryLabel)
                         }
                     }
                     
@@ -367,7 +325,7 @@ struct HistoryView: View {
                         }
                         
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .bold))
+                            .scaledFont(size: 12, weight: .bold)
                             .foregroundColor(.plGray500)
                             .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     }
@@ -376,7 +334,7 @@ struct HistoryView: View {
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(formatSessionDate(session.dateString)) workout session")
-            .accessibilityValue("\((session.sets ?? []).count) sets, total volume \(Int(totalVolume)) \(activePrefs.weightUnit). Exercises completed: \(Array(Set((session.sets ?? []).map { item in uniqueExercises.first(where: { $0.name == item.exercise })?.displayName ?? item.exercise })).joined(separator: ", "))")
+            .accessibilityValue("\((session.sets ?? []).count) sets, total volume \(totalVolume.formatted(.number.precision(.fractionLength(0)))) \(activePrefs.weightUnit). Exercises completed: \(Array(Set((session.sets ?? []).map { item in uniqueExercises.first(where: { $0.name == item.exercise })?.displayName ?? item.exercise })).joined(separator: ", "))")
             .accessibilityHint(isExpanded ? "Double tap to collapse details" : "Double tap to expand details")
             
             // Expanded detail section
@@ -388,12 +346,14 @@ struct HistoryView: View {
                     
                     // Display set listings
                     VStack(spacing: 8) {
-                        ForEach(session.sets ?? []) { item in
+                        ForEach((session.sets ?? []).sorted { $0.timestamp < $1.timestamp }) { item in
                             let rawColor = Color(hex: uniqueExercises.first(where: { $0.name == item.exercise })?.colorHex ?? "#8b5cf6")
                             let itemColor = themeStyle == .night ? Color.plGray400 : rawColor
                             HStack {
-                                Text(item.exercise)
-                                    .font(.system(size: 13, weight: .black))
+                                Text(uniqueExercises.first(where: { $0.name == item.exercise })?.displayName ?? item.exercise)
+                                    .scaledFont(size: 13, weight: .black)
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.8)
                                     .foregroundColor(brandColors.whiteText)
                                     .frame(width: 80, alignment: .leading)
                                     .accessibilityLabel(uniqueExercises.first(where: { $0.name == item.exercise })?.displayName ?? item.exercise)
@@ -423,10 +383,10 @@ struct HistoryView: View {
                                 } label: {
                                     HStack(spacing: 2) {
                                         Text(item.setType == "drop" || item.setType == "failed" ? "FAILED" : item.setType.uppercased())
-                                            .font(.system(size: 8, weight: .black))
+                                            .scaledFont(size: 8, weight: .black)
                                             .foregroundColor(item.setType == "working" ? itemColor : .plGray400)
                                         Image(systemName: "chevron.up.chevron.down")
-                                            .font(.system(size: 6, weight: .black))
+                                            .scaledFont(size: 6, weight: .black)
                                             .foregroundColor(item.setType == "working" ? itemColor : .plGray400)
                                     }
                                 }
@@ -437,11 +397,11 @@ struct HistoryView: View {
                                 
                                 Spacer()
                                 
-                                Text("\(Int(item.weight)) \(activePrefs.weightUnit) x \(item.reps)")
-                                    .font(.system(size: 13, weight: .black, design: .monospaced))
+                                Text("\(LiftMath.format(item.weight)) \(activePrefs.weightUnit) x \(item.reps)")
+                                    .scaledFont(size: 13, weight: .black, design: .monospaced)
                                     .foregroundColor(brandColors.whiteText)
                                     .accessibilityLabel("Weight and reps")
-                                    .accessibilityValue("\(Int(item.weight)) \(activePrefs.weightUnit) for \(item.reps) repetitions")
+                                    .accessibilityValue("\(LiftMath.format(item.weight)) \(activePrefs.weightUnit) for \(item.reps) repetitions")
                                 
                                 Menu {
                                     ForEach(Array(stride(from: 5.0, through: 10.0, by: 0.5)), id: \.self) { val in
@@ -456,10 +416,10 @@ struct HistoryView: View {
                                 } label: {
                                     HStack(spacing: 3) {
                                         Text("@ RPE \(String(format: "%.1f", item.rpe))")
-                                            .font(.system(size: 10, weight: .black, design: .monospaced))
+                                            .scaledFont(size: 10, weight: .black, design: .monospaced)
                                             .foregroundColor(brandColors.purple)
                                         Image(systemName: "chevron.up.chevron.down")
-                                            .font(.system(size: 7, weight: .black))
+                                            .scaledFont(size: 7, weight: .black)
                                             .foregroundColor(brandColors.purple)
                                     }
                                     .padding(.horizontal, 6)
@@ -478,7 +438,7 @@ struct HistoryView: View {
                                      showDeleteSetConfirmation = true
                                  }) {
                                      Image(systemName: "xmark.circle.fill")
-                                         .font(.system(size: 14))
+                                         .scaledFont(size: 14)
                                          .foregroundColor(brandColors.red.opacity(0.7))
                                          .padding(.leading, 6)
                                  }
@@ -495,12 +455,12 @@ struct HistoryView: View {
                     // Session Notes Editor
                     VStack(alignment: .leading, spacing: 6) {
                         Text("SESSION NOTES")
-                            .font(.system(size: 9, weight: .black))
-                            .foregroundColor(.plGray400)
+                            .scaledFont(size: 9, weight: .black)
+                            .foregroundColor(.plSecondaryLabel)
                             .tracking(1.5)
                         
                         TextField("Enter notes, mood, templates, or accessories...", text: $sessionNotesText, axis: .vertical)
-                            .font(.system(size: 13, weight: .bold))
+                            .scaledFont(size: 13, weight: .bold)
                             .foregroundColor(brandColors.whiteText)
                             .padding(12)
                             .background(notesBackgroundColor)
@@ -521,7 +481,7 @@ struct HistoryView: View {
                             showDeleteSessionConfirmation = true
                         }) {
                             Label("DELETE WORKOUT SESSION", systemImage: "trash")
-                                .font(.system(size: 10, weight: .black))
+                                .scaledFont(size: 10, weight: .black)
                                 .foregroundColor(brandColors.red)
                         }
                         .accessibilityLabel("Delete entire workout session")
@@ -538,7 +498,7 @@ struct HistoryView: View {
     
     private func exerciseBadge(label: String, color: Color) -> some View {
         Text(label)
-            .font(.system(size: 9, weight: .black))
+            .font(.system(size: 9, weight: .black)) // fixed: sits in a 14pt badge
             .foregroundColor(themeStyle == .night ? .black : .white)
             .frame(width: 14, height: 14)
             .background(color)
@@ -571,6 +531,7 @@ struct HistoryView: View {
     }
     
     private func deleteSet(_ set: WorkoutSet, in session: WorkoutSession) {
+        let dateString = session.dateString
         HapticService.play(.heavy, enabled: activePrefs.hapticsEnabled)
         
         withAnimation {
@@ -585,9 +546,18 @@ struct HistoryView: View {
             
             try? modelContext.save()
         }
+        syncHealth(dateString: dateString)
+    }
+
+    /// Re-writes (or removes) the Apple Health workout for a session after its sets change.
+    private func syncHealth(dateString: String) {
+        guard activePrefs.appleHealthEnabled else { return }
+        let remaining = sessions.first(where: { $0.dateString == dateString && !$0.isDeleted })?.sets ?? []
+        HealthKitService.shared.syncSession(dateString: dateString, sets: remaining, unit: activePrefs.weightUnit)
     }
     
     private func deleteEntireSession(_ session: WorkoutSession) {
+        let dateString = session.dateString
         HapticService.play(.heavy, enabled: activePrefs.hapticsEnabled)
         
         withAnimation {
@@ -595,5 +565,6 @@ struct HistoryView: View {
             expandedSessionDate = nil
             try? modelContext.save()
         }
+        syncHealth(dateString: dateString)
     }
 }

@@ -12,6 +12,9 @@ struct WatchLogSetView: View {
 
     private let setTypes = ["warmup", "working", "failed"]
 
+    /// One pair of plates: 5 lb or 2.5 kg.
+    private var plateStep: Double { connectivity.weightUnit == "kg" ? 2.5 : 5 }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
@@ -49,7 +52,7 @@ struct WatchLogSetView: View {
             Text(displayNameFor(selectedExercise))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-            Text("\(Int(weight)) \(connectivity.weightUnit) × \(reps)")
+            Text("\(weight.formatted(.number.precision(.fractionLength(0...2)))) \(connectivity.weightUnit) × \(reps)")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(.blue)
 
@@ -97,7 +100,7 @@ struct WatchLogSetView: View {
                     .tracking(1)
                 HStack {
                     Button {
-                        weight = max(0, weight - 5)
+                        weight = max(0, weight - plateStep)
                     } label: {
                         Image(systemName: "minus")
                             .font(.system(size: 14, weight: .bold))
@@ -106,13 +109,13 @@ struct WatchLogSetView: View {
                     .buttonStyle(.bordered)
                     .tint(.gray)
 
-                    Text("\(Int(weight))")
+                    Text(weight.formatted(.number.precision(.fractionLength(0...2))))
                         .font(.system(size: 20, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
 
                     Button {
-                        weight += 5
+                        weight += plateStep
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 14, weight: .bold))

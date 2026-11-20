@@ -26,6 +26,19 @@ struct SkipTimerIntent: LiveActivityIntent {
     }
 }
 
+// Mirrors AddRestTimeIntent in the app's RestTimerManager.swift
+@available(iOS 17.0, *)
+struct AddRestTimeIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Add 30 Seconds of Rest"
+
+    init() {}
+
+    func perform() async throws -> some IntentResult {
+        NotificationCenter.default.post(name: Notification.Name("AddRestTimeNotification"), object: nil)
+        return .result()
+    }
+}
+
 // MARK: - Live Activity Widget Configuration
 struct PrivateLiftWidgetLiveActivity: Widget {
     var body: some WidgetConfiguration {
@@ -67,6 +80,16 @@ struct PrivateLiftWidgetLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack {
                         Spacer()
+                        Button(intent: AddRestTimeIntent()) {
+                            Text("+30s")
+                                .font(.system(size: 11, weight: .black))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color.white.opacity(0.15))
+                                .cornerRadius(10)
+                        }
+                        .buttonStyle(.plain)
                         Button(intent: SkipTimerIntent()) {
                             HStack(spacing: 4) {
                                 Text("SKIP REST")
@@ -134,7 +157,18 @@ struct LiveActivityLockScreenView: View {
             
             Spacer()
             
-            // Right Column: Skip Button
+            // Right Column: +30s and Skip Buttons
+            Button(intent: AddRestTimeIntent()) {
+                Text("+30s")
+                    .font(.system(size: 11, weight: .black))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.white.opacity(0.15))
+                    .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+
             Button(intent: SkipTimerIntent()) {
                 Text("SKIP")
                     .font(.system(size: 11, weight: .black))

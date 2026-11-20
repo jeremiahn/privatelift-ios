@@ -14,6 +14,11 @@ final class CustomExercise {
     var isPowerlift: Bool = false       // Participate in Wilks/DOTS?
     var powerliftType: String? = nil  // "squat" | "bench" | "deadlift"
 
+    // Optional overrides (nil = use the Settings default). Optional + defaulted keeps
+    // this a lightweight SwiftData migration and CloudKit-compatible.
+    var restSeconds: Double? = nil    // rest timer after a set of this exercise
+    var barWeight: Double? = nil      // e.g. a 55 lb trap bar for deadlifts
+
     init(
         name: String,
         displayName: String,
@@ -31,5 +36,13 @@ final class CustomExercise {
         self.orderIndex = orderIndex
         self.isPowerlift = isPowerlift
         self.powerliftType = powerliftType
+    }
+}
+
+extension Array where Element == CustomExercise {
+    /// First exercise per canonical key, order preserved ("Bench Press" and "BENCH" collapse).
+    var uniqued: [CustomExercise] {
+        var seen = Set<String>()
+        return filter { seen.insert(LiftMath.exerciseKey($0.name)).inserted }
     }
 }

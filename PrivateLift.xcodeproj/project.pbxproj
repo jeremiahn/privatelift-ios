@@ -386,14 +386,14 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = D42P76Y3LR;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = PersonalLift;
+				INFOPLIST_KEY_CFBundleDisplayName = "Personal Lift";
 				INFOPLIST_KEY_CFBundleName = PersonalLift;
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "PersonalLift does not read data from Apple Health. It only writes workout records and related metrics.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "PersonalLift requires permission to save workout records, active energy burned, and body mass directly to your Apple Health app.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Personal Lift does not read data from Apple Health. It only writes workout records and related metrics.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Personal Lift requires permission to save workout records, active energy burned, and body mass directly to your Apple Health app.";
 				INFOPLIST_KEY_WKApplication = YES;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "Nelson-Computers.PrivateLift";
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
-				MARKETING_VERSION = 1.3.2;
+				MARKETING_VERSION = 1.3.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "Nelson-Computers.PrivateLift.watchkitapp";
 				PRODUCT_NAME = PersonalLiftWatch;
 				SDKROOT = watchos;
@@ -415,7 +415,7 @@
 				DEVELOPMENT_TEAM = D42P76Y3LR;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PrivateLiftWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = PrivateLiftWidget;
+				INFOPLIST_KEY_CFBundleDisplayName = "Personal Lift";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -423,7 +423,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.3.2;
+				MARKETING_VERSION = 1.3.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "Nelson-Computers.PrivateLift.PrivateLiftWidget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -446,7 +446,7 @@
 				DEVELOPMENT_TEAM = D42P76Y3LR;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PrivateLiftWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = PrivateLiftWidget;
+				INFOPLIST_KEY_CFBundleDisplayName = "Personal Lift";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -454,7 +454,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.3.2;
+				MARKETING_VERSION = 1.3.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "Nelson-Computers.PrivateLift.PrivateLiftWidget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -601,14 +601,14 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PrivateLift/PrivateLift/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = PersonalLift;
+				INFOPLIST_KEY_CFBundleDisplayName = "Personal Lift";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3.2;
+				MARKETING_VERSION = 1.3.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "Nelson-Computers.PrivateLift";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -634,14 +634,14 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PrivateLift/PrivateLift/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = PersonalLift;
+				INFOPLIST_KEY_CFBundleDisplayName = "Personal Lift";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3.2;
+				MARKETING_VERSION = 1.3.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "Nelson-Computers.PrivateLift";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -663,14 +663,14 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = D42P76Y3LR;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = PersonalLift;
+				INFOPLIST_KEY_CFBundleDisplayName = "Personal Lift";
 				INFOPLIST_KEY_CFBundleName = PersonalLift;
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "PersonalLift does not read data from Apple Health. It only writes workout records and related metrics.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "PersonalLift requires permission to save workout records, active energy burned, and body mass directly to your Apple Health app.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Personal Lift does not read data from Apple Health. It only writes workout records and related metrics.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Personal Lift requires permission to save workout records, active energy burned, and body mass directly to your Apple Health app.";
 				INFOPLIST_KEY_WKApplication = YES;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "Nelson-Computers.PrivateLift";
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
-				MARKETING_VERSION = 1.3.2;
+				MARKETING_VERSION = 1.3.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "Nelson-Computers.PrivateLift.watchkitapp";
 				PRODUCT_NAME = PersonalLiftWatch;
 				SDKROOT = watchos;
