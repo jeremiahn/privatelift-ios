@@ -113,6 +113,16 @@ struct HistoryView: View {
         return points
     }
     
+    /// Lowest to highest e1RM, padded and snapped to multiples of 25.
+    var chartYDomain: ClosedRange<Double> {
+        let values = chartPoints.map(\.e1RM)
+        guard let low = values.min(), let high = values.max() else { return 0...100 }
+        let pad = max(10, (high - low) * 0.1)
+        let lower = max(0, ((low - pad) / 25).rounded(.down) * 25)
+        let upper = ((high + pad) / 25).rounded(.up) * 25
+        return lower...max(upper, lower + 25)
+    }
+
     var chartColorScaleDomain: [String] {
         var domain = ["Squat", "Bench Press", "Deadlift"]
         for ex in uniqueExercises {
@@ -178,6 +188,8 @@ struct HistoryView: View {
                     .foregroundStyle(by: .value("Lift", point.liftName))
                 }
                 .chartForegroundStyleScale(domain: chartColorScaleDomain, range: chartColorScaleRange)
+                // Fit the axis to the data: from zero, a 300 -> 340 lb gain reads as a flat line.
+                .chartYScale(domain: chartYDomain)
                 .frame(height: 220)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Estimated 1RM Progression Chart")
@@ -398,6 +410,8 @@ struct HistoryView: View {
                                 Spacer()
                                 
                                 Text("\(LiftMath.format(item.weight)) \(activePrefs.weightUnit) x \(item.reps)")
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
                                     .scaledFont(size: 13, weight: .black, design: .monospaced)
                                     .foregroundColor(brandColors.whiteText)
                                     .accessibilityLabel("Weight and reps")

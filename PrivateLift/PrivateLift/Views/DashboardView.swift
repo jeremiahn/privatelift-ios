@@ -27,6 +27,8 @@ struct DashboardView: View {
     @State private var calcWeight = 225.0
     /// Exercise whose bar the plate calculator uses; nil follows the selected exercise.
     @State private var calcExercise: String? = nil
+    /// Scroll target; only set by the DEBUG `-screenshotScroll log|today|plates` launch argument.
+    @State private var scrollTarget: String? = nil
     @FocusState private var isFieldFocused: Bool
     
     @State private var pendingUndo: DeletedSet? = nil
@@ -285,9 +287,11 @@ struct DashboardView: View {
                     }
                     .padding(20)
                     .glassCard(style: themeStyle)
+                    .id("log")
                     
                     // 4. Today's Logs List
                     todayLogSection
+                        .id("today")
 
                     // 5. Barbell Plate Calculator Widget
                     VStack(alignment: .leading, spacing: 16) {
@@ -347,13 +351,16 @@ struct DashboardView: View {
                     }
                     .padding(20)
                     .glassCard(style: themeStyle)
+                    .id("plates")
                     
                     
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
                 .padding(.bottom, 100) // Padding for Rest Timer + Tabbar
+                .scrollTargetLayout()
             }
+            .scrollPosition(id: $scrollTarget, anchor: .top)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
@@ -369,6 +376,11 @@ struct DashboardView: View {
             }
             .plBackground(style: themeStyle)
             .onAppear {
+                #if DEBUG
+                if let target = UserDefaults.standard.string(forKey: "screenshotScroll") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { scrollTarget = target }
+                }
+                #endif
                 // Initialize default intensity
                 intensity = Double(activePrefs.lastIntensity)
                 if let firstExercise = uniqueExercises.first, !uniqueExercises.contains(where: { $0.name == selectedExercise }) {

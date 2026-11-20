@@ -83,9 +83,19 @@ struct MainTabView: View {
         .onAppear {
             checkOnboardingAndMigration()
             #if DEBUG
-            // Screenshot/UI check helper: `-demoRestTimer YES` starts a rest timer on launch.
-            if UserDefaults.standard.bool(forKey: "demoRestTimer") {
-                timerManager.startTimer(duration: 150)
+            // Screenshot helpers (simulator taps don't register in Xcode 27):
+            //   -demoRestTimer YES   start a rest timer on launch
+            //   -initialTab 0...3    open a tab
+            //   -screenshotTheme X   system | light | dark | night
+            let defaults = UserDefaults.standard
+            if defaults.bool(forKey: "demoRestTimer") {
+                timerManager.startTimer(duration: 150, allowNotifications: false) // no permission prompt in shots
+            }
+            if let tab = defaults.string(forKey: "initialTab").flatMap(Int.init), (0...3).contains(tab) {
+                selectedTab = tab
+            }
+            if let theme = defaults.string(forKey: "screenshotTheme"), ThemeStyle(rawValue: theme) != nil {
+                activePrefs.theme = theme
             }
             #endif
         }

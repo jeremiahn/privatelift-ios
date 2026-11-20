@@ -133,7 +133,7 @@ struct SettingsView: View {
                 Button("Rebuild") { rebuildHealthWorkouts() }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Versions before 1.3.3 saved every set as its own workout. This removes the workouts and energy samples Personal Lift has written and saves one workout per logged session instead. Data from other apps is not touched.")
+                Text("Earlier versions of Personal Lift saved every set as its own workout. This removes the workouts and energy samples Personal Lift has written and saves one workout per logged session instead. Data from other apps is not touched.")
             }
             .alert("Apple Health", isPresented: Binding(get: { healthRebuildResult != nil }, set: { if !$0 { healthRebuildResult = nil } })) {
                 Button("OK", role: .cancel) {}

@@ -29,6 +29,7 @@ class RestTimerManager: ObservableObject {
     private var cancellable: AnyCancellable?
     private var timerEndTime: Date?
     private var hapticsEnabled: Bool = true
+    private var notificationsAllowed: Bool = true
     
     #if canImport(ActivityKit)
     private var activeActivity: Activity<RestTimerAttributes>?
@@ -69,6 +70,7 @@ class RestTimerManager: ObservableObject {
     
     func startTimer(duration: TimeInterval = 180, allowNotifications: Bool = true, hapticsEnabled: Bool = true) {
         self.hapticsEnabled = hapticsEnabled
+        self.notificationsAllowed = allowNotifications
         timerEndTime = Date().addingTimeInterval(duration)
         isActive = true
         timeRemaining = duration
@@ -95,8 +97,10 @@ class RestTimerManager: ObservableObject {
                 }
             }
         
-        // Always schedule the local notification for rest completion
-        scheduleRestNotification(in: duration, totalDuration: duration)
+        // Local notification for rest completion (the parameter was previously ignored)
+        if allowNotifications {
+            scheduleRestNotification(in: duration, totalDuration: duration)
+        }
         
         #if canImport(ActivityKit)
         startLiveActivity(endTime: timerEndTime!)
@@ -116,7 +120,9 @@ class RestTimerManager: ObservableObject {
         timerEndTime = newEnd
         timeRemaining = remaining
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest_timer_end"])
-        scheduleRestNotification(in: remaining, totalDuration: remaining)
+        if notificationsAllowed {
+            scheduleRestNotification(in: remaining, totalDuration: remaining)
+        }
         #if canImport(ActivityKit)
         let content = ActivityContent(state: RestTimerAttributes.ContentState(endTime: newEnd), staleDate: nil)
         for activity in Activity<RestTimerAttributes>.activities {

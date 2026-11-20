@@ -14,16 +14,15 @@ struct DatabaseSeeder {
             if existingPrefs.isEmpty {
                 let prefs = UserPreferences()
                 if isScreenshotMode {
-                    prefs.isOnboarded = true // Bypass onboarding for screenshots
+                    applyScreenshotProfile(prefs, context: context)
                 }
                 context.insert(prefs)
                 try context.save()
                 debugLog("Default user preferences seeded successfully (onboarded=\(prefs.isOnboarded)).")
             } else if isScreenshotMode {
+                // Another code path can create the record first on a fresh install.
                 for prefs in existingPrefs {
-                    if !prefs.isOnboarded {
-                        prefs.isOnboarded = true
-                    }
+                    applyScreenshotProfile(prefs, context: context)
                 }
                 try context.save()
             }
@@ -31,67 +30,9 @@ struct DatabaseSeeder {
             debugLog("Error checking/seeding user preferences: \(error)")
         }
 
-        // 1.5 Seed historical workout data if in screenshot mode and none exist
+        // 1.5 Screenshot demo history (only with -seedScreenshots, only on an empty store)
         if isScreenshotMode {
-            do {
-                let existingSessions = try context.fetch(FetchDescriptor<WorkoutSession>())
-                if existingSessions.isEmpty {
-                    let formatter = DateFormatter()
-                    formatter.dateFormat = "yyyy-MM-dd"
-                    
-                    let calendar = Calendar.current
-                    let today = Date()
-                    
-                    let sessionData = [
-                        (daysAgo: 12, squat: 225.0, bench: 135.0, deadlift: 275.0),
-                        (daysAgo: 10, squat: 245.0, bench: 155.0, deadlift: 315.0),
-                    (daysAgo: 8, squat: 275.0, bench: 175.0, deadlift: 345.0),
-                    (daysAgo: 5, squat: 285.0, bench: 185.0, deadlift: 365.0),
-                    (daysAgo: 3, squat: 300.0, bench: 195.0, deadlift: 385.0),
-                    (daysAgo: 1, squat: 315.0, bench: 225.0, deadlift: 405.0),
-                ]
-                
-                for data in sessionData {
-                    guard let date = calendar.date(byAdding: .day, value: -data.daysAgo, to: today) else { continue }
-                    let dateString = formatter.string(from: date)
-                    let session = WorkoutSession(dateString: dateString, notes: "Felt strong during this workout!")
-                    context.insert(session)
-                    
-                    // Add sets
-                    // Squat sets
-                    let s1 = WorkoutSet(exercise: "SQUAT", weight: data.squat - 40, reps: 5, rpe: 6.0, setType: "warmup", timestamp: date)
-                    let s2 = WorkoutSet(exercise: "SQUAT", weight: data.squat - 20, reps: 5, rpe: 7.0, setType: "warmup", timestamp: date)
-                    let s3 = WorkoutSet(exercise: "SQUAT", weight: data.squat, reps: 5, rpe: 8.5, setType: "working", timestamp: date)
-                    s1.session = session
-                    s2.session = session
-                    s3.session = session
-                    context.insert(s1)
-                    context.insert(s2)
-                    context.insert(s3)
-                    
-                    // Bench sets
-                    let b1 = WorkoutSet(exercise: "BENCH", weight: data.bench - 20, reps: 5, rpe: 7.0, setType: "warmup", timestamp: date)
-                    let b2 = WorkoutSet(exercise: "BENCH", weight: data.bench, reps: 5, rpe: 8.5, setType: "working", timestamp: date)
-                    b1.session = session
-                    b2.session = session
-                    context.insert(b1)
-                    context.insert(b2)
-                    
-                    // Deadlift sets
-                    let d1 = WorkoutSet(exercise: "DEADLIFT", weight: data.deadlift - 40, reps: 5, rpe: 7.0, setType: "warmup", timestamp: date)
-                    let d2 = WorkoutSet(exercise: "DEADLIFT", weight: data.deadlift, reps: 5, rpe: 8.0, setType: "working", timestamp: date)
-                    d1.session = session
-                    d2.session = session
-                    context.insert(d1)
-                    context.insert(d2)
-                }
-                
-                try context.save()
-                debugLog("Seeded mock workout sessions successfully.")
-            }
-        } catch {
-            debugLog("Error seeding mock workout sessions: \(error)")
-        }
+            seedScreenshotHistory(context: context)
         }
 
         // 2. Seed the three default powerlifting exercises — only if each is missing by name.
@@ -138,6 +79,99 @@ struct DatabaseSeeder {
         // 3. De-duplicate any existing exercises with the same name (safety net for
         //    CloudKit sync races that may have already inserted duplicates).
         deduplicateExercises(context: context)
+
+        if isScreenshotMode {
+            applyScreenshotMaxes(context: context)
+        }
+    }
+
+    /// Screenshot profile: onboarded, with maxes and body weight that make the PR, Wilks
+    /// and DOTS cards read like a real intermediate lifter. Only applied once per store.
+    private static func applyScreenshotProfile(_ prefs: UserPreferences, context: ModelContext) {
+        guard !prefs.isOnboarded || prefs.gender == "other" else { return }
+        prefs.isOnboarded = true
+        prefs.squatMax = 345
+        prefs.benchMax = 245
+        prefs.deadliftMax = 425
+        prefs.bodyWeight = 198
+        prefs.gender = "male"
+    }
+
+    /// The legacy web-data migration runs after the first seed and resets exercise maxes,
+    /// so screenshot mode re-applies the demo maxes on every launch.
+    private static func applyScreenshotMaxes(context: ModelContext) {
+        for exercise in (try? context.fetch(FetchDescriptor<CustomExercise>())) ?? [] {
+            switch exercise.powerliftType {
+            case "squat": exercise.oneRepMax = 345
+            case "bench": exercise.oneRepMax = 245
+            case "deadlift": exercise.oneRepMax = 425
+            default: break
+            }
+        }
+        try? context.save()
+    }
+
+    /// Screenshot-only demo data: eight weeks of progressing sessions, an Overhead Press
+    /// accessory with its own rest time, and today's workout in progress.
+    private static func seedScreenshotHistory(context: ModelContext) {
+        guard (try? context.fetchCount(FetchDescriptor<WorkoutSession>())) == 0 else { return }
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let round5 = { (v: Double) in (v / 5).rounded() * 5 }
+
+        let ohpName = "OHP"
+        if (try? context.fetchCount(FetchDescriptor<CustomExercise>(predicate: #Predicate { $0.name == ohpName }))) == 0 {
+            let ohp = CustomExercise(name: ohpName, displayName: "Overhead Press", oneRepMax: 155, colorHex: "#8b5cf6", orderIndex: 3)
+            ohp.restSeconds = 120
+            context.insert(ohp)
+        }
+
+        func addSet(_ session: WorkoutSession, _ exercise: String, _ weight: Double, _ reps: Int, _ rpe: Double, _ type: String, _ at: Date) {
+            let set = WorkoutSet(exercise: exercise, weight: weight, reps: reps, rpe: rpe, setType: type, timestamp: at)
+            set.session = session
+            context.insert(set)
+        }
+
+        // Top working weights (x5) climb ~12% across the block.
+        let finals: [(name: String, top: Double)] = [("SQUAT", 300), ("BENCH", 215), ("DEADLIFT", 375), ("OHP", 125)]
+        let daysAgo = [54, 52, 49, 47, 45, 42, 40, 38, 35, 33, 31, 28, 26, 24, 21, 19, 17, 14, 12, 10, 7, 5, 3, 1]
+        let notes = ["Belt on for top sets.", "Bar speed felt great today.", "", "Short on sleep; kept RPE honest.", "", "New 5-rep PR on squat."]
+        for (index, ago) in daysAgo.enumerated() {
+            guard let day = calendar.date(byAdding: .day, value: -ago, to: Date()),
+                  let start = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: day) else { continue }
+            let session = WorkoutSession(dateString: formatter.string(from: day), notes: notes[index % notes.count])
+            context.insert(session)
+            let progress = 0.88 + 0.12 * Double(54 - ago) / 51
+            let lifts = index % 2 == 0 ? ["SQUAT", "BENCH", "OHP"] : ["DEADLIFT", "BENCH", "SQUAT"]
+            var minute = 0.0
+            for lift in lifts {
+                guard let top = finals.first(where: { $0.name == lift })?.top else { continue }
+                let work = round5(top * progress)
+                let bar = 45.0
+                for warm in [bar, round5(work * 0.6), round5(work * 0.8)] {
+                    addSet(session, lift, warm, 5, 6, "warmup", start.addingTimeInterval(minute * 60)); minute += 2
+                }
+                for rpe in [7.5, 8.0, 8.5] {
+                    addSet(session, lift, work, 5, rpe, "working", start.addingTimeInterval(minute * 60)); minute += 3
+                }
+            }
+        }
+
+        // Today: squat in progress, so the log, "Previous set" and weekly volume have content.
+        let today = WorkoutSession(dateString: formatter.string(from: Date()), notes: "Squat day. Aiming for 3x5 at 295.")
+        context.insert(today)
+        let now = Date()
+        let todaySets: [(minutesAgo: Double, weight: Double, type: String, rpe: Double)] = [
+            (24, 135, "warmup", 6), (21, 185, "warmup", 6.5), (18, 245, "warmup", 7),
+            (14, 295, "working", 7.5), (9, 295, "working", 8)
+        ]
+        for entry in todaySets {
+            addSet(today, "SQUAT", entry.weight, 5, entry.rpe, entry.type, now.addingTimeInterval(-entry.minutesAgo * 60))
+        }
+
+        try? context.save()
+        debugLog("Seeded screenshot history.")
     }
 
     /// Removes any duplicate CustomExercise records that share the same name,
